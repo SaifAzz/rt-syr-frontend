@@ -39,7 +39,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { jobsAPI, tendersAPI, applicationsAPI, type JobRecord, type TenderRecord, type ApplicationRecord } from '@/lib/api';
+import { jobsAPI, tendersAPI, applicationsAPI, organizationsAPI, type JobRecord, type TenderRecord, type ApplicationRecord } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 
@@ -67,43 +67,79 @@ const OrganizationDashboard = () => {
     },
   ];
 
-  const { data: jobs = [], isLoading: jobsLoading } = useQuery<JobRecord[]>({
-    queryKey: ['organization-jobs', user?.organizationId],
+  // Get organization ID from user
+  const organizationId = user?.organization_id || user?.organizationId;
+
+  // Get my organizations first to find the organization ID
+  const { data: myOrganizations = [] } = useQuery({
+    queryKey: ['my-organizations'],
     queryFn: async () => {
-      if (!user?.organizationId) return [];
       try {
-        return await jobsAPI.getAll();
+        return await organizationsAPI.getMy();
       } catch {
         return [];
       }
     },
-    enabled: !!user?.organizationId,
   });
 
-  const { data: tenders = [], isLoading: tendersLoading } = useQuery<TenderRecord[]>({
-    queryKey: ['organization-tenders', user?.organizationId],
+  const effectiveOrganizationId = organizationId || myOrganizations[0]?.id;
+
+  const { data: jobs = [], isLoading: jobsLoading } = useQuery<JobRecord[]>({
+    queryKey: ['organization-jobs', effectiveOrganizationId],
     queryFn: async () => {
-      if (!user?.organizationId) return [];
+      if (!effectiveOrganizationId) return [];
       try {
-        return await tendersAPI.getAll();
+        const all = await jobsAPI.getAll();
+        const result = Array.isArray(all) ? all : all.data || [];
+        // Filter jobs by organization_id if organizations can post jobs
+        return result.filter((job: JobRecord) => job.company_id && false); // Organizations typically don't post jobs
       } catch {
         return [];
       }
     },
-    enabled: !!user?.organizationId,
+    enabled: !!effectiveOrganizationId,
   });
+
+  const { data: tendersData, isLoading: tendersLoading } = useQuery({
+    queryKey: ['organization-tenders', effectiveOrganizationId],
+    queryFn: async () => {
+      if (!effectiveOrganizationId) return [];
+      try {
+        // Use the organization-specific endpoint
+        return await tendersAPI.getByOrganization(effectiveOrganizationId);
+      } catch {
+        // Fallback to getAll and filter
+        try {
+          const all = await tendersAPI.getAll();
+          const result = Array.isArray(all) ? all : all.data || [];
+          return result.filter((tender: TenderRecord) => tender.organization_id === effectiveOrganizationId);
+        } catch {
+          return [];
+        }
+      }
+    },
+    enabled: !!effectiveOrganizationId,
+  });
+
+  const tenders: TenderRecord[] = Array.isArray(tendersData) ? tendersData : [];
 
   const { data: applications = [], isLoading: appsLoading } = useQuery<ApplicationRecord[]>({
-    queryKey: ['organization-applications', user?.organizationId],
+    queryKey: ['organization-applications', effectiveOrganizationId],
     queryFn: async () => {
-      if (!user?.organizationId) return [];
+      if (!effectiveOrganizationId) return [];
       try {
-        return await applicationsAPI.getAll();
+        const all = await applicationsAPI.getAll();
+        const result = Array.isArray(all) ? all : all.data || [];
+        // Filter applications for tenders belonging to this organization
+        const organizationTenderIds = tenders.map(t => t.id);
+        return result.filter((app: ApplicationRecord) => 
+          app.tender_id && organizationTenderIds.includes(app.tender_id)
+        );
       } catch {
         return [];
       }
     },
-    enabled: !!user?.organizationId,
+    enabled: !!effectiveOrganizationId && tenders.length > 0,
   });
 
   const activeJobs = jobs.filter(job => job.status === 'open').length;
@@ -326,7 +362,7 @@ const OrganizationDashboard = () => {
                               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                                 <span className="flex items-center gap-1">
                                   <Calendar className="w-3 h-3" />
-                                  {new Date(job.createdAt).toLocaleDateString()}
+                                  {new Date(job.created_at || job.createdAt).toLocaleDateString()}
                                 </span>
                                 <span className="flex items-center gap-1">
                                   <MapPin className="w-3 h-3" />

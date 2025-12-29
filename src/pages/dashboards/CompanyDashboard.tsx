@@ -39,7 +39,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { jobsAPI, tendersAPI, applicationsAPI, type JobRecord, type TenderRecord, type ApplicationRecord } from '@/lib/api';
+import { jobsAPI, tendersAPI, applicationsAPI, companiesAPI, type JobRecord, type TenderRecord, type ApplicationRecord } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 
@@ -67,47 +67,83 @@ const CompanyDashboard = () => {
     },
   ];
 
-  const { data: jobs = [], isLoading: jobsLoading } = useQuery<JobRecord[]>({
-    queryKey: ['company-jobs', user?.companyId],
+  // Get company ID from user
+  const companyId = user?.company_id || user?.companyId;
+
+  // Get my companies first to find the company ID
+  const { data: myCompanies = [] } = useQuery({
+    queryKey: ['my-companies'],
     queryFn: async () => {
-      if (!user?.companyId) return [];
       try {
-        return await jobsAPI.getAll();
+        return await companiesAPI.getMy();
       } catch {
         return [];
       }
     },
-    enabled: !!user?.companyId,
   });
 
-  const { data: allTenders = [], isLoading: tendersLoading } = useQuery<TenderRecord[]>({
-    queryKey: ['company-tenders', user?.companyId],
+  const effectiveCompanyId = companyId || myCompanies[0]?.id;
+
+  const { data: jobsData, isLoading: jobsLoading } = useQuery({
+    queryKey: ['company-jobs', effectiveCompanyId],
     queryFn: async () => {
-      if (!user?.companyId) return [];
+      if (!effectiveCompanyId) return [];
+      try {
+        // Use the company-specific endpoint
+        return await jobsAPI.getByCompany(effectiveCompanyId);
+      } catch {
+        // Fallback to getAll and filter
+        try {
+          const all = await jobsAPI.getAll();
+          const result = Array.isArray(all) ? all : all.data || [];
+          return result.filter((job: JobRecord) => job.company_id === effectiveCompanyId);
+        } catch {
+          return [];
+        }
+      }
+    },
+    enabled: !!effectiveCompanyId,
+  });
+
+  const jobs: JobRecord[] = Array.isArray(jobsData) ? jobsData : [];
+
+  const { data: allTenders = [], isLoading: tendersLoading } = useQuery<TenderRecord[]>({
+    queryKey: ['company-tenders', effectiveCompanyId],
+    queryFn: async () => {
+      if (!effectiveCompanyId) return [];
       try {
         const all = await tendersAPI.getAll();
-        // Filter tenders by companyId (client-side filtering as fallback)
-        return all.filter(tender => tender.companyId === user?.companyId);
+        const result = Array.isArray(all) ? all : all.data || [];
+        // Filter tenders by company_id
+        return result.filter((tender: TenderRecord) => tender.company_id === effectiveCompanyId);
       } catch {
         return [];
       }
     },
-    enabled: !!user?.companyId,
+    enabled: !!effectiveCompanyId,
   });
 
   const tenders = allTenders;
 
   const { data: applications = [], isLoading: appsLoading } = useQuery<ApplicationRecord[]>({
-    queryKey: ['company-applications', user?.companyId],
+    queryKey: ['company-applications', effectiveCompanyId],
     queryFn: async () => {
-      if (!user?.companyId) return [];
+      if (!effectiveCompanyId) return [];
       try {
-        return await applicationsAPI.getAll();
+        const all = await applicationsAPI.getAll();
+        const result = Array.isArray(all) ? all : all.data || [];
+        // Filter applications for jobs/tenders belonging to this company
+        const companyJobIds = jobs.map(j => j.id);
+        const companyTenderIds = tenders.map(t => t.id);
+        return result.filter((app: ApplicationRecord) => 
+          (app.job_id && companyJobIds.includes(app.job_id)) ||
+          (app.tender_id && companyTenderIds.includes(app.tender_id))
+        );
       } catch {
         return [];
       }
     },
-    enabled: !!user?.companyId,
+    enabled: !!effectiveCompanyId && jobs.length > 0,
   });
 
   const activeJobs = jobs.filter(job => job.status === 'open').length;
@@ -330,7 +366,7 @@ const CompanyDashboard = () => {
                               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                                 <span className="flex items-center gap-1">
                                   <Calendar className="w-3 h-3" />
-                                  {new Date(job.createdAt).toLocaleDateString()}
+                                  {new Date(job.created_at || job.createdAt).toLocaleDateString()}
                                 </span>
                                 <span className="flex items-center gap-1">
                                   <MapPin className="w-3 h-3" />
@@ -464,7 +500,7 @@ const CompanyDashboard = () => {
                                 <p className="font-semibold text-sm mb-1">Application #{application.id.slice(0, 8)}</p>
                                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                                   <Calendar className="w-3 h-3" />
-                                  Applied on {new Date(application.createdAt).toLocaleDateString()}
+                                    Applied on {new Date(application.created_at || application.createdAt).toLocaleDateString()}
                                 </p>
                               </div>
                             </div>
@@ -522,11 +558,16 @@ const CompanyDashboard = () => {
                                     </div>
                                     <div className="flex items-center gap-1.5 text-sm">
                                       <Calendar className="w-4 h-4 text-muted-foreground" />
-                                      <span>Posted {new Date(job.createdAt).toLocaleDateString()}</span>
+                                      <span>Posted {new Date(job.created_at || job.createdAt).toLocaleDateString()}</span>
                                     </div>
-                                    {job.salary && (
+                                    {(job.salary_min || job.salary_max) && (
                                       <div className="flex items-center gap-1.5 text-sm font-medium text-primary">
-                                        {job.salary}
+                                        {job.salary_min && job.salary_max 
+                                          ? `$${job.salary_min.toLocaleString()} - $${job.salary_max.toLocaleString()}`
+                                          : job.salary_min 
+                                          ? `From $${job.salary_min.toLocaleString()}`
+                                          : `Up to $${job.salary_max?.toLocaleString()}`
+                                        }
                                       </div>
                                     )}
                                   </div>
@@ -706,7 +747,7 @@ const CompanyDashboard = () => {
                                   <CardDescription className="flex items-center gap-2">
                                     <span className="flex items-center gap-1">
                                       <Calendar className="w-3 h-3" />
-                                      Applied on {new Date(application.createdAt).toLocaleDateString()}
+                                      Applied on {new Date(application.created_at || application.createdAt).toLocaleDateString()}
                                     </span>
                                   </CardDescription>
                                 </div>

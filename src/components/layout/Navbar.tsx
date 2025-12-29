@@ -20,7 +20,8 @@ import {
   User,
   Building2,
   LogOut,
-  LayoutDashboard
+  LayoutDashboard,
+  Zap
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +37,7 @@ export function Navbar() {
     { name: t('nav.jobs'), href: "/jobs", icon: Briefcase },
     { name: t('nav.tenders'), href: "/tenders", icon: FileText },
     { name: t('nav.about'), href: "/about", icon: Building2 },
+    { name: t('nav.pricing'), href: "/pricing", icon: Zap },
   ];
 
   const handleLogout = () => {

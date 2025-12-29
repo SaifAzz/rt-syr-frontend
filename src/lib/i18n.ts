@@ -10,6 +10,7 @@ const resources = {
         jobs: "Jobs",
         tenders: "Tenders",
         about: "About",
+        pricing: "Pricing",
         signIn: "Sign In",
         getStarted: "Get Started",
         dashboard: "Dashboard",
@@ -302,6 +303,105 @@ const resources = {
         title: "About Us",
         subtitle: "Learn more about RT-SYR",
       },
+      // Pricing Page
+      pricing: {
+        hero: {
+          badge: "Simple, Transparent Pricing",
+          title: "Choose the Right Plan for You",
+          subtitle: "Whether you're a job seeker, company, or organization, we have a plan that fits your needs. All plans include our core features with no hidden fees.",
+          benefit1: "No hidden fees",
+          benefit2: "Cancel anytime",
+          benefit3: "30-day money-back guarantee",
+        },
+        jobSeeker: {
+          name: "Job Seeker",
+          description: "Perfect for individuals looking for employment opportunities",
+          price: "Free",
+          period: "",
+          feature1: "Unlimited job applications",
+          feature2: "Resume upload and management",
+          feature3: "Application tracking",
+          feature4: "Job alerts and notifications",
+          feature5: "Access to all job listings",
+          cta: "Get Started Free",
+        },
+        company: {
+          name: "Company",
+          description: "Ideal for businesses looking to hire talent",
+          price: "$29",
+          period: "month",
+          badge: "Most Popular",
+          feature1: "2 free job posts per month",
+          feature2: "Unlimited applications received",
+          feature3: "Advanced application management",
+          feature4: "Company profile with verified badge",
+          feature5: "Analytics and insights",
+          feature6: "Priority customer support",
+          cta: "Start Hiring",
+        },
+        organization: {
+          name: "Organization",
+          description: "Best for organizations managing tenders and contracts",
+          price: "$49",
+          period: "month",
+          feature1: "2 free tender posts per month",
+          feature2: "Unlimited proposals received",
+          feature3: "Tender management dashboard",
+          feature4: "Organization profile with verified badge",
+          feature5: "Team collaboration tools",
+          feature6: "Advanced analytics and reporting",
+          cta: "Start Posting",
+        },
+        comparison: {
+          title: "Feature Comparison",
+          subtitle: "See what's included in each plan",
+          feature: "Feature",
+          jobSeeker: "Job Seeker",
+          company: "Company",
+          organization: "Organization",
+          row1: {
+            feature: "Job applications",
+          },
+          row2: {
+            feature: "Resume management",
+          },
+          row3: {
+            feature: "Post jobs",
+          },
+          row4: {
+            feature: "Post tenders",
+          },
+          row5: {
+            feature: "Team collaboration",
+          },
+        },
+        faq: {
+          title: "Frequently Asked Questions",
+          subtitle: "Everything you need to know about our pricing",
+          faq1: {
+            question: "Are there any fees for job seekers?",
+            answer: "No, job seekers can use all features completely free. There are no application fees, subscription fees, or hidden charges.",
+          },
+          faq2: {
+            question: "What happens if I exceed my free posts?",
+            answer: "If you need to post more jobs or tenders than your plan includes, you can purchase additional posts at a discounted rate. Contact our support team for details.",
+          },
+          faq3: {
+            question: "Can I change my plan later?",
+            answer: "Yes, you can upgrade or downgrade your plan at any time. Changes will be reflected in your next billing cycle.",
+          },
+          faq4: {
+            question: "Do you offer refunds?",
+            answer: "Yes, we offer a 30-day money-back guarantee. If you're not satisfied with our service, contact us for a full refund.",
+          },
+        },
+        cta: {
+          title: "Ready to Get Started?",
+          subtitle: "Join thousands of Syrians who have found success through RT-SYR. Create your free account today and start your journey.",
+          button: "Create Free Account",
+          learnMore: "Learn More",
+        },
+      },
       // Logo
       logo: {
         tagline: "Recruitments & Tenders",
@@ -315,6 +415,7 @@ const resources = {
         jobs: "وظائف",
         tenders: "مناقصات",
         about: "من نحن",
+        pricing: "الأسعار",
         signIn: "تسجيل الدخول",
         getStarted: "ابدأ الآن",
         dashboard: "لوحة التحكم",
@@ -606,6 +707,105 @@ const resources = {
       about: {
         title: "من نحن",
         subtitle: "اعرف المزيد عن RT-SYR",
+      },
+      // Pricing Page
+      pricing: {
+        hero: {
+          badge: "أسعار بسيطة وشفافة",
+          title: "اختر الخطة المناسبة لك",
+          subtitle: "سواء كنت باحثًا عن عمل، أو شركة، أو منظمة، لدينا خطة تناسب احتياجاتك. جميع الخطط تتضمن ميزاتنا الأساسية بدون رسوم خفية.",
+          benefit1: "بدون رسوم خفية",
+          benefit2: "إلغاء في أي وقت",
+          benefit3: "ضمان استرداد الأموال لمدة 30 يومًا",
+        },
+        jobSeeker: {
+          name: "باحث عن عمل",
+          description: "مثالي للأفراد الباحثين عن فرص العمل",
+          price: "مجاني",
+          period: "",
+          feature1: "طلبات وظائف غير محدودة",
+          feature2: "رفع وإدارة السيرة الذاتية",
+          feature3: "تتبع الطلبات",
+          feature4: "تنبيهات وإشعارات الوظائف",
+          feature5: "الوصول إلى جميع قوائم الوظائف",
+          cta: "ابدأ مجانًا",
+        },
+        company: {
+          name: "شركة",
+          description: "مثالي للشركات التي تبحث عن توظيف المواهب",
+          price: "$29",
+          period: "شهر",
+          badge: "الأكثر شعبية",
+          feature1: "منشوران وظيفيان مجانيان شهريًا",
+          feature2: "طلبات غير محدودة مستلمة",
+          feature3: "إدارة متقدمة للطلبات",
+          feature4: "ملف شركة مع شارة موثوقة",
+          feature5: "التحليلات والرؤى",
+          feature6: "دعم عملاء ذو أولوية",
+          cta: "ابدأ التوظيف",
+        },
+        organization: {
+          name: "منظمة",
+          description: "الأفضل للمنظمات التي تدير المناقصات والعقود",
+          price: "$49",
+          period: "شهر",
+          feature1: "منشوران مناقصيان مجانيان شهريًا",
+          feature2: "عروض غير محدودة مستلمة",
+          feature3: "لوحة تحكم إدارة المناقصات",
+          feature4: "ملف منظمة مع شارة موثوقة",
+          feature5: "أدوات التعاون الجماعي",
+          feature6: "تحليلات وتقارير متقدمة",
+          cta: "ابدأ النشر",
+        },
+        comparison: {
+          title: "مقارنة الميزات",
+          subtitle: "اطلع على ما هو متضمن في كل خطة",
+          feature: "الميزة",
+          jobSeeker: "باحث عن عمل",
+          company: "شركة",
+          organization: "منظمة",
+          row1: {
+            feature: "طلبات الوظائف",
+          },
+          row2: {
+            feature: "إدارة السيرة الذاتية",
+          },
+          row3: {
+            feature: "نشر الوظائف",
+          },
+          row4: {
+            feature: "نشر المناقصات",
+          },
+          row5: {
+            feature: "التعاون الجماعي",
+          },
+        },
+        faq: {
+          title: "الأسئلة الشائعة",
+          subtitle: "كل ما تحتاج معرفته عن أسعارنا",
+          faq1: {
+            question: "هل توجد رسوم للباحثين عن عمل؟",
+            answer: "لا، يمكن للباحثين عن عمل استخدام جميع الميزات مجانًا تمامًا. لا توجد رسوم طلبات، أو رسوم اشتراك، أو رسوم خفية.",
+          },
+          faq2: {
+            question: "ماذا يحدث إذا تجاوزت منشوراتي المجانية؟",
+            answer: "إذا كنت بحاجة إلى نشر المزيد من الوظائف أو المناقصات أكثر مما تتضمنه خطتك، يمكنك شراء منشورات إضافية بسعر مخفض. اتصل بفريق الدعم للحصول على التفاصيل.",
+          },
+          faq3: {
+            question: "هل يمكنني تغيير خطتي لاحقًا؟",
+            answer: "نعم، يمكنك ترقية أو تخفيض خطتك في أي وقت. ستظهر التغييرات في دورة الفوترة التالية.",
+          },
+          faq4: {
+            question: "هل تقدمون استرداد الأموال؟",
+            answer: "نعم، نقدم ضمان استرداد الأموال لمدة 30 يومًا. إذا لم تكن راضيًا عن خدمتنا، اتصل بنا للحصول على استرداد كامل.",
+          },
+        },
+        cta: {
+          title: "هل أنت مستعد للبدء؟",
+          subtitle: "انضم إلى آلاف السوريين الذين حققوا النجاح من خلال RT-SYR. أنشئ حسابك المجاني اليوم وابدأ رحلتك.",
+          button: "إنشاء حساب مجاني",
+          learnMore: "اعرف المزيد",
+        },
       },
       // Logo
       logo: {

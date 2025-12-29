@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -15,18 +15,31 @@ const VerifyEmail = () => {
   const { t } = useTranslation();
   const { user, verifyEmail, resendVerificationCode } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  if (!user) {
-    navigate('/login');
-    return null;
+  useEffect(() => {
+    // Get userId from URL params or user object
+    const paramUserId = searchParams.get('userId');
+    if (paramUserId) {
+      setUserId(paramUserId);
+    } else if (user?.id) {
+      setUserId(user.id);
+    } else {
+      navigate('/login');
+    }
+  }, [searchParams, user, navigate]);
+
+  if (!userId) {
+    return null; // Will navigate in useEffect
   }
 
-  if (user.emailVerified) {
+  if (user && (user.email_verified || user.emailVerified)) {
     navigate('/dashboard');
     return null;
   }
@@ -37,8 +50,18 @@ const VerifyEmail = () => {
     setLoading(true);
 
     try {
-      await verifyEmail(code);
+      if (!userId) {
+        setError('User ID not found');
+        return;
+      }
+
+      const result = await verifyEmail(userId, code);
+      
+      // After verification, we get tokens - fetch user profile or update user
+      // The verifyEmail function in AuthContext should handle this
       setSuccess(true);
+      
+      // Navigate to dashboard after successful verification
       setTimeout(() => {
         navigate('/dashboard');
       }, 2000);
@@ -50,10 +73,15 @@ const VerifyEmail = () => {
   };
 
   const handleResend = async () => {
+    if (!userId) {
+      setError('User ID not found');
+      return;
+    }
+
     setResending(true);
     setError('');
     try {
-      await resendVerificationCode();
+      await resendVerificationCode(userId);
       setSuccess(true);
     } catch (err: any) {
       setError('Failed to resend code. Please try again.');

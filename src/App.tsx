@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Jobs from "./pages/Jobs";
 import Tenders from "./pages/Tenders";
 import About from "./pages/About";
+import Pricing from "./pages/Pricing";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import VerifyEmail from "./pages/VerifyEmail";
@@ -38,6 +39,7 @@ const App = () => (
               <Route path="/jobs" element={<Jobs />} />
               <Route path="/tenders" element={<Tenders />} />
               <Route path="/about" element={<About />} />
+              <Route path="/pricing" element={<Pricing />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route

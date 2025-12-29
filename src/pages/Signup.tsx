@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
-import { UserPlus, Mail, Lock, User, Building2, Briefcase, AlertCircle } from 'lucide-react';
+import { UserPlus, Mail, Lock, User, Building2, Briefcase, AlertCircle, Phone } from 'lucide-react';
 import type { UserType } from '@/contexts/AuthContext';
 
 const Signup = () => {
@@ -21,7 +21,8 @@ const Signup = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [name, setName] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
   const [userType, setUserType] = useState<UserType>(
     (searchParams.get('type') as UserType) || 'job_seeker'
   );
@@ -45,8 +46,43 @@ const Signup = () => {
     setLoading(true);
 
     try {
-      await signup(email, password, name, userType);
-      navigate('/verify-email');
+      // Map userType to role: job_seeker -> user, others stay the same
+      const role = userType === 'job_seeker' ? 'user' : userType;
+      
+      // Call signup API
+      const result = await signup(email, password, fullName, phone, role);
+      
+      // If company or organization, auto-create the profile
+      if (userType === 'company' || userType === 'organization') {
+        try {
+          const { companiesAPI, organizationsAPI } = await import('@/lib/api');
+          
+          if (userType === 'company') {
+            await companiesAPI.create({
+              name: fullName,
+              description: '',
+              location: '',
+              user_id: result.userId,
+              status: 'pending',
+            });
+          } else if (userType === 'organization') {
+            await organizationsAPI.create({
+              name: fullName,
+              description: '',
+              location: '',
+              user_id: result.userId,
+              status: 'pending',
+            });
+          }
+        } catch (createError: any) {
+          // If company/org creation fails, still proceed with verification
+          console.error('Failed to create company/organization:', createError);
+          // Don't throw - user can create it later
+        }
+      }
+      
+      // Navigate to verify-email with userId
+      navigate(`/verify-email?userId=${result.userId}`);
     } catch (err: any) {
       setError(err.message || 'Failed to create account. Please try again.');
     } finally {
@@ -116,7 +152,7 @@ const Signup = () => {
                   </RadioGroup>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="name">
+                  <Label htmlFor="fullName">
                     {userType === 'company'
                       ? t('auth.companyName')
                       : userType === 'organization'
@@ -126,7 +162,7 @@ const Signup = () => {
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
-                      id="name"
+                      id="fullName"
                       type="text"
                       placeholder={
                         userType === 'company'
@@ -135,8 +171,23 @@ const Signup = () => {
                           ? 'Organization Name'
                           : 'Full Name'
                       }
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">{t('auth.phone')}</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="+1234567890"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
                       className="pl-10"
                       required
                     />
