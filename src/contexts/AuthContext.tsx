@@ -108,7 +108,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         let userName = 'Test User';
         let emailVerified = true;
 
-        if (email === 'rt@admin.com') {
+        if (email === 'admin@admin.com') {
           userRole = 'admin';
           userName = 'Admin User';
         } else if (email.includes('@company.')) {

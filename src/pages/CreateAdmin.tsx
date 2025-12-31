@@ -7,15 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { authAPI } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 import { Shield, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 const CreateAdmin = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('rt@admin.com');
-  const [password, setPassword] = useState('P@ss0rd$$');
+  const { signup } = useAuth();
+  const [email, setEmail] = useState('admin@admin.com');
+  const [password, setPassword] = useState('P@ss0rd!!');
   const [name, setName] = useState('Admin User');
+  const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -27,22 +29,13 @@ const CreateAdmin = () => {
     setLoading(true);
 
     try {
-      const result = await authAPI.signup(email, password, name, 'admin');
-      
-      // Auto-verify admin email for convenience
-      if (result.user) {
-        const verifiedUser = { ...result.user, emailVerified: true };
-        localStorage.setItem('user', JSON.stringify(verifiedUser));
-        // Update the result user to be verified
-        result.user = verifiedUser;
-      }
+      await signup(email, password, name, phone || '+1234567890', 'admin');
 
       setSuccess(true);
       toast.success('Admin user created successfully!');
-      
+
       // Auto-login the admin user
       setTimeout(() => {
-        localStorage.setItem('user', JSON.stringify(result.user));
         navigate('/dashboard/admin');
       }, 2000);
     } catch (err: any) {
@@ -109,6 +102,16 @@ const CreateAdmin = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone (Optional)</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="+1234567890"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">

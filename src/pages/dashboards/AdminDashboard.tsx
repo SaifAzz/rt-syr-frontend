@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -486,7 +485,7 @@ const AdminDashboard = () => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 w-full">
         <div className="flex w-full">
           {/* Sidebar */}
           <Sidebar variant="inset" className="border-r bg-white">
@@ -567,8 +566,8 @@ const AdminDashboard = () => {
           </Sidebar>
 
           {/* Main Content */}
-          <main className="flex-1 pt-8 pb-16 min-h-screen bg-background">
-            <div className="container mx-auto px-4 lg:px-8 max-w-7xl">
+          <main className="flex-1 pt-8 pb-16 min-h-screen bg-background min-w-0">
+            <div className="w-full px-4 lg:px-8 max-w-full">
               {/* Header with sidebar toggle */}
               <div className="mb-8">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
@@ -1677,7 +1676,6 @@ const AdminDashboard = () => {
             </div>
           </main>
         </div>
-        <Footer />
       </div>
     </SidebarProvider>
   );
