@@ -260,6 +260,7 @@ const resources = {
         termsOfService: "Terms of Service",
         neverCharge: "We never charge applicants for jobs or tenders",
         copyright: "All rights reserved.",
+        legalText: "RT-SYR is an independent platform and does not represent any government, donor, or organization.",
       },
       // Jobs Page
       jobs: {
@@ -302,6 +303,176 @@ const resources = {
       about: {
         title: "About Us",
         subtitle: "Learn more about RT-SYR",
+        whoAreWe: {
+          title: "Who Are We",
+          paragraph1: "RT-SYR is a specialized digital platform dedicated to supporting the humanitarian, development, and private sectors operating in and for Syria. We provide a centralized, transparent, and accessible space for publishing and accessing job opportunities, consultancy assignments, tenders, and professional announcements.",
+          paragraph2: "Our platform is designed to bridge the gap between organizations and qualified professionals by simplifying access to opportunities, enhancing visibility, and promoting fair and transparent engagement across sectors.",
+          paragraph3: "RT-SYR serves national and international NGOs, UN agencies, donors, private companies, and individual professionals seeking reliable, up-to-date opportunities related to Syria.",
+        },
+        vision: {
+          title: "Our Vision",
+          description: "To become the leading and most trusted digital platform for professional opportunities related to Syria, contributing to inclusive economic recovery, strengthened local capacities, and sustainable development through transparent access to information.",
+        },
+        mission: {
+          title: "Our Mission",
+          description: "Our mission is to facilitate equitable access to employment and procurement opportunities by providing a reliable, user-friendly platform that connects organizations with qualified individuals and service providers.",
+          aimTitle: "We aim to:",
+          aim1: "Support organizations in reaching a wider and more diverse pool of talent and vendors",
+          aim2: "Empower professionals by improving access to verified opportunities",
+          aim3: "Promote transparency, accountability, and efficiency in recruitment and tendering processes",
+          aim4: "Strengthen local participation and professional growth within Syria and the Syrian context",
+        },
+        values: {
+          title: "Our Values",
+          subtitle: "The principles that guide everything we do at RT-SYR.",
+          transparency: {
+            title: "Transparency",
+            description: "We are committed to clear, accurate, and openly accessible information, ensuring trust between organizations and users.",
+          },
+          integrity: {
+            title: "Integrity",
+            description: "We uphold high ethical standards and strive to maintain a professional, impartial, and credible platform.",
+          },
+          inclusivity: {
+            title: "Inclusivity",
+            description: "We believe in equal access to opportunities regardless of background, gender, location, or affiliation.",
+          },
+          reliability: {
+            title: "Reliability",
+            description: "We prioritize accuracy, consistency, and timely updates to ensure users can depend on the information we provide.",
+          },
+          impactDriven: {
+            title: "Impact-Driven",
+            description: "We focus on creating tangible value by supporting employment, professional development, and effective program implementation.",
+          },
+        },
+        publishingPolicy: {
+          title: "Publishing Policy",
+          introduction: "RT-SYR is committed to maintaining a professional, transparent, and trustworthy platform. All content published on the platform is subject to the following principles:",
+          eligibility: {
+            title: "Eligibility of Content",
+            subtitle: "RT-SYR accepts the publication of:",
+            item1: "Job vacancies and recruitment announcements",
+            item2: "Consultancy opportunities",
+            item3: "Tenders and procurement notices",
+            item4: "Professional calls and sector-related announcements",
+            note: "All content must be directly relevant to Syria or the Syrian context.",
+          },
+          contentStandards: {
+            title: "Content Standards",
+            subtitle: "All published content must:",
+            item1: "Be accurate, clear, and truthful",
+            item2: "Include sufficient information (scope, deadlines, eligibility, contact details)",
+            item3: "Respect professional, ethical, and non-discriminatory standards",
+            item4: "Not include misleading, fraudulent, political, military, or hate-related content",
+            note: "RT-SYR reserves the right to review, edit, reject, or remove any content that does not comply with these standards.",
+          },
+          responsibility: {
+            title: "Responsibility",
+            paragraph1: "The publishing entity bears full responsibility for the accuracy, legality, and legitimacy of the content submitted.",
+            paragraph2: "RT-SYR does not guarantee outcomes related to recruitment, contracting, or selection processes.",
+          },
+        },
+        codeOfConduct: {
+          title: "Code of Conduct",
+          introduction: "RT-SYR expects all users and publishing entities to adhere to the following standards:",
+          item1: "Act with professionalism, honesty, and respect",
+          item2: "Refrain from discrimination, harassment, or exploitation",
+          item3: "Ensure fair and ethical recruitment and procurement practices",
+          item4: "Avoid conflicts of interest or misuse of platform services",
+          violation: "Violation of this Code may result in content removal or account suspension.",
+        },
+        privacyPolicy: {
+          title: "Privacy Policy",
+          introduction: "RT-SYR is committed to protecting the privacy and personal data of its users.",
+          informationWeCollect: {
+            title: "Information We Collect",
+            subtitle: "RT-SYR may collect limited personal information including:",
+            item1: "Name, email address, and contact details",
+            item2: "Professional profile information voluntarily provided",
+            item3: "Technical data such as IP address and browser type for security and analytics purposes",
+          },
+          useOfInformation: {
+            title: "Use of Information",
+            subtitle: "Collected information is used solely to:",
+            item1: "Provide and improve platform services",
+            item2: "Facilitate access to published opportunities",
+            item3: "Communicate important platform-related updates",
+            item4: "Ensure platform security and prevent misuse",
+            note: "RT-SYR does not sell, trade, or share personal data with third parties for commercial purposes.",
+          },
+          dataProtection: {
+            title: "Data Protection",
+            description: "RT-SYR applies reasonable technical and organizational measures to protect user data against unauthorized access, misuse, or disclosure.",
+          },
+          userRights: {
+            title: "User Rights",
+            description: "Users may request access to, correction of, or deletion of their personal data by contacting RT-SYR through the official platform channels.",
+          },
+        },
+        disclaimer: {
+          title: "Disclaimer",
+          paragraph1: "RT-SYR is an independent digital platform that publishes information provided by third parties.",
+          paragraph2: "RT-SYR does not verify, endorse, or guarantee the legitimacy, accuracy, or outcomes of any opportunity published.",
+          paragraph3: "All recruitment, contracting, and procurement processes are conducted independently by the publishing entities.",
+          paragraph4: "RT-SYR bears no responsibility for financial loss, fraud, disputes, or damages resulting from user interactions.",
+          paragraph5: "Users are advised to exercise due diligence before applying or engaging.",
+        },
+        antiFraud: {
+          title: "Anti-Fraud & Scam Warning",
+          subtitle: "RT-SYR will never:",
+          item1: "Request payment or fees for job applications",
+          item2: "Ask for banking, financial, or confidential documents",
+          item3: "Act as an intermediary for payments or contracts",
+          warning: "Any request of this nature should be treated as potential fraud and reported immediately",
+        },
+        verificationSystem: {
+          title: "Verification System Policy",
+          introduction: "RT-SYR applies a verification framework to enhance credibility and user confidence.",
+          labels: {
+            title: "Verification Labels",
+            subtitle: "RT-SYR may assign verification badges such as:",
+            item1: "Verified NGO",
+            item2: "Verified UN / INGO",
+            item3: "Verified Private Company",
+            item4: "Verified Individual Consultant",
+            note: "Verification is based on submitted documentation, public records, and professional references where applicable.",
+          },
+          limitations: {
+            title: "Limitations",
+            item1: "Verification confirms the identity of the publishing entity only.",
+            item2: "It does not constitute endorsement, partnership, or guarantee of performance.",
+            item3: "RT-SYR reserves the right to revoke verification status at any time.",
+          },
+        },
+        paidServices: {
+          title: "Paid Services Policy",
+          introduction: "RT-SYR may introduce optional paid services to support platform sustainability, including:",
+          item1: "Featured listings",
+          item2: "Priority visibility",
+          item3: "Verification processing services",
+          note1: "Basic access to job seekers will remain free of charge.",
+          note2: "RT-SYR will never charge fees for applying to jobs or tenders.",
+        },
+        faq: {
+          title: "FAQ – Frequently Asked Questions",
+          q1: {
+            question: "Does RT-SYR recruit or hire staff?",
+            answer: "No. RT-SYR only publishes opportunities.",
+          },
+          q2: {
+            question: "Is RT-SYR affiliated with donors or governments?",
+            answer: "No. RT-SYR is an independent platform.",
+          },
+          q3: {
+            question: "Are all postings verified?",
+            answer: "RT-SYR applies moderation but users must conduct due diligence.",
+          },
+          q4: {
+            question: "Does RT-SYR charge job seekers?",
+            answer: "Never.",
+          },
+        },
       },
       // Pricing Page
       pricing: {
@@ -665,6 +836,7 @@ const resources = {
         termsOfService: "شروط الخدمة",
         neverCharge: "لا نطلب رسومًا من المتقدمين للوظائف أو المناقصات أبدًا",
         copyright: "جميع الحقوق محفوظة.",
+        legalText: "RT-SYR منصة مستقلة ولا تمثل أي جهة حكومية أو مانحة أو تنظيمية",
       },
       // Jobs Page
       jobs: {
@@ -707,6 +879,176 @@ const resources = {
       about: {
         title: "من نحن",
         subtitle: "اعرف المزيد عن RT-SYR",
+        whoAreWe: {
+          title: "من نحن",
+          paragraph1: "RT-SYR هي منصة رقمية متخصصة تهدف إلى دعم القطاعات الإنسانية والتنموية والقطاع الخاص العاملة في سوريا أو المرتبطة بالسياق السوري. توفر المنصة مساحة مركزية، شفافة، وسهلة الوصول لنشر واستعراض فرص العمل، والاستشارات، والمناقصات، والإعلانات المهنية.",
+          paragraph2: "تم تصميم RT-SYR لسد الفجوة بين المؤسسات والمهنيين المؤهلين من خلال تسهيل الوصول إلى الفرص، وتعزيز الشفافية، ودعم الممارسات المهنية العادلة عبر مختلف القطاعات.",
+          paragraph3: "تخدم المنصة المنظمات غير الحكومية الوطنية والدولية، ووكالات الأمم المتحدة، والجهات المانحة، والشركات الخاصة، إضافة إلى المهنيين والأفراد الباحثين عن فرص موثوقة ومحدثة تتعلق بسوريا.",
+        },
+        vision: {
+          title: "رؤيتنا",
+          description: "أن نكون المنصة الرقمية الرائدة والأكثر موثوقية للفرص المهنية المتعلقة بسوريا، وأن نُسهم في التعافي الاقتصادي الشامل، وتعزيز القدرات المحلية، ودعم التنمية المستدامة من خلال إتاحة المعلومات بشكل شفاف ومنصف.",
+        },
+        mission: {
+          title: "رسالتنا",
+          description: "تتمثل رسالتنا في تسهيل الوصول العادل إلى فرص العمل والتعاقد من خلال منصة موثوقة وسهلة الاستخدام تربط المؤسسات بالمهنيين ومقدمي الخدمات المؤهلين.",
+          aimTitle: "ونسعى إلى:",
+          aim1: "دعم المؤسسات في الوصول إلى قاعدة أوسع وأكثر تنوعًا من الكفاءات والموردين",
+          aim2: "تمكين الأفراد من خلال تحسين الوصول إلى فرص موثوقة ومُتحقق منها",
+          aim3: "تعزيز الشفافية والمساءلة والكفاءة في عمليات التوظيف والمناقصات",
+          aim4: "تقوية المشاركة المحلية والنمو المهني ضمن السياق السوري",
+        },
+        values: {
+          title: "قيمنا",
+          subtitle: "المبادئ التي توجه كل ما نقوم به في RT-SYR.",
+          transparency: {
+            title: "الشفافية",
+            description: "نلتزم بتوفير معلومات واضحة، دقيقة، ومتاحة للجميع، بما يعزز الثقة بين جميع الأطراف.",
+          },
+          integrity: {
+            title: "النزاهة",
+            description: "نتمسك بأعلى المعايير الأخلاقية ونعمل باستقلالية وحياد ومهنية.",
+          },
+          inclusivity: {
+            title: "الشمولية",
+            description: "نؤمن بحق الجميع في الوصول المتكافئ إلى الفرص بغض النظر عن الجنس أو الموقع أو الخلفية.",
+          },
+          reliability: {
+            title: "الموثوقية",
+            description: "نحرص على الدقة والاستمرارية والتحديث المنتظم للمحتوى.",
+          },
+          impactDriven: {
+            title: "الأثر",
+            description: "نركز على إحداث قيمة حقيقية من خلال دعم التوظيف، وبناء القدرات، وتحسين تنفيذ البرامج.",
+          },
+        },
+        publishingPolicy: {
+          title: "سياسة النشر",
+          introduction: "تلتزم منصة RT-SYR بتوفير بيئة مهنية، شفافة، وموثوقة. تخضع جميع المواد المنشورة على المنصة للمبادئ التالية:",
+          eligibility: {
+            title: "نوعية المحتوى المقبول",
+            subtitle: "تقبل المنصة نشر:",
+            item1: "فرص العمل والإعلانات الوظيفية",
+            item2: "فرص الاستشارات",
+            item3: "المناقصات وإعلانات الشراء",
+            item4: "الإعلانات المهنية المرتبطة بالقطاعات الإنسانية والتنموية والاقتصادية",
+            note: "ويشترط أن يكون المحتوى مرتبطًا بسوريا أو بالسياق السوري.",
+          },
+          contentStandards: {
+            title: "معايير المحتوى",
+            subtitle: "يجب أن:",
+            item1: "يكون المحتوى دقيقًا وواضحًا وصحيحًا",
+            item2: "يتضمن معلومات كافية (النطاق، المواعيد النهائية، شروط التقديم، وسائل التواصل)",
+            item3: "يلتزم بالمعايير المهنية والأخلاقية وعدم التمييز",
+            item4: "يخلو من أي محتوى مضلل أو احتيالي أو سياسي أو عسكري أو تحريضي",
+            note: "تحتفظ RT-SYR بحق مراجعة أو تعديل أو رفض أو إزالة أي محتوى غير متوافق مع هذه السياسة.",
+          },
+          responsibility: {
+            title: "المسؤولية",
+            paragraph1: "تتحمل الجهة الناشرة المسؤولية الكاملة عن صحة وقانونية المحتوى المنشور.",
+            paragraph2: "ولا تتحمل RT-SYR أي مسؤولية عن نتائج عمليات التوظيف أو التعاقد.",
+          },
+        },
+        codeOfConduct: {
+          title: "مدونة السلوك",
+          introduction: "تلتزم جميع الجهات والمستخدمين على منصة RT-SYR بما يلي:",
+          item1: "الالتزام بالمهنية والنزاهة والاحترام",
+          item2: "الامتناع عن أي شكل من أشكال التمييز أو الاستغلال",
+          item3: "الالتزام بممارسات عادلة وأخلاقية في التوظيف والتعاقد",
+          item4: "تجنب تعارض المصالح أو إساءة استخدام المنصة",
+          violation: "ويؤدي أي خرق لهذه المدونة إلى اتخاذ إجراءات مناسبة، بما فيها حذف المحتوى أو تعليق الحساب.",
+        },
+        privacyPolicy: {
+          title: "سياسة الخصوصية",
+          introduction: "تلتزم منصة RT-SYR بحماية خصوصية المستخدمين وبياناتهم الشخصية.",
+          informationWeCollect: {
+            title: "البيانات التي نجمعها",
+            subtitle: "قد تقوم RT-SYR بجمع بيانات محدودة تشمل:",
+            item1: "الاسم، البريد الإلكتروني، وبيانات التواصل",
+            item2: "المعلومات المهنية التي يختار المستخدم إدخالها",
+            item3: "بيانات تقنية لأغراض الحماية والتحليل (مثل عنوان IP)",
+          },
+          useOfInformation: {
+            title: "استخدام البيانات",
+            subtitle: "تُستخدم البيانات حصريًا من أجل:",
+            item1: "تشغيل وتحسين خدمات المنصة",
+            item2: "تمكين الوصول إلى الفرص المنشورة",
+            item3: "التواصل بشأن التحديثات المهمة",
+            item4: "حماية المنصة ومنع إساءة الاستخدام",
+            note: "لا تقوم RT-SYR ببيع أو مشاركة البيانات الشخصية لأغراض تجارية.",
+          },
+          dataProtection: {
+            title: "حماية البيانات",
+            description: "تطبق RT-SYR إجراءات تقنية وتنظيمية مناسبة لحماية البيانات من الوصول غير المصرح به.",
+          },
+          userRights: {
+            title: "حقوق المستخدم",
+            description: "يحق للمستخدم طلب الوصول إلى بياناته أو تعديلها أو حذفها عبر القنوات الرسمية للمنصة.",
+          },
+        },
+        disclaimer: {
+          title: "إخلاء المسؤولية",
+          paragraph1: "RT-SYR منصة رقمية مستقلة تقوم بنشر محتوى مقدم من أطراف ثالثة.",
+          paragraph2: "لا تضمن RT-SYR صحة أو قانونية أو نتائج الفرص المنشورة",
+          paragraph3: "تتم جميع عمليات التوظيف والتعاقد بشكل مستقل من قبل الجهات الناشرة",
+          paragraph4: "لا تتحمل RT-SYR أي مسؤولية عن الخسائر أو الاحتيال أو النزاعات",
+          paragraph5: "يُنصح المستخدمون بالتحقق والتدقيق قبل التقديم أو التواصل.",
+        },
+        antiFraud: {
+          title: "تحذير مكافحة الاحتيال",
+          subtitle: "لن تطلب RT-SYR أبدًا:",
+          item1: "أي رسوم مقابل التقديم على الوظائف",
+          item2: "معلومات مالية أو مصرفية",
+          item3: "التدخل في عمليات الدفع أو التعاقد",
+          warning: "وأي طلب من هذا النوع يُعد محاولة احتيال ويجب الإبلاغ عنه فورًا.",
+        },
+        verificationSystem: {
+          title: "سياسة نظام التحقق",
+          introduction: "تطبق منصة RT-SYR نظام تحقق لتعزيز المصداقية والثقة.",
+          labels: {
+            title: "شارات التحقق",
+            subtitle: "قد تمنح المنصة شارات مثل:",
+            item1: "جهة غير حكومية معتمدة",
+            item2: "منظمة دولية / أممية معتمدة",
+            item3: "شركة خاصة معتمدة",
+            item4: "استشاري فردي معتمد",
+            note: "ويعتمد التحقق على وثائق رسمية ومراجع مهنية.",
+          },
+          limitations: {
+            title: "حدود التحقق",
+            item1: "يؤكد التحقق هوية الجهة الناشرة فقط.",
+            item2: "لا يعني التحقق اعتمادًا أو شراكة أو ضمانًا للأداء.",
+            item3: "وتحتفظ RT-SYR بحق سحب الشارة في أي وقت.",
+          },
+        },
+        paidServices: {
+          title: "سياسة الخدمات المدفوعة",
+          introduction: "قد توفر RT-SYR خدمات مدفوعة اختيارية لدعم استدامة المنصة، مثل:",
+          item1: "إبراز الإعلانات",
+          item2: "أولوية الظهور",
+          item3: "خدمات التحقق",
+          note1: "ويبقى الوصول الأساسي للباحثين عن عمل مجانيًا بالكامل.",
+          note2: "",
+        },
+        faq: {
+          title: "الأسئلة الشائعة",
+          q1: {
+            question: "هل تقوم RT-SYR بالتوظيف؟",
+            answer: "لا، المنصة تنشر الفرص فقط.",
+          },
+          q2: {
+            question: "هل المنصة تابعة لجهة حكومية أو مانحة؟",
+            answer: "لا، RT-SYR منصة مستقلة.",
+          },
+          q3: {
+            question: "هل جميع الإعلانات معتمدة؟",
+            answer: "تخضع للمراجعة، لكن يتحمل المستخدم مسؤولية التحقق.",
+          },
+          q4: {
+            question: "هل توجد رسوم على الباحثين عن عمل؟",
+            answer: "لا يوجد أي رسوم.",
+          },
+        },
       },
       // Pricing Page
       pricing: {

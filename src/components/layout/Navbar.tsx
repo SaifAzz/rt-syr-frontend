@@ -68,11 +68,13 @@ export function Navbar() {
           <div className="flex lg:flex-1">
             <Link to="/" className="-m-1.5 p-1.5 flex items-center gap-2">
               <div className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow">
-                  <span className="text-primary-foreground font-bold text-lg">RT</span>
-                </div>
+                <img 
+                  src="/logos/3.png" 
+                  alt="RT-SYR Logo" 
+                  className="h-20 w-auto object-contain"
+                />
                 <div className="hidden sm:block">
-                  <span className="font-display font-bold text-xl text-foreground">RT-SYR</span>
+                  <span className="font-serif font-light text-xl text-foreground">RT-SYR</span>
                   <span className="hidden md:inline text-xs text-muted-foreground ml-2">{t('logo.tagline')}</span>
                 </div>
               </div>

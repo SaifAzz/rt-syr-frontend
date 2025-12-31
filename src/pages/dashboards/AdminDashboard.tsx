@@ -63,6 +63,7 @@ import {
   MoreVertical,
   LayoutDashboard,
   FolderTree,
+  DollarSign,
 } from 'lucide-react';
 import {
   usersAPI,
@@ -84,6 +85,7 @@ import { toast } from 'sonner';
 import { ContentManagement } from '@/components/admin/ContentManagement';
 import { FooterManagement } from '@/components/admin/FooterManagement';
 import { FormManagement } from '@/components/admin/FormManagement';
+import { PricingManagement } from '@/components/admin/PricingManagement';
 
 const AdminDashboard = () => {
   const { t } = useTranslation();
@@ -113,6 +115,7 @@ const AdminDashboard = () => {
         { id: 'content', label: 'Content', icon: Globe },
         { id: 'footer', label: 'Footer', icon: Layout },
         { id: 'forms', label: 'Forms', icon: FormInput },
+        { id: 'pricing', label: 'Pricing', icon: DollarSign },
       ],
     },
     {
@@ -492,12 +495,14 @@ const AdminDashboard = () => {
                 <div className="flex flex-col gap-3">
                   {/* Logo and Branding */}
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow flex-shrink-0">
-                      <span className="text-primary-foreground font-bold text-lg">RT</span>
-                    </div>
+                    <img 
+                      src="/logos/3.png" 
+                      alt="RT-SYR Logo" 
+                      className="h-20 w-auto object-contain flex-shrink-0"
+                    />
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-col gap-0.5">
-                        <span className="font-display font-bold text-base text-foreground leading-tight">RT-SYR</span>
+                        <span className="font-serif font-light text-base text-foreground leading-tight">RT-SYR</span>
                         <p className="text-xs text-muted-foreground mt-0.5 leading-tight">
                           {t('logo.tagline')}
                         </p>
@@ -741,6 +746,12 @@ const AdminDashboard = () => {
               {activeSection === 'forms' && (
                 <div className="space-y-6">
               <FormManagement />
+                </div>
+              )}
+
+              {activeSection === 'pricing' && (
+                <div className="space-y-6">
+              <PricingManagement />
                 </div>
               )}
 

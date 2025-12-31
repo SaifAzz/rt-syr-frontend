@@ -31,8 +31,8 @@ export function Footer() {
     support: [
       { name: t('footer.aboutUs'), href: "/about" },
       { name: t('footer.reportIssue'), href: "/report" },
-      { name: t('footer.privacyPolicy'), href: "/privacy" },
-      { name: t('footer.termsOfService'), href: "/terms" },
+      { name: t('footer.privacyPolicy'), href: "/about#privacy-policy" },
+      { name: t('footer.termsOfService'), href: "/about#terms" },
     ],
   };
 
@@ -43,11 +43,13 @@ export function Footer() {
           {/* Brand */}
           <div className="lg:col-span-1">
             <Link to="/" className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow">
-                <span className="text-primary-foreground font-bold text-lg">RT</span>
-              </div>
+              <img 
+                src="/logos/3.png" 
+                alt="RT-SYR Logo" 
+                className="h-20 w-auto object-contain"
+              />
               <div>
-                <span className="font-display font-bold text-xl text-foreground">RT-SYR</span>
+                <span className="font-serif font-light text-xl text-foreground">RT-SYR</span>
               </div>
             </Link>
             <p className="text-muted-foreground text-sm mb-4 leading-relaxed">
@@ -124,20 +126,25 @@ export function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} RT-SYR. {t('footer.copyright')}
-          </p>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Briefcase className="w-4 h-4 text-primary" />
-              #SyrianJobs
-            </span>
-            <span className="flex items-center gap-1">
-              <FileText className="w-4 h-4 text-accent" />
-              #SyrianTenders
-            </span>
+        <div className="mt-12 pt-8 border-t border-border">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
+            <p className="text-sm text-muted-foreground">
+              © {new Date().getFullYear()} RT-SYR. {t('footer.copyright')}
+            </p>
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Briefcase className="w-4 h-4 text-primary" />
+                #SyrianJobs
+              </span>
+              <span className="flex items-center gap-1">
+                <FileText className="w-4 h-4 text-accent" />
+                #SyrianTenders
+              </span>
+            </div>
           </div>
+          <p className="text-xs text-muted-foreground text-center md:text-left">
+            {t('footer.legalText')}
+          </p>
         </div>
       </div>
     </footer>
