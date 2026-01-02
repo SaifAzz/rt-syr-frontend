@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -85,42 +84,45 @@ const CompanyDashboard = () => {
   const effectiveCompanyId = companyId || myCompanies[0]?.id;
 
   const { data: jobsData, isLoading: jobsLoading } = useQuery({
-    queryKey: ['company-jobs', effectiveCompanyId],
+    queryKey: ['company-jobs', user?.id, effectiveCompanyId],
     queryFn: async () => {
-      if (!effectiveCompanyId) return [];
+      if (!user?.id) return [];
       try {
-        // Use the company-specific endpoint
-        return await jobsAPI.getByCompany(effectiveCompanyId);
+        // Use the userId filter to get jobs by user ID
+        const all = await jobsAPI.getAll({ userId: user.id });
+        const result = Array.isArray(all) ? all : all.data || [];
+        return result;
       } catch {
-        // Fallback to getAll and filter
+        // Fallback to company-specific endpoint
         try {
-          const all = await jobsAPI.getAll();
-          const result = Array.isArray(all) ? all : all.data || [];
-          return result.filter((job: JobRecord) => job.company_id === effectiveCompanyId);
+          if (effectiveCompanyId) {
+            return await jobsAPI.getByCompany(effectiveCompanyId);
+          }
+          return [];
         } catch {
           return [];
         }
       }
     },
-    enabled: !!effectiveCompanyId,
+    enabled: !!user?.id,
   });
 
   const jobs: JobRecord[] = Array.isArray(jobsData) ? jobsData : [];
 
   const { data: allTenders = [], isLoading: tendersLoading } = useQuery<TenderRecord[]>({
-    queryKey: ['company-tenders', effectiveCompanyId],
+    queryKey: ['company-tenders', user?.id, effectiveCompanyId],
     queryFn: async () => {
-      if (!effectiveCompanyId) return [];
+      if (!user?.id) return [];
       try {
-        const all = await tendersAPI.getAll();
+        // Use the userId filter to get tenders by user ID
+        const all = await tendersAPI.getAll({ userId: user.id });
         const result = Array.isArray(all) ? all : all.data || [];
-        // Filter tenders by company_id
-        return result.filter((tender: TenderRecord) => tender.company_id === effectiveCompanyId);
+        return result;
       } catch {
         return [];
       }
     },
-    enabled: !!effectiveCompanyId,
+    enabled: !!user?.id,
   });
 
   const tenders = allTenders;
@@ -801,7 +803,6 @@ const CompanyDashboard = () => {
             </div>
           </main>
         </div>
-        <Footer />
       </div>
     </SidebarProvider>
   );

@@ -23,6 +23,7 @@ export interface Tender {
   postedAt: string;
   isVerified?: boolean;
   status: "open" | "closing-soon" | "closed";
+  userRole?: "user" | "company" | "organization" | "admin";
 }
 
 interface TenderCardProps {
@@ -66,12 +67,21 @@ export function TenderCard({ tender, className }: TenderCardProps) {
                 {tender.title}
               </h3>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  {tender.organization}
-                  {tender.isVerified && (
-                    <CheckCircle className="w-3.5 h-3.5 text-success" />
-                  )}
-                </span>
+                {tender.userRole ? (
+                  <Badge variant="outline" className="text-xs capitalize flex items-center gap-1">
+                    {tender.userRole === "organization" ? "Org" : tender.userRole}
+                    {tender.isVerified && (
+                      <CheckCircle className="w-3 h-3 text-success" />
+                    )}
+                  </Badge>
+                ) : (
+                  <span className="flex items-center gap-1">
+                    {tender.organization}
+                    {tender.isVerified && (
+                      <CheckCircle className="w-3.5 h-3.5 text-success" />
+                    )}
+                  </span>
+                )}
               </div>
             </div>
             <Badge variant="secondary" className={cn("shrink-0", statusColors[tender.status])}>

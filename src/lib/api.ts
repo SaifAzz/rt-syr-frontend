@@ -440,7 +440,7 @@ export const organizationsAPI = {
 
 // Jobs API
 export const jobsAPI = {
-  getAll: async (filters?: { category?: string; location?: string; status?: string; page?: number; limit?: number; search?: string }) => {
+  getAll: async (filters?: { category?: string; location?: string; status?: string; page?: number; limit?: number; search?: string; userId?: string }) => {
     const params = new URLSearchParams();
     if (filters?.category) params.append('category', filters.category);
     if (filters?.location) params.append('location', filters.location);
@@ -448,6 +448,7 @@ export const jobsAPI = {
     if (filters?.page) params.append('page', filters.page.toString());
     if (filters?.limit) params.append('limit', filters.limit.toString());
     if (filters?.search) params.append('search', filters.search);
+    if (filters?.userId) params.append('userId', filters.userId);
     
     const query = params.toString();
     return apiRequest<{ data: JobRecord[]; total: number; page: number; limit: number } | JobRecord[]>(`/jobs${query ? `?${query}` : ''}`);
@@ -484,7 +485,7 @@ export const jobsAPI = {
 
 // Tenders API
 export const tendersAPI = {
-  getAll: async (filters?: { category?: string; location?: string; status?: string; page?: number; limit?: number; search?: string }) => {
+  getAll: async (filters?: { category?: string; location?: string; status?: string; page?: number; limit?: number; search?: string; userId?: string }) => {
     const params = new URLSearchParams();
     if (filters?.category) params.append('category', filters.category);
     if (filters?.location) params.append('location', filters.location);
@@ -492,6 +493,7 @@ export const tendersAPI = {
     if (filters?.page) params.append('page', filters.page.toString());
     if (filters?.limit) params.append('limit', filters.limit.toString());
     if (filters?.search) params.append('search', filters.search);
+    if (filters?.userId) params.append('userId', filters.userId);
     
     const query = params.toString();
     return apiRequest<{ data: TenderRecord[]; total: number; page: number; limit: number } | TenderRecord[]>(`/tenders${query ? `?${query}` : ''}`);

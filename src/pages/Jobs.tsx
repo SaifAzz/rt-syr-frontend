@@ -56,6 +56,7 @@ const mapJobRecordToJob = (jobRecord: JobRecord): Job => {
     category: jobRecord.category || "General",
     postedAt,
     isVerified: jobRecord.status === "open" || jobRecord.status === "active",
+    userRole: (jobRecord as any).user_role as "user" | "company" | "organization" | "admin" | undefined,
   };
 };
 

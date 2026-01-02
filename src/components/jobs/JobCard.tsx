@@ -23,6 +23,7 @@ export interface Job {
   category: string;
   postedAt: string;
   isVerified?: boolean;
+  userRole?: "user" | "company" | "organization" | "admin";
 }
 
 interface JobCardProps {
@@ -61,12 +62,21 @@ export function JobCard({ job, className }: JobCardProps) {
                 {job.title}
               </h3>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  {job.company}
-                  {job.isVerified && (
-                    <CheckCircle className="w-3.5 h-3.5 text-success" />
-                  )}
-                </span>
+                {job.userRole ? (
+                  <Badge variant="outline" className="text-xs capitalize flex items-center gap-1">
+                    {job.userRole === "organization" ? "Org" : job.userRole}
+                    {job.isVerified && (
+                      <CheckCircle className="w-3 h-3 text-success" />
+                    )}
+                  </Badge>
+                ) : (
+                  <span className="flex items-center gap-1">
+                    {job.company}
+                    {job.isVerified && (
+                      <CheckCircle className="w-3.5 h-3.5 text-success" />
+                    )}
+                  </span>
+                )}
               </div>
             </div>
             <Badge variant="secondary" className={cn("shrink-0", typeColors[job.type])}>

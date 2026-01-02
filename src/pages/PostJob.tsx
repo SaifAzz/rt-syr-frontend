@@ -112,32 +112,9 @@ const PostJob = () => {
         mutationFn: async (data: typeof formData) => {
             // Get company/organization ID
             const userRole = user?.role || user?.type;
-            let companyId: string | undefined;
-
-            if (userRole === 'company' || userRole === 'job_seeker') {
-                // For companies, get company_id from user or from myCompanies
-                companyId = user?.company_id || user?.companyId || myCompanies[0]?.id;
-                if (!companyId) {
-                    throw new Error('Company ID not found. Please ensure your company profile is set up.');
-                }
-            } else if (userRole === 'organization') {
-                // For organizations, they typically can't post jobs, but if they can, use organization_id
-                // Note: According to API, jobs require company_id, so organizations might need a company profile
-                companyId = user?.company_id || user?.companyId || myCompanies[0]?.id;
-                const organizationId = user?.organization_id || user?.organizationId || myOrganizations[0]?.id;
-
-                if (!companyId && !organizationId) {
-                    throw new Error('Organization must have a company or organization ID to post jobs');
-                }
-                // If no companyId but has organizationId, use organizationId (backend may handle this)
-                if (!companyId && organizationId) {
-                    companyId = organizationId;
-                }
-            } else {
-                throw new Error('User must be a company or organization to post jobs');
-            }
-
+            const companyId = user?.company_id || user?.companyId || myCompanies[0]?.id;
             const jobData: any = {
+                userId: user?.id,
                 title: data.title,
                 description: data.description,
                 company_id: companyId,

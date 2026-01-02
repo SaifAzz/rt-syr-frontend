@@ -57,6 +57,7 @@ const mapTenderRecordToTender = (tenderRecord: TenderRecord): Tender => {
     postedAt,
     isVerified: tenderRecord.status === "open" || tenderRecord.status === "active",
     status,
+    userRole: (tenderRecord as any).user_role as "user" | "company" | "organization" | "admin" | undefined,
   };
 };
 

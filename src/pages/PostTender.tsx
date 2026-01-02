@@ -16,8 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { tendersAPI } from '@/lib/api';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { tendersAPI, organizationsAPI } from '@/lib/api';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { FileText, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -69,30 +69,25 @@ const PostTender = () => {
     { value: 'OTHER', label: 'Other' },
   ];
 
+  // Fetch organization data to get IDs
+  const { data: myOrganizations = [] } = useQuery({
+    queryKey: ['my-organizations'],
+    queryFn: async () => {
+      try {
+        return await organizationsAPI.getMy();
+      } catch {
+        return [];
+      }
+    },
+    enabled: (user?.role === 'organization' || user?.type === 'organization') && !user?.organization_id && !user?.organizationId,
+  });
 
   const mutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       // Get organization_id from authenticated user
-      const userRole = user?.role || user?.type;
-      let organizationId: string | undefined;
-
-      if (userRole === 'organization') {
-        organizationId = user?.organization_id || user?.organizationId;
-        if (!organizationId) {
-          throw new Error('Organization ID not found. Please ensure your organization profile is set up.');
-        }
-      } else if (userRole === 'company') {
-        // Companies can also post tenders, but they need organization_id
-        // For now, we'll use company_id if organization_id is not available
-        organizationId = user?.organization_id || user?.organizationId;
-        if (!organizationId) {
-          throw new Error('Organization ID not found. Please ensure your organization profile is set up.');
-        }
-      } else {
-        throw new Error('User must be an organization or company to post tenders');
-      }
-
+      const organizationId = user?.organization_id || user?.organizationId || myOrganizations[0]?.id;
       const tenderData: any = {
+        userId: user?.id,
         title: data.title,
         description: data.description,
         organization_id: organizationId,
@@ -130,7 +125,7 @@ const PostTender = () => {
       queryClient.invalidateQueries({ queryKey: ['company-tenders'] });
       queryClient.invalidateQueries({ queryKey: ['organization-tenders'] });
       queryClient.invalidateQueries({ queryKey: ['tenders'] });
-      
+
       // Navigate to appropriate dashboard
       if (user?.type === 'company') {
         navigate('/dashboard/company');
@@ -145,7 +140,7 @@ const PostTender = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validation - only title and description are required according to API
     if (!formData.title || !formData.description) {
       toast.error('Please fill in all required fields (Title and Description)');

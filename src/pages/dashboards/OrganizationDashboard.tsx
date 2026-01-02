@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -85,40 +84,43 @@ const OrganizationDashboard = () => {
   const effectiveOrganizationId = organizationId || myOrganizations[0]?.id;
 
   const { data: jobs = [], isLoading: jobsLoading } = useQuery<JobRecord[]>({
-    queryKey: ['organization-jobs', effectiveOrganizationId],
+    queryKey: ['organization-jobs', user?.id, effectiveOrganizationId],
     queryFn: async () => {
-      if (!effectiveOrganizationId) return [];
+      if (!user?.id) return [];
       try {
-        const all = await jobsAPI.getAll();
+        // Use the userId filter to get jobs by user ID
+        const all = await jobsAPI.getAll({ userId: user.id });
         const result = Array.isArray(all) ? all : all.data || [];
-        // Filter jobs by organization_id if organizations can post jobs
-        return result.filter((job: JobRecord) => job.company_id && false); // Organizations typically don't post jobs
+        return result;
       } catch {
         return [];
       }
     },
-    enabled: !!effectiveOrganizationId,
+    enabled: !!user?.id,
   });
 
   const { data: tendersData, isLoading: tendersLoading } = useQuery({
-    queryKey: ['organization-tenders', effectiveOrganizationId],
+    queryKey: ['organization-tenders', user?.id, effectiveOrganizationId],
     queryFn: async () => {
-      if (!effectiveOrganizationId) return [];
+      if (!user?.id) return [];
       try {
-        // Use the organization-specific endpoint
-        return await tendersAPI.getByOrganization(effectiveOrganizationId);
+        // Use the userId filter to get tenders by user ID
+        const all = await tendersAPI.getAll({ userId: user.id });
+        const result = Array.isArray(all) ? all : all.data || [];
+        return result;
       } catch {
-        // Fallback to getAll and filter
+        // Fallback to organization-specific endpoint
         try {
-          const all = await tendersAPI.getAll();
-          const result = Array.isArray(all) ? all : all.data || [];
-          return result.filter((tender: TenderRecord) => tender.organization_id === effectiveOrganizationId);
+          if (effectiveOrganizationId) {
+            return await tendersAPI.getByOrganization(effectiveOrganizationId);
+          }
+          return [];
         } catch {
           return [];
         }
       }
     },
-    enabled: !!effectiveOrganizationId,
+    enabled: !!user?.id,
   });
 
   const tenders: TenderRecord[] = Array.isArray(tendersData) ? tendersData : [];
@@ -724,7 +726,6 @@ const OrganizationDashboard = () => {
             </div>
           </main>
         </div>
-        <Footer />
       </div>
     </SidebarProvider>
   );
