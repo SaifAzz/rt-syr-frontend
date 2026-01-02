@@ -8,9 +8,10 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
-import { UserPlus, Mail, Lock, User, Building2, Briefcase, AlertCircle, Phone } from 'lucide-react';
+import { UserPlus, Mail, Lock, User, Building2, Briefcase, AlertCircle, Phone, Link as LinkIcon, FileText } from 'lucide-react';
 import type { UserType } from '@/contexts/AuthContext';
 
 const Signup = () => {
@@ -23,23 +24,78 @@ const Signup = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
+  const [driveLink, setDriveLink] = useState('');
+  const [commercialFileUrl, setCommercialFileUrl] = useState('');
   const [userType, setUserType] = useState<UserType>(
     (searchParams.get('type') as UserType) || 'job_seeker'
   );
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [requestId, setRequestId] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+
+  // Password validation function
+  const validatePassword = (pwd: string): string | null => {
+    if (pwd.length < 8) {
+      return 'Password must be at least 8 characters';
+    }
+    if (!/[A-Z]/.test(pwd)) {
+      return 'Password must contain at least one uppercase letter';
+    }
+    if (!/[a-z]/.test(pwd)) {
+      return 'Password must contain at least one lowercase letter';
+    }
+    if (!/[0-9]/.test(pwd)) {
+      return 'Password must contain at least one number';
+    }
+    if (!/[@$!%*?&]/.test(pwd)) {
+      return 'Password must contain at least one special character (@$!%*?&)';
+    }
+    return null;
+  };
+
+  // URL validation function
+  const isValidUrl = (url: string): boolean => {
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess(false);
 
+    // Validate terms acceptance
+    if (!acceptedTerms) {
+      setError('You must accept the terms and conditions and privacy policy to continue');
+      return;
+    }
+
+    // Validate passwords match
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+    // Validate password strength
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
+
+    // Validate URLs if provided
+    if (driveLink && !isValidUrl(driveLink)) {
+      setError('Drive link must be a valid URL');
+      return;
+    }
+    if (commercialFileUrl && !isValidUrl(commercialFileUrl)) {
+      setError('Commercial file URL must be a valid URL');
       return;
     }
 
@@ -49,42 +105,42 @@ const Signup = () => {
       // Map userType to role: job_seeker -> user, others stay the same
       const role = userType === 'job_seeker' ? 'user' : userType;
       
-      // Call signup API
-      const result = await signup(email, password, fullName, phone, role);
+      // Call signup API with optional fields
+      const result = await signup(
+        email,
+        password,
+        fullName,
+        role,
+        phone || undefined,
+        driveLink || undefined,
+        commercialFileUrl || undefined
+      );
       
-      // If company or organization, auto-create the profile
-      if (userType === 'company' || userType === 'organization') {
-        try {
-          const { companiesAPI, organizationsAPI } = await import('@/lib/api');
-          
-          if (userType === 'company') {
-            await companiesAPI.create({
-              name: fullName,
-              description: '',
-              location: '',
-              user_id: result.userId,
-              status: 'pending',
-            });
-          } else if (userType === 'organization') {
-            await organizationsAPI.create({
-              name: fullName,
-              description: '',
-              location: '',
-              user_id: result.userId,
-              status: 'pending',
-            });
-          }
-        } catch (createError: any) {
-          // If company/org creation fails, still proceed with verification
-          console.error('Failed to create company/organization:', createError);
-          // Don't throw - user can create it later
+      // Show success message - admin approval required
+      setSuccess(true);
+      setRequestId(result.requestId);
+      
+      // Don't navigate to verify-email - user needs admin approval first
+    } catch (err: any) {
+      // Handle API error responses
+      let errorMessage = 'Failed to create account. Please try again.';
+      
+      if (err.message) {
+        // Check if it's an array of validation errors
+        if (Array.isArray(err.message)) {
+          errorMessage = err.message.join(', ');
+        } else {
+          errorMessage = err.message;
+        }
+      } else if (err.response?.data?.message) {
+        if (Array.isArray(err.response.data.message)) {
+          errorMessage = err.response.data.message.join(', ');
+        } else {
+          errorMessage = err.response.data.message;
         }
       }
       
-      // Navigate to verify-email with userId
-      navigate(`/verify-email?userId=${result.userId}`);
-    } catch (err: any) {
-      setError(err.message || 'Failed to create account. Please try again.');
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -124,6 +180,24 @@ const Signup = () => {
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
+              {success && (
+                <Alert className="mb-4 border-green-500 bg-green-50 dark:bg-green-950">
+                  <AlertCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  <AlertDescription className="text-green-800 dark:text-green-200">
+                    <p className="font-semibold mb-2">Signup request submitted successfully!</p>
+                    <p className="text-sm">
+                      Your signup request has been submitted and is pending admin approval. 
+                      You will be able to log in once your account is approved.
+                    </p>
+                    {requestId && (
+                      <p className="text-xs mt-2 opacity-75">
+                        Request ID: {requestId}
+                      </p>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
+              {!success && (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="userType">{t('auth.accountType')}</Label>
@@ -179,7 +253,7 @@ const Signup = () => {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phone">{t('auth.phone')}</Label>
+                  <Label htmlFor="phone">{t('auth.phone')} (Optional)</Label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
@@ -189,8 +263,10 @@ const Signup = () => {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       className="pl-10"
-                      required
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      If provided, must be unique
+                    </p>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -219,9 +295,12 @@ const Signup = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       className="pl-10"
                       required
-                      minLength={6}
+                      minLength={8}
                     />
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Must be at least 8 characters with uppercase, lowercase, number, and special character (@$!%*?&)
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword">{t('auth.confirmPassword')}</Label>
@@ -234,21 +313,80 @@ const Signup = () => {
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       className="pl-10"
                       required
-                      minLength={6}
+                      minLength={8}
                     />
                   </div>
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <div className="space-y-2">
+                  <Label htmlFor="driveLink">Google Drive Link (Optional)</Label>
+                  <div className="relative">
+                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      id="driveLink"
+                      type="url"
+                      placeholder="https://drive.google.com/..."
+                      value={driveLink}
+                      onChange={(e) => setDriveLink(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="commercialFileUrl">Commercial File URL (Optional)</Label>
+                  <div className="relative">
+                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      id="commercialFileUrl"
+                      type="url"
+                      placeholder="https://storage.example.com/commercial/file.pdf"
+                      value={commercialFileUrl}
+                      onChange={(e) => setCommercialFileUrl(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <Checkbox
+                    id="acceptTerms"
+                    checked={acceptedTerms}
+                    onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
+                    className="mt-1"
+                  />
+                  <Label
+                    htmlFor="acceptTerms"
+                    className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    I accept the{' '}
+                    <Link to="/about#terms" className="text-primary hover:underline">
+                      Terms and Conditions
+                    </Link>
+                    {' '}and{' '}
+                    <Link to="/about#privacy-policy" className="text-primary hover:underline">
+                      Privacy Policy
+                    </Link>
+                  </Label>
+                </div>
+                <Button type="submit" className="w-full" disabled={loading || !acceptedTerms}>
                   <UserPlus className="w-4 h-4 mr-2" />
                   {loading ? t('common.loading') : t('auth.signup')}
                 </Button>
               </form>
+              )}
+              {!success && (
               <div className="mt-4 text-center text-sm">
                 <span className="text-muted-foreground">{t('auth.alreadyHaveAccount')} </span>
                 <Link to="/login" className="text-primary hover:underline font-medium">
                   {t('auth.signInHere')}
                 </Link>
               </div>
+              )}
+              {success && (
+              <div className="mt-4 text-center text-sm">
+                <Link to="/login" className="text-primary hover:underline font-medium">
+                  Go to Login
+                </Link>
+              </div>
+              )}
             </CardContent>
           </Card>
         </div>

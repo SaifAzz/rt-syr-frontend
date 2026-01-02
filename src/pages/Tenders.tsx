@@ -1,16 +1,20 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
+import { formatDistanceToNow, format } from "date-fns";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { TenderCard, type Tender } from "@/components/tenders/TenderCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { tendersAPI, type TenderRecord } from "@/lib/api";
 import { 
   Search, 
   MapPin, 
   FileText,
   Building2,
-  X
+  X,
+  Loader2
 } from "lucide-react";
 import {
   Select,
@@ -20,97 +24,41 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Sample data
-const sampleTenders: Tender[] = [
-  {
-    id: "1",
-    title: "IT Infrastructure Upgrade Project",
-    organization: "Ministry of Communications",
-    location: "Damascus",
-    deadline: "Jan 15, 2025",
-    category: "Technology",
-    postedAt: "1 day ago",
-    isVerified: true,
-    status: "open",
-  },
-  {
-    id: "2",
-    title: "Office Supplies Procurement",
-    organization: "Syrian Red Crescent",
-    location: "National",
-    deadline: "Jan 10, 2025",
-    category: "Procurement",
-    postedAt: "3 days ago",
-    isVerified: true,
-    status: "closing-soon",
-  },
-  {
-    id: "3",
-    title: "Construction of Medical Facility",
-    organization: "Health Development NGO",
-    location: "Aleppo",
-    deadline: "Feb 1, 2025",
-    category: "Construction",
-    postedAt: "5 days ago",
-    isVerified: true,
-    status: "open",
-  },
-  {
-    id: "4",
-    title: "Educational Program Development",
-    organization: "Education Foundation",
-    location: "Damascus",
-    deadline: "Jan 20, 2025",
-    category: "Education",
-    postedAt: "1 week ago",
-    isVerified: true,
-    status: "open",
-  },
-  {
-    id: "5",
-    title: "Vehicle Fleet Maintenance Contract",
-    organization: "Logistics Company Ltd",
-    location: "Homs",
-    deadline: "Dec 30, 2024",
-    category: "Transportation",
-    postedAt: "2 weeks ago",
-    isVerified: false,
-    status: "closing-soon",
-  },
-  {
-    id: "6",
-    title: "Solar Panel Installation",
-    organization: "Green Energy Initiative",
-    location: "Latakia",
-    deadline: "Feb 15, 2025",
-    category: "Energy",
-    postedAt: "4 days ago",
-    isVerified: true,
-    status: "open",
-  },
-  {
-    id: "7",
-    title: "Security Services Contract",
-    organization: "Industrial Complex",
-    location: "Damascus",
-    deadline: "Dec 25, 2024",
-    category: "Services",
-    postedAt: "1 week ago",
-    isVerified: true,
-    status: "closed",
-  },
-  {
-    id: "8",
-    title: "Agricultural Equipment Supply",
-    organization: "Farmers Cooperative",
-    location: "Hama",
-    deadline: "Jan 25, 2025",
-    category: "Agriculture",
-    postedAt: "6 days ago",
-    isVerified: true,
-    status: "open",
-  },
-];
+// Helper function to map TenderRecord to Tender
+const mapTenderRecordToTender = (tenderRecord: TenderRecord): Tender => {
+  // Format deadline
+  const deadline = tenderRecord.deadline 
+    ? format(new Date(tenderRecord.deadline), "MMM d, yyyy")
+    : "Not specified";
+
+  // Format posted date
+  const postedAt = tenderRecord.created_at 
+    ? formatDistanceToNow(new Date(tenderRecord.created_at), { addSuffix: true })
+    : "Recently";
+
+  // Map status
+  let status: Tender["status"] = "open";
+  if (tenderRecord.status === "closed") {
+    status = "closed";
+  } else if (tenderRecord.status === "closing_soon" || tenderRecord.status === "closing-soon") {
+    status = "closing-soon";
+  } else {
+    status = "open";
+  }
+
+  return {
+    id: tenderRecord.id,
+    title: tenderRecord.title,
+    organization: (tenderRecord as any).organization?.name || "Organization", // API might include organization info
+    organizationLogo: (tenderRecord as any).organization?.logo_url,
+    location: tenderRecord.location || "Not specified",
+    deadline,
+    category: tenderRecord.category || "General",
+    postedAt,
+    isVerified: tenderRecord.status === "open" || tenderRecord.status === "active",
+    status,
+  };
+};
 
 const Tenders = () => {
   const { t } = useTranslation();
@@ -119,27 +67,36 @@ const Tenders = () => {
   const [selectedLocation, setSelectedLocation] = useState(t('tenders.allLocations'));
   const [selectedStatus, setSelectedStatus] = useState(t('tenders.allStatus'));
 
-  const categories = [
-    t('tenders.allCategories'),
-    "Technology",
-    "Procurement",
-    "Construction",
-    "Education",
-    "Transportation",
-    "Energy",
-    "Services",
-    "Agriculture",
-  ];
+  // Fetch tenders from API
+  const { data: tendersData, isLoading, error } = useQuery({
+    queryKey: ['tenders'],
+    queryFn: async () => {
+      const result = await tendersAPI.getAll();
+      return Array.isArray(result) ? result : result.data || [];
+    },
+  });
 
-  const locations = [
-    t('tenders.allLocations'),
-    "Damascus",
-    "Aleppo",
-    "Homs",
-    "Hama",
-    "Latakia",
-    "National",
-  ];
+  const tenders: Tender[] = useMemo(() => {
+    if (!tendersData) return [];
+    return tendersData.map(mapTenderRecordToTender);
+  }, [tendersData]);
+
+  // Extract unique categories and locations from tenders
+  const categories = useMemo(() => {
+    const uniqueCategories = new Set<string>();
+    tenders.forEach(tender => {
+      if (tender.category) uniqueCategories.add(tender.category);
+    });
+    return [t('tenders.allCategories'), ...Array.from(uniqueCategories).sort()];
+  }, [tenders, t]);
+
+  const locations = useMemo(() => {
+    const uniqueLocations = new Set<string>();
+    tenders.forEach(tender => {
+      if (tender.location) uniqueLocations.add(tender.location);
+    });
+    return [t('tenders.allLocations'), ...Array.from(uniqueLocations).sort()];
+  }, [tenders, t]);
 
   const statusOptions = [
     { value: t('tenders.allStatus'), key: 'all' },
@@ -153,7 +110,7 @@ const Tenders = () => {
     return option?.key || 'all';
   };
 
-  const filteredTenders = sampleTenders.filter((tender) => {
+  const filteredTenders = tenders.filter((tender) => {
     const matchesSearch = 
       tender.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       tender.organization.toLowerCase().includes(searchQuery.toLowerCase());
@@ -190,7 +147,7 @@ const Tenders = () => {
                 {t('tenders.title')} <span className="text-gradient-primary">{t('tenders.titleHighlight')}</span>
               </h1>
               <p className="text-lg text-muted-foreground">
-                {t('tenders.subtitle', { count: sampleTenders.length })}
+                {t('tenders.subtitle', { count: tenders.length })}
               </p>
             </div>
           </div>
@@ -275,7 +232,22 @@ const Tenders = () => {
               </p>
             </div>
 
-            {filteredTenders.length > 0 ? (
+            {isLoading ? (
+              <div className="text-center py-16">
+                <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+                <p className="text-muted-foreground">{t('common.loading') || 'Loading tenders...'}</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-16">
+                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                  <FileText className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">Error loading tenders</h3>
+                <p className="text-muted-foreground mb-4">
+                  {error instanceof Error ? error.message : 'Failed to load tenders. Please try again later.'}
+                </p>
+              </div>
+            ) : filteredTenders.length > 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {filteredTenders.map((tender) => (
                   <TenderCard key={tender.id} tender={tender} />

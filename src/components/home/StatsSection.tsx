@@ -1,31 +1,52 @@
 import { Briefcase, Users, Building2, FileText } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { getHomeStats, formatStatValue } from "@/lib/utils";
+import { useEffect, useState } from "react";
 
 export function StatsSection() {
   const { t } = useTranslation();
-  
+  const [homeStats, setHomeStats] = useState(getHomeStats());
+
+  // Listen for storage changes to update stats in real-time
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setHomeStats(getHomeStats());
+    };
+
+    // Listen for custom event when stats are updated
+    window.addEventListener('homeStatsUpdated', handleStorageChange);
+    
+    // Also listen for storage events (from other tabs/windows)
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('homeStatsUpdated', handleStorageChange);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
   const stats = [
     {
       label: t('home.stats.activeOpportunities'),
-      value: "500+",
+      value: formatStatValue(homeStats.activeOpportunities),
       icon: Briefcase,
       description: t('home.stats.jobsTenders'),
     },
     {
       label: t('home.stats.registeredUsers'),
-      value: "10,000+",
+      value: formatStatValue(homeStats.registeredUsers),
       icon: Users,
       description: t('home.stats.jobSeekers'),
     },
     {
       label: t('home.stats.verifiedCompanies'),
-      value: "200+",
+      value: formatStatValue(homeStats.verifiedCompanies),
       icon: Building2,
       description: t('home.stats.trustedEmployers'),
     },
     {
       label: t('home.stats.organizations'),
-      value: "150+",
+      value: formatStatValue(homeStats.organizations),
       icon: FileText,
       description: t('home.stats.tenderPublishers'),
     },

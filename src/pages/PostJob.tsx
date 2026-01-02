@@ -31,7 +31,16 @@ const PostJob = () => {
     const [formData, setFormData] = useState({
         title: '',
         description: '',
+        type: '',
+        sector: '' as 'WASH' | 'FSL' | 'EDUCATION' | 'HEALTH' | 'PROTECTION' | 'SHELTER' | 'NFI' | 'CCCM' | 'OTHER' | '',
+        about_company: '',
+        project_summary: '',
         requirements: '',
+        deadline: '',
+        duration: '',
+        estimated_start_date: '',
+        tender_documents_link: '',
+        file_upload_url: '',
         location: '',
         salary_min: '',
         salary_max: '',
@@ -87,6 +96,18 @@ const PostJob = () => {
         'Other',
     ];
 
+    const sectors = [
+        { value: 'WASH', label: 'WASH' },
+        { value: 'FSL', label: 'FSL' },
+        { value: 'EDUCATION', label: 'Education' },
+        { value: 'HEALTH', label: 'Health' },
+        { value: 'PROTECTION', label: 'Protection' },
+        { value: 'SHELTER', label: 'Shelter' },
+        { value: 'NFI', label: 'NFI' },
+        { value: 'CCCM', label: 'CCCM' },
+        { value: 'OTHER', label: 'Other' },
+    ];
+
     const mutation = useMutation({
         mutationFn: async (data: typeof formData) => {
             // Get company/organization ID
@@ -119,33 +140,42 @@ const PostJob = () => {
             const jobData: any = {
                 title: data.title,
                 description: data.description,
-                location: data.location,
                 company_id: companyId,
-                category: data.category,
-                status: 'open' as const,
+                status: 'active' as const,
             };
 
-            // Add employment_type if provided
-            if (data.employment_type) {
-                jobData.employment_type = data.employment_type;
+            // Add optional fields if provided
+            if (data.type?.trim()) jobData.type = data.type;
+            if (data.sector) jobData.sector = data.sector;
+            if (data.about_company?.trim()) jobData.about_company = data.about_company;
+            if (data.project_summary?.trim()) jobData.project_summary = data.project_summary;
+            if (data.requirements?.trim()) jobData.requirements = data.requirements;
+            if (data.deadline?.trim()) {
+                const deadlineDate = new Date(data.deadline);
+                if (!isNaN(deadlineDate.getTime())) {
+                    jobData.deadline = deadlineDate.toISOString();
+                }
             }
-
-            // Add requirements if provided
-            if (data.requirements.trim()) {
-                jobData.requirements = data.requirements;
+            if (data.duration?.trim()) jobData.duration = data.duration;
+            if (data.estimated_start_date?.trim()) {
+                const startDate = new Date(data.estimated_start_date);
+                if (!isNaN(startDate.getTime())) {
+                    jobData.estimated_start_date = startDate.toISOString();
+                }
             }
-
-            // Add experience_level if provided
-            if (data.experience_level.trim()) {
-                jobData.experience_level = data.experience_level;
+            if (data.tender_documents_link?.trim()) jobData.tender_documents_link = data.tender_documents_link;
+            if (data.file_upload_url?.trim()) jobData.file_upload_url = data.file_upload_url;
+            if (data.location?.trim()) jobData.location = data.location;
+            if (data.category?.trim()) jobData.category = data.category;
+            if (data.employment_type) jobData.employment_type = data.employment_type;
+            if (data.experience_level?.trim()) jobData.experience_level = data.experience_level;
+            if (data.salary_min?.trim()) {
+                const minSalary = parseInt(data.salary_min);
+                if (!isNaN(minSalary)) jobData.salary_min = minSalary;
             }
-
-            // Add salary if provided
-            if (data.salary_min.trim()) {
-                jobData.salary_min = parseInt(data.salary_min);
-            }
-            if (data.salary_max.trim()) {
-                jobData.salary_max = parseInt(data.salary_max);
+            if (data.salary_max?.trim()) {
+                const maxSalary = parseInt(data.salary_max);
+                if (!isNaN(maxSalary)) jobData.salary_max = maxSalary;
             }
 
             return await jobsAPI.create(jobData);
@@ -173,9 +203,9 @@ const PostJob = () => {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Validation
-        if (!formData.title || !formData.description || !formData.location || !formData.employment_type || !formData.category) {
-            toast.error('Please fill in all required fields');
+        // Validation - only title and description are required according to API
+        if (!formData.title || !formData.description) {
+            toast.error('Please fill in all required fields (Title and Description)');
             return;
         }
 
@@ -243,25 +273,76 @@ const PostJob = () => {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="location">Location *</Label>
+                                        <Label htmlFor="type">Type (Optional)</Label>
+                                        <Input
+                                            id="type"
+                                            placeholder="e.g., Full-time, Part-time, Contract"
+                                            value={formData.type}
+                                            onChange={(e) => handleChange('type', e.target.value)}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="sector">Sector (Optional)</Label>
+                                        <Select
+                                            value={formData.sector}
+                                            onValueChange={(value) => handleChange('sector', value)}
+                                        >
+                                            <SelectTrigger id="sector">
+                                                <SelectValue placeholder="Select sector" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {sectors.map((sector) => (
+                                                    <SelectItem key={sector.value} value={sector.value}>
+                                                        {sector.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="about_company">About Company (Optional)</Label>
+                                    <Textarea
+                                        id="about_company"
+                                        placeholder="Tell us about your company..."
+                                        value={formData.about_company}
+                                        onChange={(e) => handleChange('about_company', e.target.value)}
+                                        rows={4}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="project_summary">Project Summary (Optional)</Label>
+                                    <Textarea
+                                        id="project_summary"
+                                        placeholder="Provide a summary of the project this job is part of..."
+                                        value={formData.project_summary}
+                                        onChange={(e) => handleChange('project_summary', e.target.value)}
+                                        rows={4}
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="location">Location (Optional)</Label>
                                         <Input
                                             id="location"
                                             placeholder="e.g., Damascus, Aleppo, Remote"
                                             value={formData.location}
                                             onChange={(e) => handleChange('location', e.target.value)}
-                                            required
                                         />
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="employment_type">Job Type *</Label>
+                                        <Label htmlFor="employment_type">Employment Type (Optional)</Label>
                                         <Select
                                             value={formData.employment_type}
                                             onValueChange={(value) => handleChange('employment_type', value)}
-                                            required
                                         >
                                             <SelectTrigger id="employment_type">
-                                                <SelectValue placeholder="Select job type" />
+                                                <SelectValue placeholder="Select employment type" />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="Full-time">Full-time</SelectItem>
@@ -286,11 +367,10 @@ const PostJob = () => {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="category">Category *</Label>
+                                        <Label htmlFor="category">Category (Optional)</Label>
                                         <Select
                                             value={formData.category}
                                             onValueChange={(value) => handleChange('category', value)}
-                                            required
                                         >
                                             <SelectTrigger id="category">
                                                 <SelectValue placeholder="Select category" />
@@ -312,6 +392,62 @@ const PostJob = () => {
                                             placeholder="e.g., Senior, Mid-level, Entry-level"
                                             value={formData.experience_level}
                                             onChange={(e) => handleChange('experience_level', e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="deadline">Deadline (Optional)</Label>
+                                        <Input
+                                            id="deadline"
+                                            type="datetime-local"
+                                            value={formData.deadline}
+                                            onChange={(e) => handleChange('deadline', e.target.value)}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="duration">Duration (Optional)</Label>
+                                        <Input
+                                            id="duration"
+                                            placeholder="e.g., 6 months, 1 year"
+                                            value={formData.duration}
+                                            onChange={(e) => handleChange('duration', e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="estimated_start_date">Estimated Start Date (Optional)</Label>
+                                    <Input
+                                        id="estimated_start_date"
+                                        type="datetime-local"
+                                        value={formData.estimated_start_date}
+                                        onChange={(e) => handleChange('estimated_start_date', e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="tender_documents_link">Tender Documents Link (Optional)</Label>
+                                        <Input
+                                            id="tender_documents_link"
+                                            type="url"
+                                            placeholder="https://example.com/documents"
+                                            value={formData.tender_documents_link}
+                                            onChange={(e) => handleChange('tender_documents_link', e.target.value)}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="file_upload_url">File Upload URL (Optional)</Label>
+                                        <Input
+                                            id="file_upload_url"
+                                            type="url"
+                                            placeholder="https://storage.example.com/files/document.pdf"
+                                            value={formData.file_upload_url}
+                                            onChange={(e) => handleChange('file_upload_url', e.target.value)}
                                         />
                                     </div>
                                 </div>

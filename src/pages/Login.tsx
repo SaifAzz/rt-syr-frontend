@@ -30,6 +30,21 @@ const Login = () => {
 
     try {
       await login(email, password);
+      // Get the user from localStorage to check role
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        const user = JSON.parse(storedUser);
+        // Redirect admins to admin login page (they should use the dedicated admin login)
+        if (user.role === 'admin' || user.type === 'admin') {
+          // Logout and redirect to admin login
+          localStorage.removeItem('user');
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          navigate('/admin/dashboard/login', { replace: true });
+          return;
+        }
+      }
+      // Redirect to original destination or home
       navigate(from, { replace: true });
     } catch (err: any) {
       setError(err.message || 'Failed to login. Please try again.');

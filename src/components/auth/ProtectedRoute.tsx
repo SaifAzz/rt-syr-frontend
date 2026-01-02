@@ -30,15 +30,24 @@ export const ProtectedRoute = ({
   }
 
   if (requireAuth && !user) {
+    // Redirect to admin login if trying to access admin routes
+    if (allowedUserTypes?.includes('admin')) {
+      return <Navigate to="/admin/dashboard/login" state={{ from: location }} replace />;
+    }
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (requireEmailVerification && user && !user.emailVerified) {
+  // Admins don't need email verification
+  if (requireEmailVerification && user && !user.emailVerified && user.role !== 'admin' && user.type !== 'admin') {
     return <Navigate to="/verify-email" replace />;
   }
 
-  if (allowedUserTypes && user && !allowedUserTypes.includes(user.type)) {
-    return <Navigate to="/" replace />;
+  if (allowedUserTypes && user) {
+    // Check both type and role for admin access
+    const userType = user.type || (user.role === 'admin' ? 'admin' : user.role === 'user' ? 'job_seeker' : user.role);
+    if (!allowedUserTypes.includes(userType as any)) {
+      return <Navigate to="/" replace />;
+    }
   }
 
   return <>{children}</>;

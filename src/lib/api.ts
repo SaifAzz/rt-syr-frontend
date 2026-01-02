@@ -53,28 +53,45 @@ export interface OrganizationRecord extends DatabaseRecord {
 export interface JobRecord extends DatabaseRecord {
   title: string;
   description: string;
-  requirements?: string;
   company_id: string;
-  location: string;
+  type?: string;
+  sector?: 'WASH' | 'FSL' | 'EDUCATION' | 'HEALTH' | 'PROTECTION' | 'SHELTER' | 'NFI' | 'CCCM' | 'OTHER';
+  about_company?: string;
+  project_summary?: string;
+  requirements?: string;
+  deadline?: string;
+  status: 'active' | 'closed' | 'open' | 'closing_soon' | 'draft';
+  duration?: string;
+  estimated_start_date?: string;
+  tender_documents_link?: string;
+  file_upload_url?: string;
   salary_min?: number;
   salary_max?: number;
   employment_type?: string;
   experience_level?: string;
-  category: string;
-  status: 'open' | 'closed';
+  location?: string;
+  category?: string;
   created_at: string;
 }
 
 export interface TenderRecord extends DatabaseRecord {
   title: string;
   description: string;
-  requirements?: string;
   organization_id?: string;
   company_id?: string;
-  location: string;
-  deadline: string;
-  category: string;
-  status: 'open' | 'closing-soon' | 'closed';
+  type?: string;
+  sector?: 'WASH' | 'FSL' | 'EDUCATION' | 'HEALTH' | 'PROTECTION' | 'SHELTER' | 'NFI' | 'CCCM' | 'OTHER';
+  about_organization?: string;
+  project_summary?: string;
+  requirements?: string;
+  deadline?: string;
+  status: 'active' | 'closed' | 'open' | 'closing_soon' | 'draft';
+  duration?: string;
+  estimated_start_date?: string;
+  tender_documents_link?: string;
+  file_upload_url?: string;
+  location?: string;
+  category?: string;
   created_at: string;
 }
 
@@ -86,6 +103,39 @@ export interface ApplicationRecord extends DatabaseRecord {
   cover_letter?: string;
   resume_url?: string;
   created_at: string;
+}
+
+// Signup Request types - matching ADMIN_REQUESTS_API_DOCS.md
+export interface SignupRequestRecord {
+  id: string;
+  email: string;
+  full_name: string;
+  role: 'user' | 'company' | 'organization' | 'admin';
+  phone?: string | null;
+  drive_link?: string | null;
+  commercial_file_url?: string | null;
+  status: 'pending' | 'approved' | 'rejected' | 'need_more_info';
+  reason_note?: string | null;
+  reviewed_by_id?: string | null;
+  reviewed_at?: string | null;
+  user_id?: string | null;
+  created_at: string;
+  updated_at: string;
+  reviewed_by?: {
+    id: string;
+    email: string;
+    full_name: string;
+  } | null;
+}
+
+export interface SignupRequestsResponse {
+  requests: SignupRequestRecord[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
 // Generic API functions
@@ -157,33 +207,75 @@ async function apiRequest<T>(
 export const authAPI = {
   login: async (email: string, password: string) => {
     const result = await apiRequest<{ 
-      access_token: string; 
-      refresh_token: string; 
-      user: UserRecord 
+      access_token?: string;
+      token?: string;
+      refresh_token?: string; 
+      user: {
+        id: string;
+        email: string;
+        name?: string;
+        full_name?: string;
+        phone?: string;
+        role?: string;
+        type?: string;
+        email_verified?: boolean;
+        emailVerified?: boolean;
+        avatar_url?: string;
+        bio?: string;
+        plan_status?: string;
+        plan_id?: string;
+        company_id?: string;
+        organization_id?: string;
+        createdAt?: string;
+      }
     }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
     
-    // Store tokens
-    if (result.access_token) {
-      localStorage.setItem('access_token', result.access_token);
+    // Store tokens - handle both 'token' and 'access_token' formats
+    const accessToken = result.access_token || result.token;
+    if (accessToken) {
+      localStorage.setItem('access_token', accessToken);
       if (result.refresh_token) {
         localStorage.setItem('refresh_token', result.refresh_token);
       }
     }
     
-    return result;
+    // Normalize the response to match expected format
+    return {
+      access_token: accessToken,
+      refresh_token: result.refresh_token,
+      user: {
+        ...result.user,
+        full_name: result.user.full_name || result.user.name || '',
+        role: (result.user.role || result.user.type || 'user') as UserRecord['role'],
+        email_verified: result.user.email_verified ?? result.user.emailVerified ?? false,
+      } as UserRecord
+    };
   },
 
-  signup: async (email: string, password: string, full_name: string, phone: string, role: string) => {
+  signup: async (
+    email: string,
+    password: string,
+    full_name: string,
+    role: string,
+    phone?: string,
+    drive_link?: string,
+    commercial_file_url?: string
+  ) => {
+    const body: any = { email, password, full_name, role };
+    if (phone) body.phone = phone;
+    if (drive_link) body.drive_link = drive_link;
+    if (commercial_file_url) body.commercial_file_url = commercial_file_url;
+
     const result = await apiRequest<{ 
       message: string; 
-      userId: string; 
+      requestId: string; 
       email: string 
     }>('/auth/signup', {
       method: 'POST',
-      body: JSON.stringify({ email, password, full_name, phone, role }),
+      body: JSON.stringify(body),
     });
     
     return result;
@@ -605,16 +697,78 @@ export const adminAPI = {
       companies: Array<{
         id: string;
         name: string;
-        status: string;
+        description?: string | null;
+        website?: string | null;
+        logo_url?: string | null;
+        approved: boolean;
         created_at: string;
+        updated_at: string;
+        user: {
+          id: string;
+          email: string;
+          full_name: string;
+        };
       }>;
       organizations: Array<{
         id: string;
         name: string;
-        status: string;
+        description?: string | null;
+        website?: string | null;
+        logo_url?: string | null;
+        approved: boolean;
         created_at: string;
+        updated_at: string;
+        user: {
+          id: string;
+          email: string;
+          full_name: string;
+        };
       }>;
     }>('/admin/pending');
+  },
+
+  getSignupRequests: async (params?: {
+    page?: number;
+    limit?: number;
+    status?: 'pending' | 'approved' | 'rejected' | 'need_more_info';
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.status) queryParams.append('status', params.status);
+
+    const query = queryParams.toString();
+    return apiRequest<SignupRequestsResponse>(
+      `/admin/signup-requests${query ? `?${query}` : ''}`
+    );
+  },
+
+  getSignupRequest: async (requestId: string) => {
+    return apiRequest<SignupRequestRecord>(`/admin/signup-requests/${requestId}`);
+  },
+
+  approveSignupRequest: async (
+    requestId: string,
+    action: 'approve' | 'reject' | 'need_more_info',
+    reasonNote?: string
+  ) => {
+    // Map action to status: approve -> approved, reject -> rejected, need_more_info -> need_more_info
+    const statusMap: Record<'approve' | 'reject' | 'need_more_info', 'approved' | 'rejected' | 'need_more_info'> = {
+      approve: 'approved',
+      reject: 'rejected',
+      need_more_info: 'need_more_info',
+    };
+    
+    return apiRequest<{
+      message: string;
+      request: SignupRequestRecord;
+    }>(`/admin/signup-requests/${requestId}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({
+        status: statusMap[action],
+        reason_note: reasonNote,
+      }),
+    });
   },
 
   getAnalytics: async () => {

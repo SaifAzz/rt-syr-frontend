@@ -63,6 +63,7 @@ import {
   LayoutDashboard,
   FolderTree,
   DollarSign,
+  ClipboardList,
 } from 'lucide-react';
 import {
   usersAPI,
@@ -85,6 +86,8 @@ import { ContentManagement } from '@/components/admin/ContentManagement';
 import { FooterManagement } from '@/components/admin/FooterManagement';
 import { FormManagement } from '@/components/admin/FormManagement';
 import { PricingManagement } from '@/components/admin/PricingManagement';
+import { StatsManagement } from '@/components/admin/StatsManagement';
+import { SignupRequestsManagement } from '@/components/admin/SignupRequestsManagement';
 
 const AdminDashboard = () => {
   const { t } = useTranslation();
@@ -115,12 +118,14 @@ const AdminDashboard = () => {
         { id: 'footer', label: 'Footer', icon: Layout },
         { id: 'forms', label: 'Forms', icon: FormInput },
         { id: 'pricing', label: 'Pricing', icon: DollarSign },
+        { id: 'stats', label: 'Statistics', icon: BarChart3 },
       ],
     },
     {
       category: 'Users & Organizations',
       items: [
         { id: 'users', label: 'Users', icon: Users },
+        { id: 'signup-requests', label: 'Signup Requests', icon: ClipboardList },
         { id: 'companies', label: 'Companies', icon: Building2 },
         { id: 'organizations', label: 'Organizations', icon: FolderTree },
       ],
@@ -475,10 +480,24 @@ const AdminDashboard = () => {
         updateTenderMutation.mutate({ id, data });
         break;
       case 'company':
-        updateCompanyMutation.mutate({ id, data });
+        // Filter out read-only fields for company updates
+        // Only name, description, and website are allowed per API
+        const companyUpdateData = {
+          name: data.name,
+          description: data.description,
+          website: data.website,
+        };
+        updateCompanyMutation.mutate({ id, data: companyUpdateData });
         break;
       case 'organization':
-        updateOrganizationMutation.mutate({ id, data });
+        // Filter out read-only fields for organization updates
+        // Only name, description, and website are allowed per API
+        const orgUpdateData = {
+          name: data.name,
+          description: data.description,
+          website: data.website,
+        };
+        updateOrganizationMutation.mutate({ id, data: orgUpdateData });
         break;
     }
   };
@@ -754,6 +773,12 @@ const AdminDashboard = () => {
                 </div>
               )}
 
+              {activeSection === 'stats' && (
+                <div className="space-y-6">
+              <StatsManagement />
+                </div>
+              )}
+
               {activeSection === 'users' && (
                 <div className="space-y-4">
                   <div className="flex flex-col sm:flex-row gap-4 mb-4">
@@ -840,6 +865,12 @@ const AdminDashboard = () => {
                 </div>
               )}
 
+              {activeSection === 'signup-requests' && (
+                <div className="space-y-6">
+                  <SignupRequestsManagement />
+                </div>
+              )}
+
               {activeSection === 'companies' && (
                 <div className="space-y-4">
                   <div className="flex flex-col sm:flex-row gap-4 mb-4">
@@ -901,7 +932,7 @@ const AdminDashboard = () => {
                             >
                               {company.status === 'approved' && <CheckCircle className="w-3 h-3 mr-1" />}
                               {company.status === 'rejected' && <XCircle className="w-3 h-3 mr-1" />}
-                              {company.status.charAt(0).toUpperCase() + company.status.slice(1)}
+                              {company.status ? company.status.charAt(0).toUpperCase() + company.status.slice(1) : 'Pending'}
                             </Badge>
                             {company.status === 'pending' && (
                               <>
@@ -944,7 +975,7 @@ const AdminDashboard = () => {
                                     <div className="space-y-2">
                                       <Label>Name</Label>
                                       <Input
-                                        value={editingEntity.data.name}
+                                        value={editingEntity.data.name || ''}
                                         onChange={(e) =>
                                           setEditingEntity({
                                             ...editingEntity,
@@ -956,7 +987,7 @@ const AdminDashboard = () => {
                                     <div className="space-y-2">
                                       <Label>Description</Label>
                                       <Textarea
-                                        value={editingEntity.data.description}
+                                        value={editingEntity.data.description || ''}
                                         onChange={(e) =>
                                           setEditingEntity({
                                             ...editingEntity,
@@ -969,32 +1000,18 @@ const AdminDashboard = () => {
                                       />
                                     </div>
                                     <div className="space-y-2">
-                                      <Label>Location</Label>
+                                      <Label>Website</Label>
                                       <Input
-                                        value={editingEntity.data.location}
+                                        type="url"
+                                        value={editingEntity.data.website || ''}
                                         onChange={(e) =>
                                           setEditingEntity({
                                             ...editingEntity,
-                                            data: { ...editingEntity.data, location: e.target.value },
+                                            data: { ...editingEntity.data, website: e.target.value },
                                           })
                                         }
+                                        placeholder="https://example.com"
                                       />
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                      <input
-                                        type="checkbox"
-                                        checked={editingEntity.data.verified}
-                                        onChange={(e) =>
-                                          setEditingEntity({
-                                            ...editingEntity,
-                                            data: {
-                                              ...editingEntity.data,
-                                              verified: e.target.checked,
-                                            },
-                                          })
-                                        }
-                                      />
-                                      <Label>Verified</Label>
                                     </div>
                                     <Button onClick={handleSaveEdit}>Save Changes</Button>
                                   </div>
@@ -1072,7 +1089,7 @@ const AdminDashboard = () => {
                             >
                               {org.status === 'approved' && <CheckCircle className="w-3 h-3 mr-1" />}
                               {org.status === 'rejected' && <XCircle className="w-3 h-3 mr-1" />}
-                              {org.status.charAt(0).toUpperCase() + org.status.slice(1)}
+                              {org.status ? org.status.charAt(0).toUpperCase() + org.status.slice(1) : 'Pending'}
                             </Badge>
                             {org.status === 'pending' && (
                               <>
@@ -1115,7 +1132,7 @@ const AdminDashboard = () => {
                                     <div className="space-y-2">
                                       <Label>Name</Label>
                                       <Input
-                                        value={editingEntity.data.name}
+                                        value={editingEntity.data.name || ''}
                                         onChange={(e) =>
                                           setEditingEntity({
                                             ...editingEntity,
@@ -1127,7 +1144,7 @@ const AdminDashboard = () => {
                                     <div className="space-y-2">
                                       <Label>Description</Label>
                                       <Textarea
-                                        value={editingEntity.data.description}
+                                        value={editingEntity.data.description || ''}
                                         onChange={(e) =>
                                           setEditingEntity({
                                             ...editingEntity,
@@ -1140,37 +1157,18 @@ const AdminDashboard = () => {
                                       />
                                     </div>
                                     <div className="space-y-2">
-                                      <Label>Location</Label>
+                                      <Label>Website</Label>
                                       <Input
-                                        value={editingEntity.data.location}
+                                        type="url"
+                                        value={editingEntity.data.website || ''}
                                         onChange={(e) =>
                                           setEditingEntity({
                                             ...editingEntity,
-                                            data: { ...editingEntity.data, location: e.target.value },
+                                            data: { ...editingEntity.data, website: e.target.value },
                                           })
                                         }
+                                        placeholder="https://example.com"
                                       />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label>Status</Label>
-                                      <Select
-                                        value={editingEntity.data.status || 'pending'}
-                                        onValueChange={(value) =>
-                                          setEditingEntity({
-                                            ...editingEntity,
-                                            data: { ...editingEntity.data, status: value },
-                                          })
-                                        }
-                                      >
-                                        <SelectTrigger>
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="pending">Pending</SelectItem>
-                                          <SelectItem value="approved">Approved</SelectItem>
-                                          <SelectItem value="rejected">Rejected</SelectItem>
-                                        </SelectContent>
-                                      </Select>
                                     </div>
                                     <Button onClick={handleSaveEdit}>Save Changes</Button>
                                   </div>

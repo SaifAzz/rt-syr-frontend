@@ -29,7 +29,15 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, full_name: string, phone: string, role: UserRole) => Promise<{ userId: string; email: string }>;
+  signup: (
+    email: string,
+    password: string,
+    full_name: string,
+    role: UserRole,
+    phone?: string,
+    drive_link?: string,
+    commercial_file_url?: string
+  ) => Promise<{ requestId: string; email: string; message: string }>;
   logout: () => void;
   verifyEmail: (userId: string, code: string) => Promise<void>;
   resendVerificationCode: (userId: string) => Promise<void>;
@@ -69,15 +77,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       const { authAPI } = await import('@/lib/api');
       const result = await authAPI.login(email, password);
-      
+
       // Convert API response to User format
+      // Handle both 'role' and 'type' fields, and both 'name' and 'full_name'
+      const userRole = (result.user.role || result.user.type || 'user') as UserRole;
+      const isAdmin = userRole === 'admin';
+      const emailVerified = isAdmin ? true : (result.user.email_verified ?? result.user.emailVerified ?? false);
+      const fullName = result.user.full_name || result.user.name || '';
+
       const user: User = {
         id: result.user.id,
         email: result.user.email,
-        full_name: result.user.full_name,
+        full_name: fullName,
         phone: result.user.phone,
-        role: result.user.role,
-        email_verified: result.user.email_verified,
+        role: userRole,
+        email_verified: emailVerified,
         avatar_url: result.user.avatar_url,
         bio: result.user.bio,
         plan_status: result.user.plan_status,
@@ -86,13 +100,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         organization_id: result.user.organization_id,
         createdAt: result.user.createdAt || new Date().toISOString(),
         // Legacy compatibility
-        name: result.user.full_name,
-        type: result.user.role === 'user' ? 'job_seeker' : result.user.role as UserType,
-        emailVerified: result.user.email_verified,
+        name: fullName,
+        type: userRole === 'user' ? 'job_seeker' : userRole as UserType,
+        emailVerified: emailVerified,
         companyId: result.user.company_id,
         organizationId: result.user.organization_id,
       };
-      
+
       setUser(user);
       localStorage.setItem('user', JSON.stringify(user));
     } catch (error: any) {
@@ -141,14 +155,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const signup = async (email: string, password: string, full_name: string, phone: string, role: UserRole) => {
+  const signup = async (
+    email: string,
+    password: string,
+    full_name: string,
+    role: UserRole,
+    phone?: string,
+    drive_link?: string,
+    commercial_file_url?: string
+  ) => {
     try {
       // Use the authAPI for signup
       const { authAPI } = await import('@/lib/api');
-      const result = await authAPI.signup(email, password, full_name, phone, role);
-      
-      // Signup returns { message, userId, email } - not user object
-      // We'll need to fetch user after email verification
+      const result = await authAPI.signup(email, password, full_name, role, phone, drive_link, commercial_file_url);
+
+      // Signup returns { message, requestId, email } - signup request needs admin approval
+      // User cannot log in until admin approves
       return result;
     } catch (error: any) {
       // Check if it's a 404 or network error - use fallback for development
@@ -160,24 +182,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         error.message?.includes('NetworkError');
 
       if (isNetworkError) {
-        // Development fallback - create mock user
-        const mockUserId = `mock-${Date.now()}`;
-        const mockUser: User = {
-          id: mockUserId,
+        // Development fallback - create mock requestId
+        const mockRequestId = `mock-request-${Date.now()}`;
+        return {
+          requestId: mockRequestId,
           email,
-          full_name,
-          phone,
-          role,
-          email_verified: role === 'admin', // Auto-verify admin users
-          createdAt: new Date().toISOString(),
-          // Legacy compatibility
-          name: full_name,
-          type: role === 'user' ? 'job_seeker' : role as UserType,
-          emailVerified: role === 'admin',
+          message: 'Signup request submitted successfully. Please wait for admin approval.',
         };
-        setUser(mockUser);
-        localStorage.setItem('user', JSON.stringify(mockUser));
-        return { userId: mockUserId, email }; // Return mock result
       }
 
       // Re-throw other errors
@@ -194,7 +205,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       const { authAPI } = await import('@/lib/api');
       const result = await authAPI.verifyEmail(userId, code);
-      
+
       // After verification, we get tokens but need to fetch user profile
       // For now, update current user if exists, or we'll need to fetch user
       if (user && user.id === userId) {
@@ -206,7 +217,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setUser(updatedUser);
         localStorage.setItem('user', JSON.stringify(updatedUser));
       }
-      
+
       return result;
     } catch (error: any) {
       // Mock fallback for development

@@ -1,17 +1,21 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
+import { formatDistanceToNow } from "date-fns";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { JobCard, type Job } from "@/components/jobs/JobCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { jobsAPI, type JobRecord } from "@/lib/api";
 import { 
   Search, 
   MapPin, 
   Filter,
   Briefcase,
   Building2,
-  X
+  X,
+  Loader2
 } from "lucide-react";
 import {
   Select,
@@ -21,96 +25,39 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Sample data
-const sampleJobs: Job[] = [
-  {
-    id: "1",
-    title: "Senior Software Engineer",
-    company: "Tech Solutions Syria",
-    location: "Damascus",
-    salary: "$1,500 - $2,500",
-    type: "full-time",
-    category: "Technology",
-    postedAt: "2 days ago",
-    isVerified: true,
-  },
-  {
-    id: "2",
-    title: "Marketing Manager",
-    company: "Global Marketing Co.",
-    location: "Aleppo",
-    salary: "$1,200 - $1,800",
-    type: "full-time",
-    category: "Marketing",
-    postedAt: "3 days ago",
-    isVerified: true,
-  },
-  {
-    id: "3",
-    title: "Accountant",
-    company: "Financial Services Ltd",
-    location: "Homs",
-    salary: "$800 - $1,200",
-    type: "full-time",
-    category: "Finance",
-    postedAt: "1 week ago",
-    isVerified: true,
-  },
-  {
-    id: "4",
-    title: "UI/UX Designer",
-    company: "Creative Agency",
-    location: "Damascus",
-    salary: "$1,000 - $1,500",
-    type: "remote",
-    category: "Design",
-    postedAt: "4 days ago",
-    isVerified: true,
-  },
-  {
-    id: "5",
-    title: "Project Manager",
-    company: "Construction Corp",
-    location: "Latakia",
-    salary: "$1,800 - $2,200",
-    type: "full-time",
-    category: "Management",
-    postedAt: "5 days ago",
-    isVerified: true,
-  },
-  {
-    id: "6",
-    title: "Sales Representative",
-    company: "Retail Solutions",
-    location: "Damascus",
-    type: "part-time",
-    category: "Sales",
-    postedAt: "1 day ago",
-    isVerified: false,
-  },
-  {
-    id: "7",
-    title: "Content Writer",
-    company: "Media House",
-    location: "Remote",
-    salary: "$500 - $800",
-    type: "contract",
-    category: "Content",
-    postedAt: "6 days ago",
-    isVerified: true,
-  },
-  {
-    id: "8",
-    title: "HR Coordinator",
-    company: "HR Solutions Syria",
-    location: "Damascus",
-    salary: "$900 - $1,100",
-    type: "full-time",
-    category: "Human Resources",
-    postedAt: "2 weeks ago",
-    isVerified: true,
-  },
-];
+// Helper function to map JobRecord to Job
+const mapJobRecordToJob = (jobRecord: JobRecord): Job => {
+  // Format salary
+  let salary: string | undefined;
+  if (jobRecord.salary_min && jobRecord.salary_max) {
+    salary = `$${jobRecord.salary_min.toLocaleString()} - $${jobRecord.salary_max.toLocaleString()}`;
+  } else if (jobRecord.salary_min) {
+    salary = `From $${jobRecord.salary_min.toLocaleString()}`;
+  } else if (jobRecord.salary_max) {
+    salary = `Up to $${jobRecord.salary_max.toLocaleString()}`;
+  }
+
+  // Format posted date
+  const postedAt = jobRecord.created_at 
+    ? formatDistanceToNow(new Date(jobRecord.created_at), { addSuffix: true })
+    : "Recently";
+
+  // Map employment type
+  const type = (jobRecord.employment_type || jobRecord.type || "full-time") as Job["type"];
+
+  return {
+    id: jobRecord.id,
+    title: jobRecord.title,
+    company: (jobRecord as any).company?.name || "Company", // API might include company info
+    companyLogo: (jobRecord as any).company?.logo_url,
+    location: jobRecord.location || "Not specified",
+    salary,
+    type,
+    category: jobRecord.category || "General",
+    postedAt,
+    isVerified: jobRecord.status === "open" || jobRecord.status === "active",
+  };
+};
 
 const Jobs = () => {
   const { t } = useTranslation();
@@ -118,29 +65,38 @@ const Jobs = () => {
   const [selectedCategory, setSelectedCategory] = useState(t('jobs.allCategories'));
   const [selectedLocation, setSelectedLocation] = useState(t('jobs.allLocations'));
 
-  const categories = [
-    t('jobs.allCategories'),
-    "Technology",
-    "Marketing",
-    "Finance",
-    "Design",
-    "Management",
-    "Sales",
-    "Content",
-    "Human Resources",
-  ];
+  // Fetch jobs from API
+  const { data: jobsData, isLoading, error } = useQuery({
+    queryKey: ['jobs'],
+    queryFn: async () => {
+      const result = await jobsAPI.getAll();
+      return Array.isArray(result) ? result : result.data || [];
+    },
+  });
 
-  const locations = [
-    t('jobs.allLocations'),
-    "Damascus",
-    "Aleppo",
-    "Homs",
-    "Latakia",
-    "Tartus",
-    "Remote",
-  ];
+  const jobs: Job[] = useMemo(() => {
+    if (!jobsData) return [];
+    return jobsData.map(mapJobRecordToJob);
+  }, [jobsData]);
 
-  const filteredJobs = sampleJobs.filter((job) => {
+  // Extract unique categories and locations from jobs
+  const categories = useMemo(() => {
+    const uniqueCategories = new Set<string>();
+    jobs.forEach(job => {
+      if (job.category) uniqueCategories.add(job.category);
+    });
+    return [t('jobs.allCategories'), ...Array.from(uniqueCategories).sort()];
+  }, [jobs, t]);
+
+  const locations = useMemo(() => {
+    const uniqueLocations = new Set<string>();
+    jobs.forEach(job => {
+      if (job.location) uniqueLocations.add(job.location);
+    });
+    return [t('jobs.allLocations'), ...Array.from(uniqueLocations).sort()];
+  }, [jobs, t]);
+
+  const filteredJobs = jobs.filter((job) => {
     const matchesSearch = 
       job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       job.company.toLowerCase().includes(searchQuery.toLowerCase());
@@ -173,7 +129,7 @@ const Jobs = () => {
                 {t('jobs.title')} <span className="text-gradient-primary">{t('jobs.titleHighlight')}</span>
               </h1>
               <p className="text-lg text-muted-foreground">
-                {t('jobs.subtitle', { count: sampleJobs.length })}
+                {t('jobs.subtitle', { count: jobs.length })}
               </p>
             </div>
           </div>
@@ -244,7 +200,22 @@ const Jobs = () => {
               </p>
             </div>
 
-            {filteredJobs.length > 0 ? (
+            {isLoading ? (
+              <div className="text-center py-16">
+                <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+                <p className="text-muted-foreground">{t('common.loading') || 'Loading jobs...'}</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-16">
+                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                  <Briefcase className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">Error loading jobs</h3>
+                <p className="text-muted-foreground mb-4">
+                  {error instanceof Error ? error.message : 'Failed to load jobs. Please try again later.'}
+                </p>
+              </div>
+            ) : filteredJobs.length > 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {filteredJobs.map((job) => (
                   <JobCard key={job.id} job={job} />

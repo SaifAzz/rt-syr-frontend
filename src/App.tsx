@@ -12,6 +12,7 @@ import Tenders from "./pages/Tenders";
 import About from "./pages/About";
 import Pricing from "./pages/Pricing";
 import Login from "./pages/Login";
+import AdminLogin from "./pages/AdminLogin";
 import Signup from "./pages/Signup";
 import VerifyEmail from "./pages/VerifyEmail";
 import UserDashboard from "./pages/dashboards/UserDashboard";
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="/about" element={<About />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/admin/dashboard/login" element={<AdminLogin />} />
               <Route path="/signup" element={<Signup />} />
               <Route
                 path="/verify-email"
