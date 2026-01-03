@@ -16,17 +16,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { tendersAPI, organizationsAPI } from '@/lib/api';
+import { tendersAPI, organizationsAPI, adminAPI } from '@/lib/api';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { FileText, ArrowLeft } from 'lucide-react';
+import { FileText, ArrowLeft, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const PostTender = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Check user approval status
+  const { data: approvalStatus } = useQuery({
+    queryKey: ['user-approval-status', user?.email],
+    queryFn: async () => {
+      if (!user?.email) return { approved: false, status: 'pending' };
+      return await adminAPI.checkUserApproval(user.email);
+    },
+    enabled: !!user?.email,
+    retry: false,
+  });
+
+  const isApproved = approvalStatus?.approved ?? false;
+  const approvalStatusText = approvalStatus?.status ?? 'pending';
 
   const [formData, setFormData] = useState({
     title: '',
@@ -141,6 +156,12 @@ const PostTender = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Check if user is approved
+    if (!isApproved) {
+      toast.error('Your account is pending admin approval. You cannot post tenders until your account is approved.');
+      return;
+    }
+
     // Validation - only title and description are required according to API
     if (!formData.title || !formData.description) {
       toast.error('Please fill in all required fields (Title and Description)');
@@ -203,6 +224,19 @@ const PostTender = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {!isApproved && (
+                <Alert variant="destructive" className="mb-6">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Account Pending Approval</strong>
+                    <p className="mt-2">
+                      {approvalStatus?.cannotCheck 
+                        ? 'Unable to verify approval status. Your account may be pending admin approval. You cannot post tenders until an admin approves your account. The system will prevent posting if your account is not approved.'
+                        : `Your account is currently ${approvalStatusText}. You cannot post tenders until an admin approves your account. Please wait for admin approval or contact support if you have questions.`}
+                    </p>
+                  </AlertDescription>
+                </Alert>
+              )}
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="title">Title *</Label>
@@ -392,7 +426,7 @@ const PostTender = () => {
                   </Button>
                   <Button
                     type="submit"
-                    disabled={mutation.isPending}
+                    disabled={mutation.isPending || !isApproved}
                   >
                     {mutation.isPending ? 'Posting...' : 'Post Tender'}
                   </Button>

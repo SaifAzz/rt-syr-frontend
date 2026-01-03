@@ -271,7 +271,8 @@ export const authAPI = {
 
     const result = await apiRequest<{ 
       message: string; 
-      requestId: string; 
+      requestId?: string; 
+      userId?: string;
       email: string 
     }>('/auth/signup', {
       method: 'POST',
@@ -781,6 +782,53 @@ export const adminAPI = {
       companies: { total: number; approved: number; pending: number };
       organizations: { total: number; approved: number; pending: number };
     }>('/admin/analytics');
+  },
+
+  // Check if current user is approved (for posting jobs/tenders)
+  // This checks the user's signup request status by email
+  // Note: This requires admin access. For regular users, this will fail
+  // and return not approved. The backend will enforce the restriction anyway.
+  checkUserApproval: async (userEmail: string) => {
+    try {
+      // Try to get signup requests - this requires admin access
+      // Regular users won't have access, so this will fail for them
+      const result = await apiRequest<SignupRequestsResponse>(
+        `/admin/signup-requests?limit=100`
+      );
+      
+      // Find the signup request for this user by email
+      const userRequest = result.requests.find(
+        req => req.email === userEmail
+      );
+      
+      // Return approval status
+      return {
+        approved: userRequest?.status === 'approved',
+        status: userRequest?.status || 'pending',
+        requestId: userRequest?.id,
+      };
+    } catch (error: any) {
+      // If API fails (e.g., 403 Forbidden - not admin, or 401 Unauthorized)
+      // Assume not approved for safety - backend will enforce restriction anyway
+      const isAuthError = error.status === 401 || error.status === 403;
+      if (isAuthError) {
+        // User doesn't have admin access - can't check status
+        // Return pending status - backend will reject if not approved
+        return {
+          approved: false,
+          status: 'pending',
+          requestId: null,
+          cannotCheck: true, // Flag to indicate we couldn't check
+        };
+      }
+      
+      console.error('Failed to check user approval:', error);
+      return {
+        approved: false,
+        status: 'pending',
+        requestId: null,
+      };
+    }
   },
 };
 

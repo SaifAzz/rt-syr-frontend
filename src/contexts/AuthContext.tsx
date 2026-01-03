@@ -37,7 +37,7 @@ interface AuthContextType {
     phone?: string,
     drive_link?: string,
     commercial_file_url?: string
-  ) => Promise<{ requestId: string; email: string; message: string }>;
+  ) => Promise<{ requestId?: string; userId?: string; email: string; message: string }>;
   logout: () => void;
   verifyEmail: (userId: string, code: string) => Promise<void>;
   resendVerificationCode: (userId: string) => Promise<void>;

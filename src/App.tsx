@@ -47,7 +47,7 @@ const App = () => (
               <Route
                 path="/verify-email"
                 element={
-                  <ProtectedRoute requireAuth={true} requireEmailVerification={false}>
+                  <ProtectedRoute requireAuth={false} requireEmailVerification={false}>
                     <VerifyEmail />
                   </ProtectedRoute>
                 }

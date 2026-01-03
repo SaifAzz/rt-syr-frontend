@@ -116,11 +116,17 @@ const Signup = () => {
         commercialFileUrl || undefined
       );
       
-      // Show success message - admin approval required
-      setSuccess(true);
-      setRequestId(result.requestId);
+      // Always redirect to OTP verification page after successful signup
+      // The API returns userId for OTP verification
+      const userId = result.userId || result.requestId;
       
-      // Don't navigate to verify-email - user needs admin approval first
+      if (userId) {
+        // Redirect to OTP verification page immediately
+        navigate(`/verify-email?userId=${userId}`, { replace: true });
+      } else {
+        // If no userId is returned, show error
+        setError('Signup successful but no user ID received. Please contact support.');
+      }
     } catch (err: any) {
       // Handle API error responses
       let errorMessage = 'Failed to create account. Please try again.';

@@ -57,13 +57,18 @@ const VerifyEmail = () => {
 
       const result = await verifyEmail(userId, code);
       
-      // After verification, we get tokens - fetch user profile or update user
-      // The verifyEmail function in AuthContext should handle this
+      // After verification, we get tokens - user account is created
+      // User can now log in (but still pending admin approval for posting)
       setSuccess(true);
       
-      // Navigate to dashboard after successful verification
+      // Navigate to login page after successful verification
+      // User needs to log in to access their account
       setTimeout(() => {
-        navigate('/dashboard');
+        navigate('/login', { 
+          state: { 
+            message: 'Email verified successfully! Please log in to continue. Your account is pending admin approval.' 
+          } 
+        });
       }, 2000);
     } catch (err: any) {
       setError(err.message || 'Invalid verification code. Please try again.');
