@@ -8,7 +8,6 @@ import {
     CarouselPrevious,
     type CarouselApi,
 } from "@/components/ui/carousel";
-import { Mail } from "lucide-react";
 
 interface Company {
     name: string;
@@ -98,17 +97,6 @@ export function CompaniesSlider() {
                                         <p className="text-xs text-muted-foreground mb-2 leading-relaxed">
                                             {company.description}
                                         </p>
-                                    </div>
-
-                                    {/* Email */}
-                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                        <Mail className="w-3 h-3" />
-                                        <a
-                                            href={`mailto:${company.email}`}
-                                            className="hover:text-primary transition-colors"
-                                        >
-                                            {company.email}
-                                        </a>
                                     </div>
                                 </div>
                             </div>

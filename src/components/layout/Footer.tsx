@@ -1,9 +1,9 @@
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { 
-  Briefcase, 
-  FileText, 
-  Mail, 
+import {
+  Briefcase,
+  FileText,
+  Mail,
   MapPin,
   Facebook,
   Twitter,
@@ -20,7 +20,7 @@ const socialLinks = [
 
 export function Footer() {
   const { t } = useTranslation();
-  
+
   const footerLinks = {
     platform: [
       { name: t('footer.browseJobs'), href: "/jobs" },
@@ -43,9 +43,9 @@ export function Footer() {
           {/* Brand */}
           <div className="lg:col-span-1">
             <Link to="/" className="flex items-center gap-2 mb-4">
-              <img 
-                src="/logos/3.png" 
-                alt="RT-SYR Logo" 
+              <img
+                src="/logos/3.png"
+                alt="RT-SYR Logo"
                 className="h-20 w-auto object-contain"
               />
               <div>
@@ -109,7 +109,7 @@ export function Footer() {
             <ul className="space-y-3">
               <li className="flex items-center gap-2 text-muted-foreground text-sm">
                 <Mail className="w-4 h-4 text-primary" />
-                contact@rt-syr.com
+                info@rt-syr.com
               </li>
               <li className="flex items-center gap-2 text-muted-foreground text-sm">
                 <MapPin className="w-4 h-4 text-primary" />
