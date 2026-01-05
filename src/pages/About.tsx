@@ -199,19 +199,19 @@ const About = () => {
                 <div className="bg-card rounded-2xl p-8 border border-border">
                   <div className="grid grid-cols-2 gap-6">
                     <div className="text-center p-6 rounded-xl bg-primary/5">
-                      <div className="text-3xl font-bold text-primary mb-1">10K+</div>
+                      <div className="text-3xl font-bold text-primary mb-1">0</div>
                       <div className="text-sm text-muted-foreground">Active Users</div>
                     </div>
                     <div className="text-center p-6 rounded-xl bg-accent/5">
-                      <div className="text-3xl font-bold text-accent mb-1">500+</div>
+                      <div className="text-3xl font-bold text-accent mb-1">0</div>
                       <div className="text-sm text-muted-foreground">Opportunities</div>
                     </div>
                     <div className="text-center p-6 rounded-xl bg-success/5">
-                      <div className="text-3xl font-bold text-success mb-1">200+</div>
+                      <div className="text-3xl font-bold text-success mb-1">0</div>
                       <div className="text-sm text-muted-foreground">Companies</div>
                     </div>
                     <div className="text-center p-6 rounded-xl bg-info/5">
-                      <div className="text-3xl font-bold text-info mb-1">150+</div>
+                      <div className="text-3xl font-bold text-info mb-1">0</div>
                       <div className="text-sm text-muted-foreground">Organizations</div>
                     </div>
                   </div>
