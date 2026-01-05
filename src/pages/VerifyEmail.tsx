@@ -23,13 +23,31 @@ const VerifyEmail = () => {
   const [resending, setResending] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
+  // UUID validation function
+  const isValidUUID = (uuid: string): boolean => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
+  };
+
   useEffect(() => {
     // Get userId from URL params or user object
     const paramUserId = searchParams.get('userId');
     if (paramUserId) {
-      setUserId(paramUserId);
+      // Validate UUID format before using it
+      if (isValidUUID(paramUserId)) {
+        setUserId(paramUserId);
+      } else {
+        setError('Invalid user ID format. Please check your verification link.');
+        return;
+      }
     } else if (user?.id) {
-      setUserId(user.id);
+      // Validate user.id is a valid UUID
+      if (isValidUUID(user.id)) {
+        setUserId(user.id);
+      } else {
+        setError('Invalid user ID format. Please contact support.');
+        return;
+      }
     } else {
       navigate('/login');
     }
@@ -52,6 +70,13 @@ const VerifyEmail = () => {
     try {
       if (!userId) {
         setError('User ID not found');
+        return;
+      }
+
+      // Validate UUID before making API call
+      if (!isValidUUID(userId)) {
+        setError('Invalid user ID format. Please check your verification link.');
+        setLoading(false);
         return;
       }
 
@@ -80,6 +105,12 @@ const VerifyEmail = () => {
   const handleResend = async () => {
     if (!userId) {
       setError('User ID not found');
+      return;
+    }
+
+    // Validate UUID before making API call
+    if (!isValidUUID(userId)) {
+      setError('Invalid user ID format. Please check your verification link.');
       return;
     }
 

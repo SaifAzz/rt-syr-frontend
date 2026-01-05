@@ -164,36 +164,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     drive_link?: string,
     commercial_file_url?: string
   ) => {
-    try {
-      // Use the authAPI for signup
-      const { authAPI } = await import('@/lib/api');
-      const result = await authAPI.signup(email, password, full_name, role, phone, drive_link, commercial_file_url);
+    // Use the authAPI for signup
+    const { authAPI } = await import('@/lib/api');
+    const result = await authAPI.signup(email, password, full_name, role, phone, drive_link, commercial_file_url);
 
-      // Signup returns { message, requestId, email } - signup request needs admin approval
-      // User cannot log in until admin approves
-      return result;
-    } catch (error: any) {
-      // Check if it's a 404 or network error - use fallback for development
-      const isNetworkError =
-        error.status === 404 ||
-        error.isNetworkError ||
-        error.message?.includes('fetch') ||
-        error.message?.includes('Failed to fetch') ||
-        error.message?.includes('NetworkError');
-
-      if (isNetworkError) {
-        // Development fallback - create mock requestId
-        const mockRequestId = `mock-request-${Date.now()}`;
-        return {
-          requestId: mockRequestId,
-          email,
-          message: 'Signup request submitted successfully. Please wait for admin approval.',
-        };
-      }
-
-      // Re-throw other errors
-      throw error;
-    }
+    // Signup returns { message, requestId, email } - signup request needs admin approval
+    // User cannot log in until admin approves
+    return result;
   };
 
   const logout = () => {

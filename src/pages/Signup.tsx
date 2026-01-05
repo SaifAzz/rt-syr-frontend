@@ -65,6 +65,12 @@ const Signup = () => {
     }
   };
 
+  // UUID validation function
+  const isValidUUID = (uuid: string): boolean => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -121,8 +127,14 @@ const Signup = () => {
       const userId = result.userId || result.requestId;
       
       if (userId) {
-        // Redirect to OTP verification page immediately
-        navigate(`/verify-email?userId=${userId}`, { replace: true });
+        // Validate that userId is a valid UUID before redirecting
+        if (isValidUUID(userId)) {
+          // Redirect to OTP verification page immediately
+          navigate(`/verify-email?userId=${userId}`, { replace: true });
+        } else {
+          // Invalid UUID format - this shouldn't happen with real API
+          setError('Invalid user ID format received. Please contact support.');
+        }
       } else {
         // If no userId is returned, show error
         setError('Signup successful but no user ID received. Please contact support.');
