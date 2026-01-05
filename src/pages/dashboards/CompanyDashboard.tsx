@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -36,17 +36,44 @@ import {
   LayoutDashboard,
   Mail,
   Settings,
+  User,
+  Save,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { jobsAPI, tendersAPI, applicationsAPI, companiesAPI, type JobRecord, type TenderRecord, type ApplicationRecord } from '@/lib/api';
-import { useQuery } from '@tanstack/react-query';
+import { jobsAPI, tendersAPI, applicationsAPI, companiesAPI, type JobRecord, type TenderRecord, type ApplicationRecord, type CompanyRecord } from '@/lib/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
 
 const CompanyDashboard = () => {
   const { t } = useTranslation();
   const { language } = useLanguage();
   const { user } = useAuth();
   const [activeSection, setActiveSection] = useState('overview');
+  const queryClient = useQueryClient();
+
+  // Profile state
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileData, setProfileData] = useState<Partial<CompanyRecord>>({
+    name: '',
+    name_ar: '',
+    description: '',
+    sector: '',
+    registration_country: '',
+    registration_number: '',
+    registration_file_url: '',
+    contact_person_name: '',
+    contact_person_position: '',
+    contact_person_email: '',
+    logo_url: '',
+  });
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [registrationFile, setRegistrationFile] = useState<File | null>(null);
 
   // Menu items organized by category
   const menuItems = [
@@ -54,6 +81,7 @@ const CompanyDashboard = () => {
       category: 'Dashboard',
       items: [
         { id: 'overview', label: t('dashboard.organization.overview'), icon: LayoutDashboard },
+        { id: 'profile', label: 'Profile', icon: User },
       ],
     },
     {
@@ -66,25 +94,59 @@ const CompanyDashboard = () => {
     },
   ];
 
-  // Get company ID from user
-  const companyId = user?.company_id || user?.companyId;
+  // Check if user has company role
+  const isCompanyUser = user?.role === 'company';
 
-  // Get my companies first to find the company ID
-  const { data: myCompanies = [] } = useQuery({
-    queryKey: ['my-companies'],
-    queryFn: async () => {
-      try {
-        return await companiesAPI.getMy();
-      } catch {
-        return [];
-      }
+  // Update company mutation
+  const updateCompanyMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      if (!user?.id || !isCompanyUser) throw new Error('Unauthorized');
+      return await companiesAPI.updateProfile(user.id, formData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-companies', user?.id] });
+      toast.success('Profile updated successfully');
+      setIsEditingProfile(false);
+      setLogoFile(null);
+      setRegistrationFile(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to update profile');
     },
   });
 
-  const effectiveCompanyId = companyId || myCompanies[0]?.id;
+  // Handle profile save
+  const handleProfileSave = async () => {
+    const formData = new FormData();
+
+    // Add all text fields with correct API field names
+    formData.append('description', profileData.description || '');
+    formData.append('full_name_en', profileData.name || '');
+    if (profileData.name_ar) {
+      formData.append('full_name_ar', profileData.name_ar);
+    }
+    formData.append('sector', profileData.sector || '');
+    formData.append('registration_country', profileData.registration_country || '');
+    formData.append('registration_number', profileData.registration_number || '');
+    formData.append('contact_person_name', profileData.contact_person_name || '');
+    formData.append('contact_person_position', profileData.contact_person_position || '');
+    formData.append('contact_person_email', profileData.contact_person_email || '');
+
+    // Add files if they exist
+    if (logoFile) {
+      formData.append('logo', logoFile);
+    }
+    if (registrationFile) {
+      formData.append('registration', registrationFile);
+    }
+
+    updateCompanyMutation.mutate(formData);
+  };
+
+  const sectors = ['WASH', 'FSL', 'EDUCATION', 'HEALTH', 'PROTECTION', 'SHELTER', 'NFI', 'CCCM', 'OTHER'];
 
   const { data: jobsData, isLoading: jobsLoading } = useQuery({
-    queryKey: ['company-jobs', user?.id, effectiveCompanyId],
+    queryKey: ['company-jobs', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
       try {
@@ -93,15 +155,7 @@ const CompanyDashboard = () => {
         const result = Array.isArray(all) ? all : all.data || [];
         return result;
       } catch {
-        // Fallback to company-specific endpoint
-        try {
-          if (effectiveCompanyId) {
-            return await jobsAPI.getByCompany(effectiveCompanyId);
-          }
-          return [];
-        } catch {
-          return [];
-        }
+        return [];
       }
     },
     enabled: !!user?.id,
@@ -110,7 +164,7 @@ const CompanyDashboard = () => {
   const jobs: JobRecord[] = Array.isArray(jobsData) ? jobsData : [];
 
   const { data: allTenders = [], isLoading: tendersLoading } = useQuery<TenderRecord[]>({
-    queryKey: ['company-tenders', user?.id, effectiveCompanyId],
+    queryKey: ['company-tenders', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
       try {
@@ -128,24 +182,24 @@ const CompanyDashboard = () => {
   const tenders = allTenders;
 
   const { data: applications = [], isLoading: appsLoading } = useQuery<ApplicationRecord[]>({
-    queryKey: ['company-applications', effectiveCompanyId],
+    queryKey: ['company-applications', user?.id],
     queryFn: async () => {
-      if (!effectiveCompanyId) return [];
+      if (!user?.id) return [];
       try {
         const all = await applicationsAPI.getAll();
         const result = Array.isArray(all) ? all : all.data || [];
-        // Filter applications for jobs/tenders belonging to this company
-        const companyJobIds = jobs.map(j => j.id);
-        const companyTenderIds = tenders.map(t => t.id);
-        return result.filter((app: ApplicationRecord) => 
-          (app.job_id && companyJobIds.includes(app.job_id)) ||
-          (app.tender_id && companyTenderIds.includes(app.tender_id))
+        // Filter applications for jobs/tenders belonging to this user
+        const userJobIds = jobs.map(j => j.id);
+        const userTenderIds = tenders.map(t => t.id);
+        return result.filter((app: ApplicationRecord) =>
+          (app.job_id && userJobIds.includes(app.job_id)) ||
+          (app.tender_id && userTenderIds.includes(app.tender_id))
         );
       } catch {
         return [];
       }
     },
-    enabled: !!effectiveCompanyId && jobs.length > 0,
+    enabled: !!user?.id && jobs.length > 0,
   });
 
   const activeJobs = jobs.filter(job => job.status === 'open').length;
@@ -163,9 +217,9 @@ const CompanyDashboard = () => {
                 <div className="flex flex-col gap-3">
                   {/* Logo and Branding */}
                   <div className="flex items-center gap-3">
-                    <img 
-                      src="/logos/3.png" 
-                      alt="RT-SYR Logo" 
+                    <img
+                      src="/logos/3.png"
+                      alt="RT-SYR Logo"
                       className="h-20 w-auto object-contain flex-shrink-0"
                     />
                     <div className="flex-1 min-w-0">
@@ -185,7 +239,7 @@ const CompanyDashboard = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex-1 overflow-y-auto py-2 bg-white">
                 {menuItems.map((category, categoryIndex) => (
                   <SidebarGroup key={categoryIndex} className="px-2">
@@ -202,11 +256,10 @@ const CompanyDashboard = () => {
                               <SidebarMenuButton
                                 onClick={() => setActiveSection(item.id)}
                                 isActive={isActive}
-                                className={`w-full justify-start gap-3 px-3 py-2.5 rounded-lg transition-all ${
-                                  isActive 
-                                    ? 'bg-muted text-foreground font-medium' 
-                                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-                                }`}
+                                className={`w-full justify-start gap-3 px-3 py-2.5 rounded-lg transition-all ${isActive
+                                  ? 'bg-muted text-foreground font-medium'
+                                  : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                                  }`}
                                 tooltip={item.label}
                               >
                                 <Icon className="w-4 h-4 flex-shrink-0" />
@@ -222,9 +275,9 @@ const CompanyDashboard = () => {
               </div>
 
               <div className="p-4 border-t border-border bg-white">
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start gap-2 text-muted-foreground hover:bg-muted hover:text-foreground" 
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-2 text-muted-foreground hover:bg-muted hover:text-foreground"
                   size="sm"
                 >
                   <Settings className="w-4 h-4" />
@@ -265,210 +318,743 @@ const CompanyDashboard = () => {
                 <Separator />
               </div>
 
-          {/* Professional Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <Card className="border-l-4 border-l-primary shadow-sm hover:shadow-md transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{t('dashboard.company.activeJobs')}</CardTitle>
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Briefcase className="h-5 w-5 text-primary" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-foreground mb-1">{activeJobs}</div>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <span>out of {jobs.length} total</span>
-                  {jobs.length > 0 && (
-                    <span className="text-primary font-medium">
-                      ({Math.round((activeJobs / jobs.length) * 100)}%)
-                    </span>
-                  )}
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="border-l-4 border-l-success shadow-sm hover:shadow-md transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{t('dashboard.company.totalApplications')}</CardTitle>
-                <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center">
-                  <Users className="h-5 w-5 text-success" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-foreground mb-1">{totalApplications}</div>
-                <p className="text-xs text-muted-foreground">applications received</p>
-              </CardContent>
-            </Card>
-            <Card className="border-l-4 border-l-accent shadow-sm hover:shadow-md transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{t('dashboard.organization.activeTenders')}</CardTitle>
-                <div className="h-10 w-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                  <FileText className="h-5 w-5 text-accent" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-foreground mb-1">{activeTenders}</div>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <span>out of {tenders.length} total</span>
-                  {tenders.length > 0 && (
-                    <span className="text-accent font-medium">
-                      ({Math.round((activeTenders / tenders.length) * 100)}%)
-                    </span>
-                  )}
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="border-l-4 border-l-info shadow-sm hover:shadow-md transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Views</CardTitle>
-                <div className="h-10 w-10 rounded-lg bg-info/10 flex items-center justify-center">
-                  <TrendingUp className="h-5 w-5 text-info" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-foreground mb-1">0</div>
-                <p className="text-xs text-muted-foreground">job views this month</p>
-              </CardContent>
-            </Card>
-          </div>
+              {/* Professional Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                <Card className="border-l-4 border-l-primary shadow-sm hover:shadow-md transition-shadow">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">{t('dashboard.company.activeJobs')}</CardTitle>
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Briefcase className="h-5 w-5 text-primary" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-foreground mb-1">{activeJobs}</div>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <span>out of {jobs.length} total</span>
+                      {jobs.length > 0 && (
+                        <span className="text-primary font-medium">
+                          ({Math.round((activeJobs / jobs.length) * 100)}%)
+                        </span>
+                      )}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="border-l-4 border-l-success shadow-sm hover:shadow-md transition-shadow">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">{t('dashboard.company.totalApplications')}</CardTitle>
+                    <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center">
+                      <Users className="h-5 w-5 text-success" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-foreground mb-1">{totalApplications}</div>
+                    <p className="text-xs text-muted-foreground">applications received</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-l-4 border-l-accent shadow-sm hover:shadow-md transition-shadow">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">{t('dashboard.organization.activeTenders')}</CardTitle>
+                    <div className="h-10 w-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                      <FileText className="h-5 w-5 text-accent" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-foreground mb-1">{activeTenders}</div>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <span>out of {tenders.length} total</span>
+                      {tenders.length > 0 && (
+                        <span className="text-accent font-medium">
+                          ({Math.round((activeTenders / tenders.length) * 100)}%)
+                        </span>
+                      )}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="border-l-4 border-l-info shadow-sm hover:shadow-md transition-shadow">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Views</CardTitle>
+                    <div className="h-10 w-10 rounded-lg bg-info/10 flex items-center justify-center">
+                      <TrendingUp className="h-5 w-5 text-info" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-foreground mb-1">0</div>
+                    <p className="text-xs text-muted-foreground">job views this month</p>
+                  </CardContent>
+                </Card>
+              </div>
 
               {/* Content Sections */}
               {activeSection === 'overview' && (
                 <div className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card className="shadow-sm">
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg font-semibold">{t('dashboard.organization.recentJobs')}</CardTitle>
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link to="#" className="text-xs">
-                          {t('common.view')} All <ArrowUpRight className="w-3 h-3 ml-1" />
-                        </Link>
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {jobsLoading ? (
-                      <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                      </div>
-                    ) : jobs.length === 0 ? (
-                      <div className="text-center py-8">
-                        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
-                          <Briefcase className="w-6 h-6 text-muted-foreground" />
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <Card className="shadow-sm">
+                      <CardHeader className="pb-4">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-lg font-semibold">{t('dashboard.organization.recentJobs')}</CardTitle>
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link to="#" className="text-xs">
+                              {t('common.view')} All <ArrowUpRight className="w-3 h-3 ml-1" />
+                            </Link>
+                          </Button>
                         </div>
-                        <p className="text-sm text-muted-foreground">{t('dashboard.organization.noJobs')}</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {jobs.slice(0, 4).map((job) => (
-                          <div
-                            key={job.id}
-                            className="group flex items-center justify-between p-4 border rounded-lg hover:border-primary/50 hover:bg-accent/5 transition-all cursor-pointer"
-                          >
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-sm mb-1 truncate">{job.title}</p>
-                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                <span className="flex items-center gap-1">
-                                  <Calendar className="w-3 h-3" />
-                                  {new Date(job.created_at || job.createdAt).toLocaleDateString()}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <MapPin className="w-3 h-3" />
-                                  {job.location}
-                                </span>
-                              </div>
-                            </div>
-                            <Badge
-                              variant={job.status === 'open' ? 'default' : 'secondary'}
-                              className="ml-3 shrink-0"
-                            >
-                              {job.status}
-                            </Badge>
+                      </CardHeader>
+                      <CardContent>
+                        {jobsLoading ? (
+                          <div className="text-center py-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-                <Card className="shadow-sm">
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg font-semibold">{t('dashboard.organization.recentTenders')}</CardTitle>
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link to="#" className="text-xs">
-                          {t('common.view')} All <ArrowUpRight className="w-3 h-3 ml-1" />
-                        </Link>
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {tendersLoading ? (
-                      <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                      </div>
-                    ) : tenders.length === 0 ? (
-                      <div className="text-center py-8">
-                        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
-                          <FileText className="w-6 h-6 text-muted-foreground" />
+                        ) : jobs.length === 0 ? (
+                          <div className="text-center py-8">
+                            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
+                              <Briefcase className="w-6 h-6 text-muted-foreground" />
+                            </div>
+                            <p className="text-sm text-muted-foreground">{t('dashboard.organization.noJobs')}</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {jobs.slice(0, 4).map((job) => (
+                              <div
+                                key={job.id}
+                                className="group flex items-center justify-between p-4 border rounded-lg hover:border-primary/50 hover:bg-accent/5 transition-all cursor-pointer"
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-semibold text-sm mb-1 truncate">{job.title}</p>
+                                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                    <span className="flex items-center gap-1">
+                                      <Calendar className="w-3 h-3" />
+                                      {new Date(job.created_at || job.createdAt).toLocaleDateString()}
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                      <MapPin className="w-3 h-3" />
+                                      {job.location}
+                                    </span>
+                                  </div>
+                                </div>
+                                <Badge
+                                  variant={job.status === 'open' ? 'default' : 'secondary'}
+                                  className="ml-3 shrink-0"
+                                >
+                                  {job.status}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                    <Card className="shadow-sm">
+                      <CardHeader className="pb-4">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-lg font-semibold">{t('dashboard.organization.recentTenders')}</CardTitle>
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link to="#" className="text-xs">
+                              {t('common.view')} All <ArrowUpRight className="w-3 h-3 ml-1" />
+                            </Link>
+                          </Button>
                         </div>
-                        <p className="text-sm text-muted-foreground">{t('dashboard.organization.noTenders')}</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {tenders.slice(0, 4).map((tender) => (
-                          <div
-                            key={tender.id}
-                            className="group flex items-center justify-between p-4 border rounded-lg hover:border-primary/50 hover:bg-accent/5 transition-all cursor-pointer"
-                          >
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-sm mb-1 truncate">{tender.title}</p>
-                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                <span className="flex items-center gap-1">
-                                  <Clock className="w-3 h-3" />
-                                  {new Date(tender.deadline).toLocaleDateString()}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <MapPin className="w-3 h-3" />
-                                  {tender.location}
-                                </span>
-                              </div>
-                            </div>
-                            <Badge variant="outline" className="ml-3 shrink-0">
-                              {tender.status}
-                            </Badge>
+                      </CardHeader>
+                      <CardContent>
+                        {tendersLoading ? (
+                          <div className="text-center py-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-              <Card className="shadow-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg font-semibold">{t('dashboard.company.recentApplications')}</CardTitle>
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link to="#" className="text-xs">
-                        {t('common.view')} All <ArrowUpRight className="w-3 h-3 ml-1" />
-                      </Link>
-                    </Button>
+                        ) : tenders.length === 0 ? (
+                          <div className="text-center py-8">
+                            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
+                              <FileText className="w-6 h-6 text-muted-foreground" />
+                            </div>
+                            <p className="text-sm text-muted-foreground">{t('dashboard.organization.noTenders')}</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {tenders.slice(0, 4).map((tender) => (
+                              <div
+                                key={tender.id}
+                                className="group flex items-center justify-between p-4 border rounded-lg hover:border-primary/50 hover:bg-accent/5 transition-all cursor-pointer"
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-semibold text-sm mb-1 truncate">{tender.title}</p>
+                                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                    <span className="flex items-center gap-1">
+                                      <Clock className="w-3 h-3" />
+                                      {new Date(tender.deadline).toLocaleDateString()}
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                      <MapPin className="w-3 h-3" />
+                                      {tender.location}
+                                    </span>
+                                  </div>
+                                </div>
+                                <Badge variant="outline" className="ml-3 shrink-0">
+                                  {tender.status}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
                   </div>
-                </CardHeader>
-                <CardContent>
+                  <Card className="shadow-sm">
+                    <CardHeader className="pb-4">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg font-semibold">{t('dashboard.company.recentApplications')}</CardTitle>
+                        <Button variant="ghost" size="sm" asChild>
+                          <Link to="#" className="text-xs">
+                            {t('common.view')} All <ArrowUpRight className="w-3 h-3 ml-1" />
+                          </Link>
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {appsLoading ? (
+                        <div className="text-center py-12">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                        </div>
+                      ) : applications.length === 0 ? (
+                        <div className="text-center py-12">
+                          <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
+                            <FileText className="w-6 h-6 text-muted-foreground" />
+                          </div>
+                          <p className="text-sm text-muted-foreground">No applications yet</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {applications.slice(0, 5).map((application) => {
+                            const getStatusIcon = () => {
+                              switch (application.status) {
+                                case 'accepted':
+                                  return <CheckCircle2 className="w-4 h-4 text-success" />;
+                                case 'rejected':
+                                  return <XCircle className="w-4 h-4 text-destructive" />;
+                                default:
+                                  return <Clock className="w-4 h-4 text-muted-foreground" />;
+                              }
+                            };
+
+                            const getStatusVariant = () => {
+                              switch (application.status) {
+                                case 'accepted':
+                                  return 'default';
+                                case 'rejected':
+                                  return 'destructive';
+                                default:
+                                  return 'secondary';
+                              }
+                            };
+
+                            return (
+                              <div
+                                key={application.id}
+                                className="group flex items-center justify-between p-4 border rounded-lg hover:border-primary/50 hover:bg-accent/5 transition-all cursor-pointer"
+                              >
+                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                    <FileText className="w-5 h-5 text-primary" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-sm mb-1">Application #{application.id.slice(0, 8)}</p>
+                                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                      <Calendar className="w-3 h-3" />
+                                      Applied on {new Date(application.created_at || application.createdAt).toLocaleDateString()}
+                                    </p>
+                                  </div>
+                                </div>
+                                <Badge variant={getStatusVariant()} className="shrink-0 gap-1.5">
+                                  {getStatusIcon()}
+                                  {application.status}
+                                </Badge>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {activeSection === 'jobs' && (
+                <div className="space-y-4">
+                  {jobsLoading ? (
+                    <div className="text-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                    </div>
+                  ) : jobs.length === 0 ? (
+                    <Card>
+                      <CardContent className="py-12 text-center">
+                        <Briefcase className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">No jobs posted yet</h3>
+                        <p className="text-muted-foreground mb-4">
+                          Start posting jobs to attract candidates
+                        </p>
+                        <Button asChild>
+                          <Link to="/jobs/post">{t('dashboard.company.postJob')}</Link>
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="grid gap-4">
+                      {jobs.map((job) => (
+                        <Card key={job.id} className="hover:shadow-md transition-shadow">
+                          <CardHeader>
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start gap-3">
+                                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+                                    <Briefcase className="w-5 h-5 text-primary" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <CardTitle className="text-lg mb-2">{job.title}</CardTitle>
+                                    <CardDescription>
+                                      <div className="flex flex-wrap items-center gap-4 mt-2">
+                                        <div className="flex items-center gap-1.5 text-sm">
+                                          <MapPin className="w-4 h-4 text-muted-foreground" />
+                                          <span>{job.location}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 text-sm">
+                                          <Calendar className="w-4 h-4 text-muted-foreground" />
+                                          <span>Posted {new Date(job.created_at || job.createdAt).toLocaleDateString()}</span>
+                                        </div>
+                                        {(job.salary_min || job.salary_max) && (
+                                          <div className="flex items-center gap-1.5 text-sm font-medium text-primary">
+                                            {job.salary_min && job.salary_max
+                                              ? `$${job.salary_min.toLocaleString()} - $${job.salary_max.toLocaleString()}`
+                                              : job.salary_min
+                                                ? `From $${job.salary_min.toLocaleString()}`
+                                                : `Up to $${job.salary_max?.toLocaleString()}`
+                                            }
+                                          </div>
+                                        )}
+                                      </div>
+                                    </CardDescription>
+                                  </div>
+                                </div>
+                              </div>
+                              <Badge
+                                variant={job.status === 'open' ? 'default' : 'secondary'}
+                                className="shrink-0"
+                              >
+                                {job.status}
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{job.description}</p>
+                            <Separator className="mb-4" />
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Button variant="outline" size="sm" className="gap-2">
+                                  <Edit className="w-4 h-4" />
+                                  {t('common.edit')}
+                                </Button>
+                                <Button variant="outline" size="sm" className="gap-2">
+                                  <Eye className="w-4 h-4" />
+                                  {t('dashboard.company.applications')}
+                                </Button>
+                              </div>
+                              <Button variant="ghost" size="sm" className="gap-2">
+                                {t('common.view')} <ArrowUpRight className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeSection === 'tenders' && (
+                <div className="space-y-4">
+                  {tendersLoading ? (
+                    <div className="text-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                    </div>
+                  ) : tenders.length === 0 ? (
+                    <Card>
+                      <CardContent className="py-12 text-center">
+                        <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">{t('dashboard.organization.noTendersPosted')}</h3>
+                        <p className="text-muted-foreground mb-4">
+                          {t('dashboard.organization.startPostingTenders')}
+                        </p>
+                        <Button asChild>
+                          <Link to="/tenders/post">{t('dashboard.organization.postTender')}</Link>
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="grid gap-4">
+                      {tenders.map((tender) => (
+                        <Card key={tender.id} className="hover:shadow-md transition-shadow">
+                          <CardHeader>
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start gap-3">
+                                  <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center shrink-0 mt-1">
+                                    <FileText className="w-5 h-5 text-accent" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <CardTitle className="text-lg mb-2">{tender.title}</CardTitle>
+                                    <CardDescription>
+                                      <div className="flex flex-wrap items-center gap-4 mt-2">
+                                        <div className="flex items-center gap-1.5 text-sm">
+                                          <MapPin className="w-4 h-4 text-muted-foreground" />
+                                          <span>{tender.location}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 text-sm">
+                                          <Clock className="w-4 h-4 text-muted-foreground" />
+                                          <span className="font-medium">
+                                            {t('dashboard.organization.deadline')}: {new Date(tender.deadline).toLocaleDateString()}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </CardDescription>
+                                  </div>
+                                </div>
+                              </div>
+                              <Badge
+                                variant={tender.status === 'open' ? 'default' : tender.status === 'closing-soon' ? 'secondary' : 'outline'}
+                                className="shrink-0"
+                              >
+                                {tender.status}
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{tender.description}</p>
+                            <Separator className="mb-4" />
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Button variant="outline" size="sm" className="gap-2">
+                                  <Edit className="w-4 h-4" />
+                                  {t('common.edit')}
+                                </Button>
+                                <Button variant="outline" size="sm" className="gap-2">
+                                  <Eye className="w-4 h-4" />
+                                  {t('dashboard.organization.viewProposals')}
+                                </Button>
+                              </div>
+                              <Button variant="ghost" size="sm" className="gap-2">
+                                {t('common.view')} <ArrowUpRight className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeSection === 'profile' && (
+                <div className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg font-semibold">Company Profile</CardTitle>
+                        <Button
+                          variant={isEditingProfile ? "outline" : "default"}
+                          onClick={() => {
+                            if (isEditingProfile) {
+                              setIsEditingProfile(false);
+                              setLogoFile(null);
+                              setRegistrationFile(null);
+                            } else {
+                              setIsEditingProfile(true);
+                            }
+                          }}
+                        >
+                          {isEditingProfile ? (
+                            <>
+                              <X className="w-4 h-4 mr-2" />
+                              Cancel
+                            </>
+                          ) : (
+                            <>
+                              <Edit className="w-4 h-4 mr-2" />
+                              Edit Profile
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {/* Logo Upload */}
+                      <div className="space-y-2">
+                        <Label>Logo</Label>
+                        <div className="flex items-center gap-4">
+                          {profileData.logo_url && (
+                            <img
+                              src={profileData.logo_url}
+                              alt="Company logo"
+                              className="w-24 h-24 object-contain border rounded-lg"
+                            />
+                          )}
+                          {isEditingProfile && (
+                            <div className="flex flex-col gap-2">
+                              <Input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    setLogoFile(file);
+                                    const reader = new FileReader();
+                                    reader.onload = (e) => {
+                                      if (e.target?.result) {
+                                        setProfileData(prev => ({ ...prev, logo_url: e.target.result as string }));
+                                      }
+                                    };
+                                    reader.readAsDataURL(file);
+                                  }
+                                }}
+                                className="w-full"
+                              />
+                              <p className="text-xs text-muted-foreground">PNG, JPG, JPEG (max 5MB)</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Company Profile (Description) */}
+                      <div className="space-y-2">
+                        <Label>Company Profile *</Label>
+                        {isEditingProfile ? (
+                          <Textarea
+                            value={profileData.description}
+                            onChange={(e) => setProfileData(prev => ({ ...prev, description: e.target.value }))}
+                            placeholder="Enter company description/profile"
+                            rows={4}
+                          />
+                        ) : (
+                          <p className="text-sm py-2 whitespace-pre-wrap">{profileData.description || '-'}</p>
+                        )}
+                      </div>
+
+                      {/* Full Name (English) */}
+                      <div className="space-y-2">
+                        <Label>Full Name (English) *</Label>
+                        {isEditingProfile ? (
+                          <Input
+                            value={profileData.name}
+                            onChange={(e) => setProfileData(prev => ({ ...prev, name: e.target.value }))}
+                            placeholder="Enter company name in English"
+                          />
+                        ) : (
+                          <p className="text-sm py-2">{profileData.name || '-'}</p>
+                        )}
+                      </div>
+
+                      {/* Full Name (Arabic) */}
+                      <div className="space-y-2">
+                        <Label>Full Name (Arabic)</Label>
+                        {isEditingProfile ? (
+                          <Input
+                            value={profileData.name_ar || ''}
+                            onChange={(e) => setProfileData(prev => ({ ...prev, name_ar: e.target.value }))}
+                            placeholder="Enter company name in Arabic"
+                            dir="rtl"
+                          />
+                        ) : (
+                          <p className="text-sm py-2" dir="rtl">{profileData.name_ar || '-'}</p>
+                        )}
+                      </div>
+
+                      {/* Sector */}
+                      <div className="space-y-2">
+                        <Label>Sector *</Label>
+                        {isEditingProfile ? (
+                          <Select
+                            value={profileData.sector || ''}
+                            onValueChange={(value) => setProfileData(prev => ({ ...prev, sector: value }))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select sector" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {sectors.map((sector) => (
+                                <SelectItem key={sector} value={sector}>
+                                  {sector}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <p className="text-sm py-2">{profileData.sector || '-'}</p>
+                        )}
+                      </div>
+
+                      {/* Registration Country */}
+                      <div className="space-y-2">
+                        <Label>Registration Country *</Label>
+                        {isEditingProfile ? (
+                          <Input
+                            value={profileData.registration_country || ''}
+                            onChange={(e) => setProfileData(prev => ({ ...prev, registration_country: e.target.value }))}
+                            placeholder="Enter registration country"
+                          />
+                        ) : (
+                          <p className="text-sm py-2">{profileData.registration_country || '-'}</p>
+                        )}
+                      </div>
+
+                      {/* Registration Number */}
+                      <div className="space-y-2">
+                        <Label>Registration Number *</Label>
+                        {isEditingProfile ? (
+                          <Input
+                            value={profileData.registration_number || ''}
+                            onChange={(e) => setProfileData(prev => ({ ...prev, registration_number: e.target.value }))}
+                            placeholder="Enter registration number"
+                          />
+                        ) : (
+                          <p className="text-sm py-2">{profileData.registration_number || '-'}</p>
+                        )}
+                      </div>
+
+                      {/* Registration File Upload */}
+                      <div className="space-y-2">
+                        <Label>Registration Document (Optional)</Label>
+                        {isEditingProfile ? (
+                          <div className="space-y-2">
+                            {profileData.registration_file_url && (
+                              <a
+                                href={profileData.registration_file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-primary hover:underline flex items-center gap-2"
+                              >
+                                View current file
+                              </a>
+                            )}
+                            <Input
+                              type="file"
+                              accept=".pdf,.doc,.docx,image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  setRegistrationFile(file);
+                                }
+                              }}
+                            />
+                            <p className="text-xs text-muted-foreground">PDF, DOC, DOCX, or Image (max 10MB)</p>
+                          </div>
+                        ) : (
+                          profileData.registration_file_url ? (
+                            <a
+                              href={profileData.registration_file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-primary hover:underline"
+                            >
+                              View registration document
+                            </a>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">No file uploaded</p>
+                          )
+                        )}
+                      </div>
+
+                      {/* Contact Person Name */}
+                      <div className="space-y-2">
+                        <Label>Contact Person Name *</Label>
+                        {isEditingProfile ? (
+                          <Input
+                            value={profileData.contact_person_name || ''}
+                            onChange={(e) => setProfileData(prev => ({ ...prev, contact_person_name: e.target.value }))}
+                            placeholder="Enter contact person name"
+                          />
+                        ) : (
+                          <p className="text-sm py-2">{profileData.contact_person_name || '-'}</p>
+                        )}
+                      </div>
+
+                      {/* Contact Person Position */}
+                      <div className="space-y-2">
+                        <Label>Contact Person Position *</Label>
+                        {isEditingProfile ? (
+                          <Input
+                            value={profileData.contact_person_position || ''}
+                            onChange={(e) => setProfileData(prev => ({ ...prev, contact_person_position: e.target.value }))}
+                            placeholder="Enter contact person position"
+                          />
+                        ) : (
+                          <p className="text-sm py-2">{profileData.contact_person_position || '-'}</p>
+                        )}
+                      </div>
+
+                      {/* Contact Person Email */}
+                      <div className="space-y-2">
+                        <Label>Contact Person Email *</Label>
+                        {isEditingProfile ? (
+                          <Input
+                            type="email"
+                            value={profileData.contact_person_email || ''}
+                            onChange={(e) => setProfileData(prev => ({ ...prev, contact_person_email: e.target.value }))}
+                            placeholder="Enter contact person email"
+                          />
+                        ) : (
+                          <p className="text-sm py-2">{profileData.contact_person_email || '-'}</p>
+                        )}
+                      </div>
+
+                      {isEditingProfile && (
+                        <div className="flex justify-end gap-3 pt-4">
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setIsEditingProfile(false);
+                              setLogoFile(null);
+                              setRegistrationFile(null);
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={handleProfileSave}
+                            disabled={updateCompanyMutation.isPending}
+                          >
+                            {updateCompanyMutation.isPending ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                                Saving...
+                              </>
+                            ) : (
+                              <>
+                                <Save className="w-4 h-4 mr-2" />
+                                Save Changes
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {activeSection === 'applications' && (
+                <div className="space-y-4">
                   {appsLoading ? (
                     <div className="text-center py-12">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
                     </div>
                   ) : applications.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
-                        <FileText className="w-6 h-6 text-muted-foreground" />
-                      </div>
-                      <p className="text-sm text-muted-foreground">No applications yet</p>
-                    </div>
+                    <Card>
+                      <CardContent className="py-12 text-center">
+                        <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">No applications yet</h3>
+                        <p className="text-muted-foreground">
+                          Applications will appear here when candidates apply to your jobs
+                        </p>
+                      </CardContent>
+                    </Card>
                   ) : (
-                    <div className="space-y-3">
-                      {applications.slice(0, 5).map((application) => {
+                    <div className="grid gap-4">
+                      {applications.map((application) => {
                         const getStatusIcon = () => {
                           switch (application.status) {
                             case 'accepted':
@@ -492,312 +1078,66 @@ const CompanyDashboard = () => {
                         };
 
                         return (
-                          <div
-                            key={application.id}
-                            className="group flex items-center justify-between p-4 border rounded-lg hover:border-primary/50 hover:bg-accent/5 transition-all cursor-pointer"
-                          >
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                                <FileText className="w-5 h-5 text-primary" />
+                          <Card key={application.id} className="hover:shadow-md transition-shadow">
+                            <CardHeader>
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start gap-3">
+                                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+                                      <FileText className="w-5 h-5 text-primary" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <CardTitle className="text-lg mb-1">Application #{application.id.slice(0, 8)}</CardTitle>
+                                      <CardDescription className="flex items-center gap-2">
+                                        <span className="flex items-center gap-1">
+                                          <Calendar className="w-3 h-3" />
+                                          Applied on {new Date(application.created_at || application.createdAt).toLocaleDateString()}
+                                        </span>
+                                      </CardDescription>
+                                    </div>
+                                  </div>
+                                </div>
+                                <Badge variant={getStatusVariant()} className="shrink-0 gap-1.5">
+                                  {getStatusIcon()}
+                                  {application.status}
+                                </Badge>
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-sm mb-1">Application #{application.id.slice(0, 8)}</p>
-                                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Calendar className="w-3 h-3" />
-                                    Applied on {new Date(application.created_at || application.createdAt).toLocaleDateString()}
-                                </p>
+                            </CardHeader>
+                            <CardContent>
+                              {application.coverLetter && (
+                                <>
+                                  <p className="text-sm text-muted-foreground mb-4 line-clamp-3">
+                                    {application.coverLetter}
+                                  </p>
+                                  <Separator className="mb-4" />
+                                </>
+                              )}
+                              <div className="flex items-center justify-between">
+                                <Button variant="outline" size="sm" className="gap-2">
+                                  <Eye className="w-4 h-4" />
+                                  View Details
+                                </Button>
+                                <div className="flex items-center gap-2">
+                                  {application.status === 'pending' && (
+                                    <>
+                                      <Button variant="default" size="sm" className="gap-2 bg-success hover:bg-success/90">
+                                        <CheckCircle2 className="w-4 h-4" />
+                                        Accept
+                                      </Button>
+                                      <Button variant="destructive" size="sm" className="gap-2">
+                                        <XCircle className="w-4 h-4" />
+                                        Reject
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                            <Badge variant={getStatusVariant()} className="shrink-0 gap-1.5">
-                              {getStatusIcon()}
-                              {application.status}
-                            </Badge>
-                          </div>
+                            </CardContent>
+                          </Card>
                         );
                       })}
                     </div>
                   )}
-                </CardContent>
-              </Card>
-                </div>
-              )}
-
-              {activeSection === 'jobs' && (
-                <div className="space-y-4">
-              {jobsLoading ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                </div>
-              ) : jobs.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <Briefcase className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No jobs posted yet</h3>
-                    <p className="text-muted-foreground mb-4">
-                      Start posting jobs to attract candidates
-                    </p>
-                    <Button asChild>
-                      <Link to="/jobs/post">{t('dashboard.company.postJob')}</Link>
-                    </Button>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid gap-4">
-                  {jobs.map((job) => (
-                    <Card key={job.id} className="hover:shadow-md transition-shadow">
-                      <CardHeader>
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start gap-3">
-                              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-1">
-                                <Briefcase className="w-5 h-5 text-primary" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <CardTitle className="text-lg mb-2">{job.title}</CardTitle>
-                                <CardDescription>
-                                  <div className="flex flex-wrap items-center gap-4 mt-2">
-                                    <div className="flex items-center gap-1.5 text-sm">
-                                      <MapPin className="w-4 h-4 text-muted-foreground" />
-                                      <span>{job.location}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 text-sm">
-                                      <Calendar className="w-4 h-4 text-muted-foreground" />
-                                      <span>Posted {new Date(job.created_at || job.createdAt).toLocaleDateString()}</span>
-                                    </div>
-                                    {(job.salary_min || job.salary_max) && (
-                                      <div className="flex items-center gap-1.5 text-sm font-medium text-primary">
-                                        {job.salary_min && job.salary_max 
-                                          ? `$${job.salary_min.toLocaleString()} - $${job.salary_max.toLocaleString()}`
-                                          : job.salary_min 
-                                          ? `From $${job.salary_min.toLocaleString()}`
-                                          : `Up to $${job.salary_max?.toLocaleString()}`
-                                        }
-                                      </div>
-                                    )}
-                                  </div>
-                                </CardDescription>
-                              </div>
-                            </div>
-                          </div>
-                          <Badge
-                            variant={job.status === 'open' ? 'default' : 'secondary'}
-                            className="shrink-0"
-                          >
-                            {job.status}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{job.description}</p>
-                        <Separator className="mb-4" />
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" className="gap-2">
-                              <Edit className="w-4 h-4" />
-                              {t('common.edit')}
-                            </Button>
-                            <Button variant="outline" size="sm" className="gap-2">
-                              <Eye className="w-4 h-4" />
-                              {t('dashboard.company.applications')}
-                            </Button>
-                          </div>
-                          <Button variant="ghost" size="sm" className="gap-2">
-                            {t('common.view')} <ArrowUpRight className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-                </div>
-              )}
-
-              {activeSection === 'tenders' && (
-                <div className="space-y-4">
-              {tendersLoading ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                </div>
-              ) : tenders.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">{t('dashboard.organization.noTendersPosted')}</h3>
-                    <p className="text-muted-foreground mb-4">
-                      {t('dashboard.organization.startPostingTenders')}
-                    </p>
-                    <Button asChild>
-                      <Link to="/tenders/post">{t('dashboard.organization.postTender')}</Link>
-                    </Button>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid gap-4">
-                  {tenders.map((tender) => (
-                    <Card key={tender.id} className="hover:shadow-md transition-shadow">
-                      <CardHeader>
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start gap-3">
-                              <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center shrink-0 mt-1">
-                                <FileText className="w-5 h-5 text-accent" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <CardTitle className="text-lg mb-2">{tender.title}</CardTitle>
-                                <CardDescription>
-                                  <div className="flex flex-wrap items-center gap-4 mt-2">
-                                    <div className="flex items-center gap-1.5 text-sm">
-                                      <MapPin className="w-4 h-4 text-muted-foreground" />
-                                      <span>{tender.location}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 text-sm">
-                                      <Clock className="w-4 h-4 text-muted-foreground" />
-                                      <span className="font-medium">
-                                        {t('dashboard.organization.deadline')}: {new Date(tender.deadline).toLocaleDateString()}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </CardDescription>
-                              </div>
-                            </div>
-                          </div>
-                          <Badge
-                            variant={tender.status === 'open' ? 'default' : tender.status === 'closing-soon' ? 'secondary' : 'outline'}
-                            className="shrink-0"
-                          >
-                            {tender.status}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{tender.description}</p>
-                        <Separator className="mb-4" />
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" className="gap-2">
-                              <Edit className="w-4 h-4" />
-                              {t('common.edit')}
-                            </Button>
-                            <Button variant="outline" size="sm" className="gap-2">
-                              <Eye className="w-4 h-4" />
-                              {t('dashboard.organization.viewProposals')}
-                            </Button>
-                          </div>
-                          <Button variant="ghost" size="sm" className="gap-2">
-                            {t('common.view')} <ArrowUpRight className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-                </div>
-              )}
-
-              {activeSection === 'applications' && (
-                <div className="space-y-4">
-              {appsLoading ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                </div>
-              ) : applications.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No applications yet</h3>
-                    <p className="text-muted-foreground">
-                      Applications will appear here when candidates apply to your jobs
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid gap-4">
-                  {applications.map((application) => {
-                    const getStatusIcon = () => {
-                      switch (application.status) {
-                        case 'accepted':
-                          return <CheckCircle2 className="w-4 h-4 text-success" />;
-                        case 'rejected':
-                          return <XCircle className="w-4 h-4 text-destructive" />;
-                        default:
-                          return <Clock className="w-4 h-4 text-muted-foreground" />;
-                      }
-                    };
-
-                    const getStatusVariant = () => {
-                      switch (application.status) {
-                        case 'accepted':
-                          return 'default';
-                        case 'rejected':
-                          return 'destructive';
-                        default:
-                          return 'secondary';
-                      }
-                    };
-
-                    return (
-                      <Card key={application.id} className="hover:shadow-md transition-shadow">
-                        <CardHeader>
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-start gap-3">
-                                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-1">
-                                  <FileText className="w-5 h-5 text-primary" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <CardTitle className="text-lg mb-1">Application #{application.id.slice(0, 8)}</CardTitle>
-                                  <CardDescription className="flex items-center gap-2">
-                                    <span className="flex items-center gap-1">
-                                      <Calendar className="w-3 h-3" />
-                                      Applied on {new Date(application.created_at || application.createdAt).toLocaleDateString()}
-                                    </span>
-                                  </CardDescription>
-                                </div>
-                              </div>
-                            </div>
-                            <Badge variant={getStatusVariant()} className="shrink-0 gap-1.5">
-                              {getStatusIcon()}
-                              {application.status}
-                            </Badge>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          {application.coverLetter && (
-                            <>
-                              <p className="text-sm text-muted-foreground mb-4 line-clamp-3">
-                                {application.coverLetter}
-                              </p>
-                              <Separator className="mb-4" />
-                            </>
-                          )}
-                          <div className="flex items-center justify-between">
-                            <Button variant="outline" size="sm" className="gap-2">
-                              <Eye className="w-4 h-4" />
-                              View Details
-                            </Button>
-                            <div className="flex items-center gap-2">
-                              {application.status === 'pending' && (
-                                <>
-                                  <Button variant="default" size="sm" className="gap-2 bg-success hover:bg-success/90">
-                                    <CheckCircle2 className="w-4 h-4" />
-                                    Accept
-                                  </Button>
-                                  <Button variant="destructive" size="sm" className="gap-2">
-                                    <XCircle className="w-4 h-4" />
-                                    Reject
-                                  </Button>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
                 </div>
               )}
             </div>

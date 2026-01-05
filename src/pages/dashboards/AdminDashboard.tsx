@@ -218,8 +218,7 @@ const AdminDashboard = () => {
   // Delete mutations
   const deleteUserMutation = useMutation({
     mutationFn: async (id: string) => {
-      // Note: Delete endpoint might not exist, adjust based on API
-      return await fetch(`/api/users/${id}`, { method: 'DELETE' });
+      return await usersAPI.delete(id);
     },
     onSuccess: () => {
       toast.success('User deleted successfully');
@@ -831,7 +830,16 @@ const AdminDashboard = () => {
                               <CardTitle className="text-lg">{userName}</CardTitle>
                               <CardDescription>{user.email}</CardDescription>
                             </div>
-                            <Badge variant="outline">{userRole}</Badge>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline">{userRole}</Badge>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => deleteUserMutation.mutate(user.id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </div>
                         </CardHeader>
                         <CardContent>

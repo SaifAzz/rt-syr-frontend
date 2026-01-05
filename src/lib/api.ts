@@ -1,7 +1,7 @@
 // Lovable Cloud API integration
 // This file contains functions to interact with the Lovable Cloud database
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const API_BASE_URL = 'http://localhost:3001/api';
 
 export interface DatabaseRecord {
   id: string;
@@ -26,18 +26,27 @@ export interface UserRecord extends DatabaseRecord {
 
 export interface CompanyRecord extends DatabaseRecord {
   name: string;
+  name_ar?: string;
   description: string;
   location: string;
   website?: string;
   logo_url?: string;
   industry?: string;
+  sector?: string;
   size?: string;
+  registration_country?: string;
+  registration_number?: string;
+  registration_file_url?: string;
+  contact_person_name?: string;
+  contact_person_position?: string;
+  contact_person_email?: string;
   status: 'pending' | 'approved' | 'rejected';
   user_id: string;
 }
 
 export interface OrganizationRecord extends DatabaseRecord {
   name: string;
+  name_ar?: string;
   description: string;
   location: string;
   website?: string;
@@ -45,6 +54,12 @@ export interface OrganizationRecord extends DatabaseRecord {
   industry?: string;
   license_number?: string;
   license_file_url?: string;
+  registration_country?: string;
+  registration_number?: string;
+  registration_file_url?: string;
+  contact_person_name?: string;
+  contact_person_position?: string;
+  contact_person_email?: string;
   work_sectors?: string[];
   status: 'pending' | 'approved' | 'rejected';
   user_id: string;
@@ -347,6 +362,12 @@ export const usersAPI = {
       body: JSON.stringify(data),
     });
   },
+
+  delete: async (id: string) => {
+    return apiRequest<{ message: string }>(`/users/${id}`, {
+      method: 'DELETE',
+    });
+  },
 };
 
 // Companies API
@@ -375,6 +396,44 @@ export const companiesAPI = {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
+  },
+
+  updateProfile: async (userId: string, formData: FormData) => {
+    const userStr = localStorage.getItem('user');
+    let token: string | null = null;
+    
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        token = user.token || user.access_token;
+      } catch {
+        // Ignore parse errors
+      }
+    }
+    
+    if (!token) {
+      token = localStorage.getItem('access_token');
+    }
+
+    const headers: HeadersInit = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/companies/${userId}/profile`, {
+      method: 'PATCH',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Update failed' }));
+      const apiError = new Error(error.message || 'Update failed');
+      (apiError as any).status = response.status;
+      throw apiError;
+    }
+
+    return response.json();
   },
 
   delete: async (id: string) => {
@@ -420,6 +479,44 @@ export const organizationsAPI = {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
+  },
+
+  updateProfile: async (userId: string, formData: FormData) => {
+    const userStr = localStorage.getItem('user');
+    let token: string | null = null;
+    
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        token = user.token || user.access_token;
+      } catch {
+        // Ignore parse errors
+      }
+    }
+    
+    if (!token) {
+      token = localStorage.getItem('access_token');
+    }
+
+    const headers: HeadersInit = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/organizations/${userId}/profile`, {
+      method: 'PATCH',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Update failed' }));
+      const apiError = new Error(error.message || 'Update failed');
+      (apiError as any).status = response.status;
+      throw apiError;
+    }
+
+    return response.json();
   },
 
   delete: async (id: string) => {
@@ -676,6 +773,70 @@ export const contentAPI = {
       method: 'PUT',
       body: JSON.stringify(data),
     });
+  },
+};
+
+// Upload API
+async function uploadFile(
+  endpoint: string,
+  file: File,
+  fileType: 'logo' | 'license' | 'resume' | 'avatar'
+): Promise<{ message: string; url: string }> {
+  const userStr = localStorage.getItem('user');
+  let token: string | null = null;
+  
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      token = user.token || user.access_token;
+    } catch {
+      // Ignore parse errors
+    }
+  }
+  
+  if (!token) {
+    token = localStorage.getItem('access_token');
+  }
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const headers: HeadersInit = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Upload failed' }));
+    const apiError = new Error(error.message || 'Upload failed');
+    (apiError as any).status = response.status;
+    throw apiError;
+  }
+
+  return response.json();
+}
+
+export const uploadAPI = {
+  logo: async (file: File) => {
+    return uploadFile('/upload/logo', file, 'logo');
+  },
+  
+  license: async (file: File) => {
+    return uploadFile('/upload/license', file, 'license');
+  },
+  
+  resume: async (file: File) => {
+    return uploadFile('/upload/resume', file, 'resume');
+  },
+  
+  avatar: async (file: File) => {
+    return uploadFile('/upload/avatar', file, 'avatar');
   },
 };
 
