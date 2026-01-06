@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,55 +16,20 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { jobsAPI, companiesAPI, organizationsAPI, adminAPI } from '@/lib/api';
+import { jobsAPI, companiesAPI, organizationsAPI } from '@/lib/api';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Briefcase, ArrowLeft, AlertCircle } from 'lucide-react';
+import { Briefcase, ArrowLeft, Mail, Link as LinkIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const PostJob = () => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { user } = useAuth();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
+    const isArabic = i18n.language.startsWith('ar');
 
-    // Check user approval status
-    const { data: approvalStatus } = useQuery({
-        queryKey: ['user-approval-status', user?.email],
-        queryFn: async () => {
-            if (!user?.email) return { approved: false, status: 'pending' };
-            return await adminAPI.checkUserApproval(user.email);
-        },
-        enabled: !!user?.email,
-        retry: false,
-    });
-
-    const isApproved = approvalStatus?.approved ?? false;
-    const approvalStatusText = approvalStatus?.status ?? 'pending';
-
-    const [formData, setFormData] = useState({
-        title: '',
-        description: '',
-        type: '',
-        sector: '' as 'WASH' | 'FSL' | 'EDUCATION' | 'HEALTH' | 'PROTECTION' | 'SHELTER' | 'NFI' | 'CCCM' | 'OTHER' | '',
-        about_company: '',
-        project_summary: '',
-        requirements: '',
-        deadline: '',
-        duration: '',
-        estimated_start_date: '',
-        tender_documents_link: '',
-        file_upload_url: '',
-        location: '',
-        salary_min: '',
-        salary_max: '',
-        employment_type: '' as 'Full-time' | 'Part-time' | 'Contract' | 'Remote' | '',
-        experience_level: '',
-        category: '',
-    });
-
-    // Fetch company/organization data to get IDs
+    // Fetch company/organization data to get names
     const { data: myCompanies = [] } = useQuery({
         queryKey: ['my-companies'],
         queryFn: async () => {
@@ -74,7 +39,7 @@ const PostJob = () => {
                 return [];
             }
         },
-        enabled: (user?.role === 'company' || user?.type === 'company') && !user?.company_id && !user?.companyId,
+        enabled: (user?.role === 'company' || user?.type === 'company'),
     });
 
     const { data: myOrganizations = [] } = useQuery({
@@ -86,94 +51,160 @@ const PostJob = () => {
                 return [];
             }
         },
-        enabled: (user?.role === 'organization' || user?.type === 'organization') && !user?.organization_id && !user?.organizationId,
+        enabled: (user?.role === 'organization' || user?.type === 'organization'),
     });
 
+    const [formData, setFormData] = useState({
+        // 1. العنوان
+        title: '',
+        // 2. اسم المعلن (منظمة او شركة)
+        publisher_name: '',
+        // 3. أخر موعد للتقديم
+        deadline: '',
+        // 4. الموقع الجغرافي
+        location: '',
+        // 5. شرح عن المعلن (منظمة او شركة)
+        about_publisher: '',
+        // 6. نوع الوظيفة
+        employment_type: '',
+        // 7. المدة الزمنية للعمل
+        work_duration: '',
+        // 8. شرح تفصيلي عن الوظيفة
+        detailed_description: '',
+        // 9. المتطلبات الرئيسية
+        main_requirements: '',
+        // 10. الراتب المخصص (اختياري)
+        salary: '',
+        // 11. كيفية التقديم على الوظيفة مع الروابط و البريد الالكتروني
+        application_method: '',
+        application_link: '',
+        application_email: '',
+        // 12. قطاع العمل
+        work_sector: '',
+    });
+
+    // نوع الوظيفة options / Job Type options
     const jobTypes = [
-        { value: 'full-time', label: 'Full-time' },
-        { value: 'part-time', label: 'Part-time' },
-        { value: 'contract', label: 'Contract' },
-        { value: 'remote', label: 'Remote' },
+        { value: 'full-time', labelAr: 'وقت كامل', labelEn: 'Full-time' },
+        { value: 'remote', labelAr: 'عن بعد', labelEn: 'Remote' },
+        { value: 'part-time', labelAr: 'دوام جزئي', labelEn: 'Part-time' },
+        { value: 'contract', labelAr: 'عقد', labelEn: 'Contract' },
     ];
 
-    const categories = [
-        'Technology',
-        'Marketing',
-        'Finance',
-        'Design',
-        'Management',
-        'Sales',
-        'Content',
-        'Human Resources',
-        'Healthcare',
-        'Education',
-        'Construction',
-        'Other',
+    // المدة الزمنية للعمل options / Work Duration options
+    const workDurations = [
+        { value: '1-year', labelAr: 'سنة', labelEn: '1 Year' },
+        { value: '1-year-renewable', labelAr: 'سنة قابلة للتجديد', labelEn: '1 Year Renewable' },
+        { value: '6-months', labelAr: 'ستة أشهر', labelEn: '6 Months' },
+        { value: '6-months-renewable', labelAr: 'ستة أشهر قابلة للتجديد', labelEn: '6 Months Renewable' },
+        { value: '3-months', labelAr: 'ثلاثة أشهر', labelEn: '3 Months' },
+        { value: '3-months-renewable', labelAr: 'ثلاثة أشهر قابلة للتجديد', labelEn: '3 Months Renewable' },
+        { value: 'project-based', labelAr: 'حسب المشروع', labelEn: 'Project-based' },
+        { value: 'indefinite', labelAr: 'غير محدد', labelEn: 'Indefinite' },
     ];
 
-    const sectors = [
-        { value: 'WASH', label: 'WASH' },
-        { value: 'FSL', label: 'FSL' },
-        { value: 'EDUCATION', label: 'Education' },
-        { value: 'HEALTH', label: 'Health' },
-        { value: 'PROTECTION', label: 'Protection' },
-        { value: 'SHELTER', label: 'Shelter' },
-        { value: 'NFI', label: 'NFI' },
-        { value: 'CCCM', label: 'CCCM' },
-        { value: 'OTHER', label: 'Other' },
+    // قطاع العمل options / Work Sector options
+    const workSectors = [
+        { value: 'WASH', labelAr: 'المياه والاصحاح', labelEn: 'Water and Sanitation' },
+        { value: 'NUTRITION', labelAr: 'التغذية', labelEn: 'Nutrition' },
+        { value: 'EARLY_RECOVERY', labelAr: 'التعافي المبكر', labelEn: 'Early Recovery' },
+        { value: 'TECHNOLOGY', labelAr: 'التكنولوجيا', labelEn: 'Technology' },
+        { value: 'MONITORING_EVALUATION', labelAr: 'المراقبة والتقييم', labelEn: 'Monitoring and Evaluation' },
+        { value: 'PROGRAM_MANAGER', labelAr: 'مدير برنامج', labelEn: 'Program Manager' },
+        { value: 'ASSISTANT_PROGRAM_MANAGER', labelAr: 'مساعد مدير برنامج', labelEn: 'Assistant Program Manager' },
+        { value: 'HUMAN_RESOURCES', labelAr: 'موارد بشرية', labelEn: 'Human Resources' },
+        { value: 'EXECUTIVE_DIRECTOR', labelAr: 'مدير تنفيذي', labelEn: 'Executive Director' },
+        { value: 'GENERAL_MANAGER', labelAr: 'مدير عام', labelEn: 'General Manager' },
+        { value: 'ADMINISTRATIVE', labelAr: 'الإداريين', labelEn: 'Administrative' },
+        { value: 'PUBLIC_RELATIONS_MANAGER', labelAr: 'مدير علاقات عامة', labelEn: 'Public Relations Manager' },
+        { value: 'FINANCE', labelAr: 'المالية', labelEn: 'Finance' },
+        { value: 'LOGISTICS', labelAr: 'اللوجستيات', labelEn: 'Logistics' },
+        { value: 'OTHER', labelAr: 'أخرى', labelEn: 'Other' },
     ];
+
+    // Get publisher name from organization or company
+    const getPublisherName = () => {
+        if (user?.role === 'organization' || user?.type === 'organization') {
+            const org = myOrganizations[0];
+            return org?.name || user?.full_name || '';
+        } else if (user?.role === 'company' || user?.type === 'company') {
+            const company = myCompanies[0];
+            return company?.name || user?.full_name || '';
+        }
+        return user?.full_name || '';
+    };
+
+    // Set publisher name on mount
+    useEffect(() => {
+        const publisherName = getPublisherName();
+        if (publisherName) {
+            setFormData(prev => {
+                if (!prev.publisher_name) {
+                    return { ...prev, publisher_name: publisherName };
+                }
+                return prev;
+            });
+        }
+    }, [user, myOrganizations, myCompanies]);
 
     const mutation = useMutation({
         mutationFn: async (data: typeof formData) => {
-            // Get company/organization ID
-            const userRole = user?.role || user?.type;
-            const companyId = user?.company_id || user?.companyId || myCompanies[0]?.id;
             const jobData: any = {
                 userId: user?.id,
                 title: data.title,
-                description: data.description,
-                company_id: companyId,
+                description: data.detailed_description || data.main_requirements || '',
                 status: 'active' as const,
             };
 
-            // Add optional fields if provided
-            if (data.type?.trim()) jobData.type = data.type;
-            if (data.sector) jobData.sector = data.sector;
-            if (data.about_company?.trim()) jobData.about_company = data.about_company;
-            if (data.project_summary?.trim()) jobData.project_summary = data.project_summary;
-            if (data.requirements?.trim()) jobData.requirements = data.requirements;
+            // Add all optional fields
             if (data.deadline?.trim()) {
                 const deadlineDate = new Date(data.deadline);
                 if (!isNaN(deadlineDate.getTime())) {
                     jobData.deadline = deadlineDate.toISOString();
                 }
             }
-            if (data.duration?.trim()) jobData.duration = data.duration;
-            if (data.estimated_start_date?.trim()) {
-                const startDate = new Date(data.estimated_start_date);
-                if (!isNaN(startDate.getTime())) {
-                    jobData.estimated_start_date = startDate.toISOString();
+            if (data.location?.trim()) jobData.location = data.location;
+            if (data.about_publisher?.trim()) jobData.about_company = data.about_publisher;
+            if (data.employment_type) jobData.employment_type = data.employment_type;
+            if (data.work_duration?.trim()) jobData.duration = data.work_duration;
+            if (data.detailed_description?.trim()) jobData.description = data.detailed_description;
+            if (data.main_requirements?.trim()) jobData.requirements = data.main_requirements;
+            if (data.salary?.trim()) {
+                // Try to parse salary range or single value
+                // Support formats like: "1500$ - 2500$", "$1,500 - $2,500", "2000$", "$2,000"
+                const salaryStr = data.salary.replace(/,/g, '').replace(/\$/g, '');
+                const rangeMatch = salaryStr.match(/(\d+)\s*-\s*(\d+)/);
+                if (rangeMatch) {
+                    // Range format: min - max
+                    jobData.salary_min = parseInt(rangeMatch[1]);
+                    jobData.salary_max = parseInt(rangeMatch[2]);
+                } else {
+                    // Single value
+                    const singleMatch = salaryStr.match(/(\d+)/);
+                    if (singleMatch) {
+                        const salaryValue = parseInt(singleMatch[1]);
+                        jobData.salary_min = salaryValue;
+                        jobData.salary_max = salaryValue;
+                    }
                 }
             }
-            if (data.tender_documents_link?.trim()) jobData.tender_documents_link = data.tender_documents_link;
-            if (data.file_upload_url?.trim()) jobData.file_upload_url = data.file_upload_url;
-            if (data.location?.trim()) jobData.location = data.location;
-            if (data.category?.trim()) jobData.category = data.category;
-            if (data.employment_type) jobData.employment_type = data.employment_type;
-            if (data.experience_level?.trim()) jobData.experience_level = data.experience_level;
-            if (data.salary_min?.trim()) {
-                const minSalary = parseInt(data.salary_min);
-                if (!isNaN(minSalary)) jobData.salary_min = minSalary;
-            }
-            if (data.salary_max?.trim()) {
-                const maxSalary = parseInt(data.salary_max);
-                if (!isNaN(maxSalary)) jobData.salary_max = maxSalary;
+            if (data.work_sector) jobData.sector = data.work_sector;
+            if (data.work_sector) jobData.category = data.work_sector;
+
+            // Store application method in a custom field or description
+            if (data.application_method?.trim() || data.application_link?.trim() || data.application_email?.trim()) {
+                const applicationInfo = [
+                    data.application_method,
+                    data.application_link ? `رابط التقديم: ${data.application_link}` : '',
+                    data.application_email ? `البريد الإلكتروني: ${data.application_email}` : '',
+                ].filter(Boolean).join('\n');
+                jobData.requirements = (jobData.requirements || '') + '\n\nكيفية التقديم:\n' + applicationInfo;
             }
 
             return await jobsAPI.create(jobData);
         },
         onSuccess: () => {
-            toast.success('Job posted successfully!');
+            toast.success(isArabic ? 'تم نشر الوظيفة بنجاح!' : 'Job posted successfully!');
             queryClient.invalidateQueries({ queryKey: ['company-jobs'] });
             queryClient.invalidateQueries({ queryKey: ['organization-jobs'] });
             queryClient.invalidateQueries({ queryKey: ['jobs'] });
@@ -188,22 +219,46 @@ const PostJob = () => {
             }
         },
         onError: (error: Error) => {
-            toast.error(error.message || 'Failed to post job');
+            toast.error(error.message || (isArabic ? 'فشل في نشر الوظيفة' : 'Failed to post job'));
         },
     });
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Check if user is approved
-        if (!isApproved) {
-            toast.error('Your account is pending admin approval. You cannot post jobs until your account is approved.');
+        // Validation
+        if (!formData.title) {
+            toast.error(isArabic ? 'الرجاء إدخال عنوان الوظيفة' : 'Please enter the job title');
             return;
         }
 
-        // Validation - only title and description are required according to API
-        if (!formData.title || !formData.description) {
-            toast.error('Please fill in all required fields (Title and Description)');
+        if (!formData.deadline) {
+            toast.error(isArabic ? 'الرجاء إدخال آخر موعد للتقديم' : 'Please enter the submission deadline');
+            return;
+        }
+
+        if (!formData.location) {
+            toast.error(isArabic ? 'الرجاء إدخال الموقع الجغرافي' : 'Please enter the geographic location');
+            return;
+        }
+
+        if (!formData.employment_type) {
+            toast.error(isArabic ? 'الرجاء اختيار نوع الوظيفة' : 'Please select the job type');
+            return;
+        }
+
+        if (!formData.work_duration) {
+            toast.error(isArabic ? 'الرجاء اختيار المدة الزمنية للعمل' : 'Please select the work duration');
+            return;
+        }
+
+        if (!formData.detailed_description) {
+            toast.error(isArabic ? 'الرجاء إدخال شرح تفصيلي عن الوظيفة' : 'Please enter a detailed job description');
+            return;
+        }
+
+        if (!formData.work_sector) {
+            toast.error(isArabic ? 'الرجاء اختيار قطاع العمل' : 'Please select the work sector');
             return;
         }
 
@@ -214,6 +269,13 @@ const PostJob = () => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
+    // Get minimum date for deadline input
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const today = `${year}-${month}-${day}`;
+
     return (
         <div className="min-h-screen bg-background">
             <Navbar />
@@ -223,274 +285,232 @@ const PostJob = () => {
                         <Button variant="ghost" asChild className="mb-4">
                             <Link to={(user?.role === 'company' || user?.type === 'company') ? '/dashboard/company' : '/dashboard/organization'}>
                                 <ArrowLeft className="w-4 h-4 mr-2" />
-                                Back to Dashboard
+                                {isArabic ? 'العودة إلى لوحة التحكم' : 'Back to Dashboard'}
                             </Link>
                         </Button>
                         <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center gap-3">
                             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                                 <Briefcase className="w-5 h-5 text-primary" />
                             </div>
-                            Post a Job
+                            {isArabic ? 'نشر وظيفة' : 'Post a Job'}
                         </h1>
                         <p className="text-muted-foreground">
-                            Create a new job posting to attract qualified candidates
+                            {isArabic ? 'أنشئ إعلان وظيفة جديد لجذب المرشحين المؤهلين' : 'Create a new job posting to attract qualified candidates'}
                         </p>
                     </div>
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Job Details</CardTitle>
+                            <CardTitle>{isArabic ? 'تفاصيل الوظيفة' : 'Job Details'}</CardTitle>
                             <CardDescription>
-                                Fill in the information about your job opportunity
+                                {isArabic ? 'املأ المعلومات حول فرصة العمل الخاصة بك' : 'Fill in the information about your job opportunity'}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            {!isApproved && (
-                                <Alert variant="destructive" className="mb-6">
-                                    <AlertCircle className="h-4 w-4" />
-                                    <AlertDescription>
-                                        <strong>Account Pending Approval</strong>
-                                        <p className="mt-2">
-                                            {approvalStatus?.cannotCheck 
-                                              ? 'Unable to verify approval status. Your account may be pending admin approval. You cannot post jobs until an admin approves your account. The system will prevent posting if your account is not approved.'
-                                              : `Your account is currently ${approvalStatusText}. You cannot post jobs until an admin approves your account. Please wait for admin approval or contact support if you have questions.`}
-                                        </p>
-                                    </AlertDescription>
-                                </Alert>
-                            )}
                             <form onSubmit={handleSubmit} className="space-y-6">
+                                {/* 1. العنوان / Title */}
                                 <div className="space-y-2">
-                                    <Label htmlFor="title">Job Title *</Label>
+                                    <Label htmlFor="title">{isArabic ? 'العنوان *' : 'Title *'}</Label>
                                     <Input
                                         id="title"
-                                        placeholder="e.g., Senior Software Engineer"
+                                        placeholder={isArabic ? 'مثال: مهندس برمجيات أول' : 'e.g., Senior Software Engineer'}
                                         value={formData.title}
                                         onChange={(e) => handleChange('title', e.target.value)}
                                         required
                                     />
                                 </div>
 
+                                {/* 2. اسم المعلن / Publisher Name */}
                                 <div className="space-y-2">
-                                    <Label htmlFor="description">Job Description *</Label>
+                                    <Label htmlFor="publisher_name">{isArabic ? 'اسم المعلن (منظمة أو شركة) *' : 'Publisher Name (Organization or Company) *'}</Label>
+                                    <Input
+                                        id="publisher_name"
+                                        placeholder={isArabic ? 'اسم المنظمة أو الشركة' : 'Organization or Company Name'}
+                                        value={formData.publisher_name}
+                                        onChange={(e) => handleChange('publisher_name', e.target.value)}
+                                        required
+                                    />
+                                </div>
+
+                                {/* 3. أخر موعد للتقديم / Submission Deadline */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="deadline">{isArabic ? 'أخر موعد للتقديم *' : 'Submission Deadline *'}</Label>
+                                    <Input
+                                        id="deadline"
+                                        type="date"
+                                        min={today}
+                                        value={formData.deadline}
+                                        onChange={(e) => handleChange('deadline', e.target.value)}
+                                        required
+                                    />
+                                </div>
+
+                                {/* 4. الموقع الجغرافي / Geographic Location */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="location">{isArabic ? 'الموقع الجغرافي *' : 'Geographic Location *'}</Label>
+                                    <Input
+                                        id="location"
+                                        placeholder={isArabic ? 'مثال: دمشق، حلب، عن بُعد' : 'e.g., Damascus, Aleppo, Remote'}
+                                        value={formData.location}
+                                        onChange={(e) => handleChange('location', e.target.value)}
+                                        required
+                                    />
+                                </div>
+
+                                {/* 5. شرح عن المعلن / About Publisher */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="about_publisher">{isArabic ? 'شرح عن المعلن (منظمة أو شركة) *' : 'About Publisher (Organization or Company) *'}</Label>
                                     <Textarea
-                                        id="description"
-                                        placeholder="Provide a detailed description of the job, including responsibilities, requirements, qualifications, and any other relevant information..."
-                                        value={formData.description}
-                                        onChange={(e) => handleChange('description', e.target.value)}
+                                        id="about_publisher"
+                                        placeholder={isArabic ? 'أخبرنا عن منظمتك أو شركتك...' : 'Tell us about your organization or company...'}
+                                        value={formData.about_publisher}
+                                        onChange={(e) => handleChange('about_publisher', e.target.value)}
+                                        rows={4}
+                                        required
+                                    />
+                                </div>
+
+                                {/* 6. نوع الوظيفة / Job Type */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="employment_type">{isArabic ? 'نوع الوظيفة *' : 'Job Type *'}</Label>
+                                    <Select
+                                        value={formData.employment_type}
+                                        onValueChange={(value) => handleChange('employment_type', value)}
+                                    >
+                                        <SelectTrigger id="employment_type">
+                                            <SelectValue placeholder={isArabic ? 'اختر نوع الوظيفة' : 'Select job type'} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {jobTypes.map((type) => (
+                                                <SelectItem key={type.value} value={type.value}>
+                                                    {isArabic ? type.labelAr : type.labelEn}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* 7. المدة الزمنية للعمل / Work Duration */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="work_duration">{isArabic ? 'المدة الزمنية للعمل *' : 'Work Duration *'}</Label>
+                                    <Select
+                                        value={formData.work_duration}
+                                        onValueChange={(value) => handleChange('work_duration', value)}
+                                    >
+                                        <SelectTrigger id="work_duration">
+                                            <SelectValue placeholder={isArabic ? 'اختر المدة الزمنية' : 'Select work duration'} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {workDurations.map((duration) => (
+                                                <SelectItem key={duration.value} value={duration.value}>
+                                                    {isArabic ? duration.labelAr : duration.labelEn}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* 8. شرح تفصيلي عن الوظيفة / Detailed Job Description */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="detailed_description">{isArabic ? 'شرح تفصيلي عن الوظيفة *' : 'Detailed Job Description *'}</Label>
+                                    <Textarea
+                                        id="detailed_description"
+                                        placeholder={isArabic
+                                            ? 'قدم شرحاً تفصيلياً عن الوظيفة، المسؤوليات، المهام، وأي معلومات أخرى ذات صلة...'
+                                            : 'Provide a detailed description of the job, responsibilities, tasks, and any other relevant information...'}
+                                        value={formData.detailed_description}
+                                        onChange={(e) => handleChange('detailed_description', e.target.value)}
                                         rows={8}
                                         required
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="type">Type (Optional)</Label>
-                                        <Input
-                                            id="type"
-                                            placeholder="e.g., Full-time, Part-time, Contract"
-                                            value={formData.type}
-                                            onChange={(e) => handleChange('type', e.target.value)}
-                                        />
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="sector">Sector (Optional)</Label>
-                                        <Select
-                                            value={formData.sector}
-                                            onValueChange={(value) => handleChange('sector', value)}
-                                        >
-                                            <SelectTrigger id="sector">
-                                                <SelectValue placeholder="Select sector" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {sectors.map((sector) => (
-                                                    <SelectItem key={sector.value} value={sector.value}>
-                                                        {sector.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
-
+                                {/* 9. المتطلبات الرئيسية / Main Requirements */}
                                 <div className="space-y-2">
-                                    <Label htmlFor="about_company">About Company (Optional)</Label>
+                                    <Label htmlFor="main_requirements">{isArabic ? 'المتطلبات الرئيسية *' : 'Main Requirements *'}</Label>
                                     <Textarea
-                                        id="about_company"
-                                        placeholder="Tell us about your company..."
-                                        value={formData.about_company}
-                                        onChange={(e) => handleChange('about_company', e.target.value)}
-                                        rows={4}
+                                        id="main_requirements"
+                                        placeholder={isArabic
+                                            ? 'اذكر المتطلبات الرئيسية مثل الشهادات، سنوات الخبرة، اللغات، المهارات المطلوبة...'
+                                            : 'Mention the main requirements such as certificates, years of experience, languages, required skills...'}
+                                        value={formData.main_requirements}
+                                        onChange={(e) => handleChange('main_requirements', e.target.value)}
+                                        rows={6}
+                                        required
                                     />
                                 </div>
 
+                                {/* 10. الراتب المخصص / Salary (Optional) */}
                                 <div className="space-y-2">
-                                    <Label htmlFor="project_summary">Project Summary (Optional)</Label>
-                                    <Textarea
-                                        id="project_summary"
-                                        placeholder="Provide a summary of the project this job is part of..."
-                                        value={formData.project_summary}
-                                        onChange={(e) => handleChange('project_summary', e.target.value)}
-                                        rows={4}
-                                    />
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="location">Location (Optional)</Label>
-                                        <Input
-                                            id="location"
-                                            placeholder="e.g., Damascus, Aleppo, Remote"
-                                            value={formData.location}
-                                            onChange={(e) => handleChange('location', e.target.value)}
-                                        />
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="employment_type">Employment Type (Optional)</Label>
-                                        <Select
-                                            value={formData.employment_type}
-                                            onValueChange={(value) => handleChange('employment_type', value)}
-                                        >
-                                            <SelectTrigger id="employment_type">
-                                                <SelectValue placeholder="Select employment type" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="Full-time">Full-time</SelectItem>
-                                                <SelectItem value="Part-time">Part-time</SelectItem>
-                                                <SelectItem value="Contract">Contract</SelectItem>
-                                                <SelectItem value="Remote">Remote</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="requirements">Requirements (Optional)</Label>
-                                    <Textarea
-                                        id="requirements"
-                                        placeholder="List the requirements, qualifications, and skills needed for this position..."
-                                        value={formData.requirements}
-                                        onChange={(e) => handleChange('requirements', e.target.value)}
-                                        rows={4}
-                                    />
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="category">Category (Optional)</Label>
-                                        <Select
-                                            value={formData.category}
-                                            onValueChange={(value) => handleChange('category', value)}
-                                        >
-                                            <SelectTrigger id="category">
-                                                <SelectValue placeholder="Select category" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {categories.map((cat) => (
-                                                    <SelectItem key={cat} value={cat}>
-                                                        {cat}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="experience_level">Experience Level (Optional)</Label>
-                                        <Input
-                                            id="experience_level"
-                                            placeholder="e.g., Senior, Mid-level, Entry-level"
-                                            value={formData.experience_level}
-                                            onChange={(e) => handleChange('experience_level', e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="deadline">Deadline (Optional)</Label>
-                                        <Input
-                                            id="deadline"
-                                            type="datetime-local"
-                                            value={formData.deadline}
-                                            onChange={(e) => handleChange('deadline', e.target.value)}
-                                        />
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="duration">Duration (Optional)</Label>
-                                        <Input
-                                            id="duration"
-                                            placeholder="e.g., 6 months, 1 year"
-                                            value={formData.duration}
-                                            onChange={(e) => handleChange('duration', e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="estimated_start_date">Estimated Start Date (Optional)</Label>
+                                    <Label htmlFor="salary">{isArabic ? 'الراتب المخصص (اختياري)' : 'Salary (Optional)'}</Label>
                                     <Input
-                                        id="estimated_start_date"
-                                        type="datetime-local"
-                                        value={formData.estimated_start_date}
-                                        onChange={(e) => handleChange('estimated_start_date', e.target.value)}
+                                        id="salary"
+                                        placeholder={isArabic ? 'مثال: 1500$ - 2500$ أو 2000$' : 'e.g., $1,500 - $2,500 or $2,000'}
+                                        value={formData.salary}
+                                        onChange={(e) => handleChange('salary', e.target.value)}
                                     />
+                                    <p className="text-xs text-muted-foreground">
+                                        {isArabic ? 'يمكنك إدخال نطاق راتب أو مبلغ محدد' : 'You can enter a salary range or a specific amount'}
+                                    </p>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="tender_documents_link">Tender Documents Link (Optional)</Label>
-                                        <Input
-                                            id="tender_documents_link"
-                                            type="url"
-                                            placeholder="https://example.com/documents"
-                                            value={formData.tender_documents_link}
-                                            onChange={(e) => handleChange('tender_documents_link', e.target.value)}
-                                        />
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="file_upload_url">File Upload URL (Optional)</Label>
-                                        <Input
-                                            id="file_upload_url"
-                                            type="url"
-                                            placeholder="https://storage.example.com/files/document.pdf"
-                                            value={formData.file_upload_url}
-                                            onChange={(e) => handleChange('file_upload_url', e.target.value)}
-                                        />
+                                {/* 11. كيفية التقديم / How to Apply */}
+                                <div className="space-y-4">
+                                    <Label>{isArabic ? 'كيفية التقديم على الوظيفة *' : 'How to Apply *'}</Label>
+                                    <div className="space-y-3">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="application_method">{isArabic ? 'طريقة التقديم' : 'Application Method'}</Label>
+                                            <Textarea
+                                                id="application_method"
+                                                placeholder={isArabic ? 'اشرح كيفية التقديم على الوظيفة...' : 'Explain how to apply for the job...'}
+                                                value={formData.application_method}
+                                                onChange={(e) => handleChange('application_method', e.target.value)}
+                                                rows={3}
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="application_link">{isArabic ? 'رابط التقديم' : 'Application Link'}</Label>
+                                                <Input
+                                                    id="application_link"
+                                                    type="url"
+                                                    placeholder="https://example.com/apply"
+                                                    value={formData.application_link}
+                                                    onChange={(e) => handleChange('application_link', e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="application_email">{isArabic ? 'البريد الإلكتروني' : 'Email'}</Label>
+                                                <Input
+                                                    id="application_email"
+                                                    type="email"
+                                                    placeholder="jobs@example.com"
+                                                    value={formData.application_email}
+                                                    onChange={(e) => handleChange('application_email', e.target.value)}
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="salary_min">Minimum Salary (Optional)</Label>
-                                        <Input
-                                            id="salary_min"
-                                            type="number"
-                                            placeholder="e.g., 1500"
-                                            value={formData.salary_min}
-                                            onChange={(e) => handleChange('salary_min', e.target.value)}
-                                        />
-                                        <p className="text-xs text-muted-foreground">
-                                            Minimum salary in USD
-                                        </p>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="salary_max">Maximum Salary (Optional)</Label>
-                                        <Input
-                                            id="salary_max"
-                                            type="number"
-                                            placeholder="e.g., 2500"
-                                            value={formData.salary_max}
-                                            onChange={(e) => handleChange('salary_max', e.target.value)}
-                                        />
-                                        <p className="text-xs text-muted-foreground">
-                                            Maximum salary in USD
-                                        </p>
-                                    </div>
+                                {/* 12. قطاع العمل / Work Sector */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="work_sector">{isArabic ? 'قطاع العمل *' : 'Work Sector *'}</Label>
+                                    <Select
+                                        value={formData.work_sector}
+                                        onValueChange={(value) => handleChange('work_sector', value)}
+                                    >
+                                        <SelectTrigger id="work_sector">
+                                            <SelectValue placeholder={isArabic ? 'اختر قطاع العمل' : 'Select work sector'} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {workSectors.map((sector) => (
+                                                <SelectItem key={sector.value} value={sector.value}>
+                                                    {isArabic ? sector.labelAr : sector.labelEn}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
 
                                 <div className="flex items-center justify-end gap-4 pt-4">
@@ -499,13 +519,15 @@ const PostJob = () => {
                                         variant="outline"
                                         onClick={() => navigate(-1)}
                                     >
-                                        Cancel
+                                        {isArabic ? 'إلغاء' : 'Cancel'}
                                     </Button>
                                     <Button
                                         type="submit"
-                                        disabled={mutation.isPending || !isApproved}
+                                        disabled={mutation.isPending}
                                     >
-                                        {mutation.isPending ? 'Posting...' : 'Post Job'}
+                                        {mutation.isPending
+                                            ? (isArabic ? 'جاري النشر...' : 'Posting...')
+                                            : (isArabic ? 'نشر الوظيفة' : 'Post Job')}
                                     </Button>
                                 </div>
                             </form>
@@ -519,4 +541,3 @@ const PostJob = () => {
 };
 
 export default PostJob;
-

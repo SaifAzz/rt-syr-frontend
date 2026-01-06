@@ -341,6 +341,35 @@ const AdminDashboard = () => {
     },
   });
 
+  // Posting approval mutations
+  const approveJobMutation = useMutation({
+    mutationFn: async ({ id, can_post }: { id: string; can_post: boolean }) => {
+      return await adminAPI.approvePosting('jobs', id, can_post);
+    },
+    onSuccess: (_, variables) => {
+      toast.success(`Job ${variables.can_post ? 'approved' : 'rejected'} successfully`);
+      queryClient.invalidateQueries({ queryKey: ['admin-jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+    },
+    onError: () => {
+      toast.error('Failed to update job approval status');
+    },
+  });
+
+  const approveTenderMutation = useMutation({
+    mutationFn: async ({ id, can_post }: { id: string; can_post: boolean }) => {
+      return await adminAPI.approvePosting('tenders', id, can_post);
+    },
+    onSuccess: (_, variables) => {
+      toast.success(`Tender ${variables.can_post ? 'approved' : 'rejected'} successfully`);
+      queryClient.invalidateQueries({ queryKey: ['admin-tenders'] });
+      queryClient.invalidateQueries({ queryKey: ['tenders'] });
+    },
+    onError: () => {
+      toast.error('Failed to update tender approval status');
+    },
+  });
+
   // Fetch pending approvals
   const { data: pendingData } = useQuery({
     queryKey: ['admin-pending'],
@@ -1249,6 +1278,27 @@ const AdminDashboard = () => {
                             <Badge variant={job.status === 'open' ? 'default' : 'secondary'}>
                               {job.status}
                             </Badge>
+                            {/* Approval buttons - allow admin to approve/reject job postings */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => approveJobMutation.mutate({ id: job.id, can_post: true })}
+                              className="text-green-600 hover:text-green-700"
+                              disabled={approveJobMutation.isPending}
+                            >
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              Approve
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => approveJobMutation.mutate({ id: job.id, can_post: false })}
+                              className="text-red-600 hover:text-red-700"
+                              disabled={approveJobMutation.isPending}
+                            >
+                              <XCircle className="w-4 h-4 mr-1" />
+                              Reject
+                            </Button>
                             <Dialog>
                               <DialogTrigger asChild>
                                 <Button
@@ -1492,6 +1542,27 @@ const AdminDashboard = () => {
                           </div>
                           <div className="flex items-center gap-2">
                             <Badge variant="outline">{tender.status}</Badge>
+                            {/* Approval buttons - allow admin to approve/reject tender postings */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => approveTenderMutation.mutate({ id: tender.id, can_post: true })}
+                              className="text-green-600 hover:text-green-700"
+                              disabled={approveTenderMutation.isPending}
+                            >
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              Approve
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => approveTenderMutation.mutate({ id: tender.id, can_post: false })}
+                              className="text-red-600 hover:text-red-700"
+                              disabled={approveTenderMutation.isPending}
+                            >
+                              <XCircle className="w-4 h-4 mr-1" />
+                              Reject
+                            </Button>
                             <Dialog>
                               <DialogTrigger asChild>
                                 <Button

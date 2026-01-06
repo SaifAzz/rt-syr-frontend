@@ -1,7 +1,7 @@
 // Lovable Cloud API integration
 // This file contains functions to interact with the Lovable Cloud database
 
-const API_BASE_URL = 'https://rt-syr.site/api';
+const API_BASE_URL = 'http://localhost:3001/api';
 
 export interface DatabaseRecord {
   id: string;
@@ -943,6 +943,21 @@ export const adminAPI = {
       companies: { total: number; approved: number; pending: number };
       organizations: { total: number; approved: number; pending: number };
     }>('/admin/analytics');
+  },
+
+  // Approve or reject a job or tender posting
+  approvePosting: async (entityType: 'jobs' | 'tenders', entityId: string, can_post: boolean) => {
+    return apiRequest<{
+      message: string;
+      posting: {
+        id: string;
+        type: string;
+        status: string;
+      };
+    }>('/admin/approve-posting', {
+      method: 'POST',
+      body: JSON.stringify({ entityType, entityId, can_post }),
+    });
   },
 
   // Check if current user is approved (for posting jobs/tenders)

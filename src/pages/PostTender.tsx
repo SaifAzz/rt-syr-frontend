@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,75 +16,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { tendersAPI, organizationsAPI, adminAPI } from '@/lib/api';
+import { tendersAPI, organizationsAPI, companiesAPI } from '@/lib/api';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { FileText, ArrowLeft, AlertCircle } from 'lucide-react';
+import { FileText, ArrowLeft, Upload } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const PostTender = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const isArabic = i18n.language.startsWith('ar');
 
-  // Check user approval status
-  const { data: approvalStatus } = useQuery({
-    queryKey: ['user-approval-status', user?.email],
-    queryFn: async () => {
-      if (!user?.email) return { approved: false, status: 'pending' };
-      return await adminAPI.checkUserApproval(user.email);
-    },
-    enabled: !!user?.email,
-    retry: false,
-  });
-
-  const isApproved = approvalStatus?.approved ?? false;
-  const approvalStatusText = approvalStatus?.status ?? 'pending';
-
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    type: '',
-    sector: '' as 'WASH' | 'FSL' | 'EDUCATION' | 'HEALTH' | 'PROTECTION' | 'SHELTER' | 'NFI' | 'CCCM' | 'OTHER' | '',
-    about_organization: '',
-    project_summary: '',
-    requirements: '',
-    deadline: '',
-    duration: '',
-    estimated_start_date: '',
-    tender_documents_link: '',
-    file_upload_url: '',
-    location: '',
-    category: '',
-  });
-
-  const categories = [
-    'Technology',
-    'Construction',
-    'Procurement',
-    'Education',
-    'Healthcare',
-    'Transportation',
-    'Agriculture',
-    'Energy',
-    'Other',
-  ];
-
-  const sectors = [
-    { value: 'WASH', label: 'WASH' },
-    { value: 'FSL', label: 'FSL' },
-    { value: 'EDUCATION', label: 'Education' },
-    { value: 'HEALTH', label: 'Health' },
-    { value: 'PROTECTION', label: 'Protection' },
-    { value: 'SHELTER', label: 'Shelter' },
-    { value: 'NFI', label: 'NFI' },
-    { value: 'CCCM', label: 'CCCM' },
-    { value: 'OTHER', label: 'Other' },
-  ];
-
-  // Fetch organization data to get IDs
+  // Fetch organization/company data to get names
   const { data: myOrganizations = [] } = useQuery({
     queryKey: ['my-organizations'],
     queryFn: async () => {
@@ -94,49 +39,117 @@ const PostTender = () => {
         return [];
       }
     },
-    enabled: (user?.role === 'organization' || user?.type === 'organization') && !user?.organization_id && !user?.organizationId,
+    enabled: (user?.role === 'organization' || user?.type === 'organization'),
   });
+
+  const { data: myCompanies = [] } = useQuery({
+    queryKey: ['my-companies'],
+    queryFn: async () => {
+      try {
+        return await companiesAPI.getMy();
+      } catch {
+        return [];
+      }
+    },
+    enabled: (user?.role === 'company' || user?.type === 'company'),
+  });
+
+  const [formData, setFormData] = useState({
+    // 1. عنوان المناقصة
+    title: '',
+    // 2. اسم المعلن (المنظمة أو الشركة)
+    publisher_name: '',
+    // 3. الموقع الجغرافي
+    location: '',
+    // 4. أخر موعد للتقديم (تاريخ)
+    deadline: '',
+    // 5. نبذة عن المعلن (المنظمة أو الشركة)
+    about_publisher: '',
+    // 6. قطاع المناقصة
+    sector: '',
+    // 7. نبذة عن المشروع
+    project_summary: '',
+    // 8. المتطلبات
+    requirements: '',
+    // 9. رفع مستندات المناقصة
+    tender_documents_link: '',
+    file_upload_url: '',
+    // 10. رابط التقديم من موقع المعلن او رابط درايف
+    application_link: '',
+    drive_link: '',
+  });
+
+  // قطاع المناقصة options
+  const tenderSectors = [
+    { value: 'WASH', labelAr: 'المياه والاصحاح', labelEn: 'Water and Sanitation' },
+    { value: 'ELECTRICITY', labelAr: 'الكهرباء', labelEn: 'Electricity' },
+    { value: 'FOOD', labelAr: 'الغذاء', labelEn: 'Food' },
+    { value: 'CONSTRUCTION', labelAr: 'الإنشاءات', labelEn: 'Construction' },
+    { value: 'FSL', labelAr: 'الأمن الغذائي وسبل العيش', labelEn: 'Food Security and Livelihoods' },
+    { value: 'EDUCATION', labelAr: 'التعليم', labelEn: 'Education' },
+    { value: 'HEALTH', labelAr: 'الصحة', labelEn: 'Health' },
+    { value: 'PROTECTION', labelAr: 'الحماية', labelEn: 'Protection' },
+    { value: 'SHELTER', labelAr: 'المأوى', labelEn: 'Shelter' },
+    { value: 'NFI', labelAr: 'المواد غير الغذائية', labelEn: 'Non-Food Items' },
+    { value: 'CCCM', labelAr: 'إدارة المخيمات', labelEn: 'Camp Coordination and Management' },
+    { value: 'OTHER', labelAr: 'أخرى', labelEn: 'Other' },
+  ];
+
+  // Get publisher name from organization or company
+  const getPublisherName = () => {
+    if (user?.role === 'organization' || user?.type === 'organization') {
+      const org = myOrganizations[0];
+      return org?.name || user?.full_name || '';
+    } else if (user?.role === 'company' || user?.type === 'company') {
+      const company = myCompanies[0];
+      return company?.name || user?.full_name || '';
+    }
+    return user?.full_name || '';
+  };
+
+  // Set publisher name on mount
+  useEffect(() => {
+    const publisherName = getPublisherName();
+    if (publisherName) {
+      setFormData(prev => {
+        if (!prev.publisher_name) {
+          return { ...prev, publisher_name: publisherName };
+        }
+        return prev;
+      });
+    }
+  }, [user, myOrganizations, myCompanies]);
 
   const mutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      // Get organization_id from authenticated user
-      const organizationId = user?.organization_id || user?.organizationId || myOrganizations[0]?.id;
       const tenderData: any = {
         userId: user?.id,
         title: data.title,
-        description: data.description,
-        organization_id: organizationId,
+        description: data.project_summary || data.requirements || '', // Use project_summary or requirements as description
         status: 'active' as const,
       };
 
-      // Add optional fields if provided
-      if (data.type?.trim()) tenderData.type = data.type;
-      if (data.sector) tenderData.sector = data.sector;
-      if (data.about_organization?.trim()) tenderData.about_organization = data.about_organization;
-      if (data.project_summary?.trim()) tenderData.project_summary = data.project_summary;
-      if (data.requirements?.trim()) tenderData.requirements = data.requirements;
+      // Add all optional fields
+      if (data.location?.trim()) tenderData.location = data.location;
       if (data.deadline?.trim()) {
         const deadlineDate = new Date(data.deadline);
         if (!isNaN(deadlineDate.getTime())) {
           tenderData.deadline = deadlineDate.toISOString();
         }
       }
-      if (data.duration?.trim()) tenderData.duration = data.duration;
-      if (data.estimated_start_date?.trim()) {
-        const startDate = new Date(data.estimated_start_date);
-        if (!isNaN(startDate.getTime())) {
-          tenderData.estimated_start_date = startDate.toISOString();
-        }
-      }
+      if (data.about_publisher?.trim()) tenderData.about_organization = data.about_publisher;
+      if (data.sector) tenderData.sector = data.sector;
+      if (data.project_summary?.trim()) tenderData.project_summary = data.project_summary;
+      if (data.requirements?.trim()) tenderData.requirements = data.requirements;
       if (data.tender_documents_link?.trim()) tenderData.tender_documents_link = data.tender_documents_link;
       if (data.file_upload_url?.trim()) tenderData.file_upload_url = data.file_upload_url;
-      if (data.location?.trim()) tenderData.location = data.location;
-      if (data.category?.trim()) tenderData.category = data.category;
+      // Note: application_link and drive_link are not part of the API spec, 
+      // so we don't include them in the payload
 
       return await tendersAPI.create(tenderData);
     },
     onSuccess: () => {
-      toast.success('Tender posted successfully!');
+      toast.success(isArabic ? 'تم نشر المناقصة بنجاح!' : 'Tender posted successfully!');
       queryClient.invalidateQueries({ queryKey: ['company-tenders'] });
       queryClient.invalidateQueries({ queryKey: ['organization-tenders'] });
       queryClient.invalidateQueries({ queryKey: ['tenders'] });
@@ -149,32 +162,41 @@ const PostTender = () => {
       }
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to post tender');
+      toast.error(error.message || (isArabic ? 'فشل في نشر المناقصة' : 'Failed to post tender'));
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Check if user is approved
-    if (!isApproved) {
-      toast.error('Your account is pending admin approval. You cannot post tenders until your account is approved.');
+    // Validation
+    if (!formData.title) {
+      toast.error(isArabic ? 'الرجاء إدخال عنوان المناقصة' : 'Please enter the tender title');
       return;
     }
 
-    // Validation - only title and description are required according to API
-    if (!formData.title || !formData.description) {
-      toast.error('Please fill in all required fields (Title and Description)');
+    if (!formData.location) {
+      toast.error(isArabic ? 'الرجاء إدخال الموقع الجغرافي' : 'Please enter the geographic location');
       return;
     }
 
-    // Validate deadline is in the future if provided
-    if (formData.deadline) {
-      const deadlineDate = new Date(formData.deadline);
-      if (deadlineDate <= new Date()) {
-        toast.error('Deadline must be in the future');
-        return;
-      }
+    if (!formData.deadline) {
+      toast.error(isArabic ? 'الرجاء إدخال آخر موعد للتقديم' : 'Please enter the submission deadline');
+      return;
+    }
+
+    // Validate deadline is in the future
+    const deadlineDate = new Date(formData.deadline);
+    if (deadlineDate <= new Date()) {
+      toast.error(isArabic
+        ? 'يجب أن يكون آخر موعد للتقديم في المستقبل'
+        : 'Deadline must be in the future');
+      return;
+    }
+
+    if (!formData.sector) {
+      toast.error(isArabic ? 'الرجاء اختيار قطاع المناقصة' : 'Please select the tender sector');
+      return;
     }
 
     mutation.mutate(formData);
@@ -184,14 +206,12 @@ const PostTender = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Get minimum date/time (now) for datetime-local inputs
+  // Get minimum date for deadline input
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  const today = `${year}-${month}-${day}T${hours}:${minutes}`;
+  const today = `${year}-${month}-${day}`;
 
   return (
     <div className="min-h-screen bg-background">
@@ -202,217 +222,193 @@ const PostTender = () => {
             <Button variant="ghost" asChild className="mb-4">
               <Link to={user?.type === 'company' ? '/dashboard/company' : '/dashboard/organization'}>
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Dashboard
+                {isArabic ? 'العودة إلى لوحة التحكم' : 'Back to Dashboard'}
               </Link>
             </Button>
             <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                 <FileText className="w-5 h-5 text-primary" />
               </div>
-              {t('dashboard.organization.postTender')}
+              {isArabic ? 'نشر مناقصة' : 'Post a Tender'}
             </h1>
             <p className="text-muted-foreground">
-              Create a new tender opportunity for potential bidders
+              {isArabic ? 'أنشئ فرصة مناقصة جديدة للمقدمين المحتملين' : 'Create a new tender opportunity for potential bidders'}
             </p>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>Tender Details</CardTitle>
+              <CardTitle>{isArabic ? 'تفاصيل المناقصة' : 'Tender Details'}</CardTitle>
               <CardDescription>
-                Fill in the information about your tender opportunity
+                {isArabic ? 'املأ المعلومات حول فرصة المناقصة الخاصة بك' : 'Fill in the information about your tender opportunity'}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {!isApproved && (
-                <Alert variant="destructive" className="mb-6">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    <strong>Account Pending Approval</strong>
-                    <p className="mt-2">
-                      {approvalStatus?.cannotCheck 
-                        ? 'Unable to verify approval status. Your account may be pending admin approval. You cannot post tenders until an admin approves your account. The system will prevent posting if your account is not approved.'
-                        : `Your account is currently ${approvalStatusText}. You cannot post tenders until an admin approves your account. Please wait for admin approval or contact support if you have questions.`}
-                    </p>
-                  </AlertDescription>
-                </Alert>
-              )}
               <form onSubmit={handleSubmit} className="space-y-6">
+                {/* 1. عنوان المناقصة / Tender Title */}
                 <div className="space-y-2">
-                  <Label htmlFor="title">Title *</Label>
+                  <Label htmlFor="title">{isArabic ? 'عنوان المناقصة *' : 'Tender Title *'}</Label>
                   <Input
                     id="title"
-                    placeholder="e.g., IT Infrastructure Upgrade Project"
+                    placeholder={isArabic ? 'مثال: مشروع ترقية البنية التحتية لتقنية المعلومات' : 'e.g., IT Infrastructure Upgrade Project'}
                     value={formData.title}
                     onChange={(e) => handleChange('title', e.target.value)}
                     required
                   />
                 </div>
 
+                {/* 2. اسم المعلن / Publisher Name */}
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description *</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Provide a detailed description of the tender requirements, scope of work, and any specific qualifications needed..."
-                    value={formData.description}
-                    onChange={(e) => handleChange('description', e.target.value)}
-                    rows={8}
+                  <Label htmlFor="publisher_name">{isArabic ? 'اسم المعلن (المنظمة أو الشركة) *' : 'Publisher Name (Organization or Company) *'}</Label>
+                  <Input
+                    id="publisher_name"
+                    placeholder={isArabic ? 'اسم المنظمة أو الشركة' : 'Organization or Company Name'}
+                    value={formData.publisher_name}
+                    onChange={(e) => handleChange('publisher_name', e.target.value)}
                     required
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="type">Type (Optional)</Label>
-                    <Input
-                      id="type"
-                      placeholder="e.g., Construction, Procurement"
-                      value={formData.type}
-                      onChange={(e) => handleChange('type', e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="sector">Sector (Optional)</Label>
-                    <Select
-                      value={formData.sector}
-                      onValueChange={(value) => handleChange('sector', value)}
-                    >
-                      <SelectTrigger id="sector">
-                        <SelectValue placeholder="Select sector" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {sectors.map((sector) => (
-                          <SelectItem key={sector.value} value={sector.value}>
-                            {sector.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
+                {/* 3. الموقع الجغرافي / Geographic Location */}
                 <div className="space-y-2">
-                  <Label htmlFor="about_organization">About Organization (Optional)</Label>
-                  <Textarea
-                    id="about_organization"
-                    placeholder="Tell us about your organization..."
-                    value={formData.about_organization}
-                    onChange={(e) => handleChange('about_organization', e.target.value)}
-                    rows={4}
+                  <Label htmlFor="location">{isArabic ? 'الموقع الجغرافي *' : 'Geographic Location *'}</Label>
+                  <Input
+                    id="location"
+                    placeholder={isArabic ? 'مثال: دمشق، حلب، وطني' : 'e.g., Damascus, Aleppo, National'}
+                    value={formData.location}
+                    onChange={(e) => handleChange('location', e.target.value)}
+                    required
                   />
                 </div>
 
+                {/* 4. أخر موعد للتقديم / Submission Deadline */}
                 <div className="space-y-2">
-                  <Label htmlFor="project_summary">Project Summary (Optional)</Label>
+                  <Label htmlFor="deadline">{isArabic ? 'أخر موعد للتقديم (تاريخ) *' : 'Submission Deadline (Date) *'}</Label>
+                  <Input
+                    id="deadline"
+                    type="date"
+                    min={today}
+                    value={formData.deadline}
+                    onChange={(e) => handleChange('deadline', e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {isArabic ? 'الموعد النهائي لتقديم العروض' : 'Deadline for submitting proposals'}
+                  </p>
+                </div>
+
+                {/* 5. نبذة عن المعلن / About Publisher */}
+                <div className="space-y-2">
+                  <Label htmlFor="about_publisher">{isArabic ? 'نبذة عن المعلن (المنظمة أو الشركة) *' : 'About Publisher (Organization or Company) *'}</Label>
+                  <Textarea
+                    id="about_publisher"
+                    placeholder={isArabic ? 'أخبرنا عن منظمتك أو شركتك...' : 'Tell us about your organization or company...'}
+                    value={formData.about_publisher}
+                    onChange={(e) => handleChange('about_publisher', e.target.value)}
+                    rows={4}
+                    required
+                  />
+                </div>
+
+                {/* 6. قطاع المناقصة / Tender Sector */}
+                <div className="space-y-2">
+                  <Label htmlFor="sector">{isArabic ? 'قطاع المناقصة *' : 'Tender Sector *'}</Label>
+                  <Select
+                    value={formData.sector}
+                    onValueChange={(value) => handleChange('sector', value)}
+                  >
+                    <SelectTrigger id="sector">
+                      <SelectValue placeholder={isArabic ? 'اختر قطاع المناقصة' : 'Select tender sector'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tenderSectors.map((sector) => (
+                        <SelectItem key={sector.value} value={sector.value}>
+                          {isArabic ? sector.labelAr : sector.labelEn}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* 7. نبذة عن المشروع / Project Summary */}
+                <div className="space-y-2">
+                  <Label htmlFor="project_summary">{isArabic ? 'نبذة عن المشروع *' : 'Project Summary *'}</Label>
                   <Textarea
                     id="project_summary"
-                    placeholder="Provide a summary of the project this tender is for..."
+                    placeholder={isArabic ? 'قدم ملخصاً عن المشروع الذي تخصه هذه المناقصة...' : 'Provide a summary of the project this tender is for...'}
                     value={formData.project_summary}
                     onChange={(e) => handleChange('project_summary', e.target.value)}
-                    rows={4}
+                    rows={5}
+                    required
                   />
                 </div>
 
+                {/* 8. المتطلبات / Requirements */}
                 <div className="space-y-2">
-                  <Label htmlFor="requirements">Requirements (Optional)</Label>
+                  <Label htmlFor="requirements">{isArabic ? 'المتطلبات *' : 'Requirements *'}</Label>
                   <Textarea
                     id="requirements"
-                    placeholder="List the requirements, qualifications, and skills needed..."
+                    placeholder={isArabic
+                      ? 'اشرح أهم المتطلبات في الإعلان مثل شركة لديها خبرة سابقة بعدد سنوات كذا أو مشاريع عدد كذا أو أي متطلبات أخرى...'
+                      : 'Explain the main requirements in the announcement, such as a company with previous experience of X years or X number of projects, or any other requirements...'}
                     value={formData.requirements}
                     onChange={(e) => handleChange('requirements', e.target.value)}
-                    rows={4}
+                    rows={6}
+                    required
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="location">Location (Optional)</Label>
-                    <Input
-                      id="location"
-                      placeholder="e.g., Damascus, Aleppo, National"
-                      value={formData.location}
-                      onChange={(e) => handleChange('location', e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="category">Category (Optional)</Label>
-                    <Select
-                      value={formData.category}
-                      onValueChange={(value) => handleChange('category', value)}
-                    >
-                      <SelectTrigger id="category">
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((cat) => (
-                          <SelectItem key={cat} value={cat}>
-                            {cat}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                {/* 9. رفع مستندات المناقصة / Upload Tender Documents */}
+                <div className="space-y-4">
+                  <Label>{isArabic ? 'رفع مستندات المناقصة' : 'Upload Tender Documents'}</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="tender_documents_link">{isArabic ? 'رابط مستندات المناقصة' : 'Tender Documents Link'}</Label>
+                      <Input
+                        id="tender_documents_link"
+                        type="url"
+                        placeholder="https://example.com/tender-documents"
+                        value={formData.tender_documents_link}
+                        onChange={(e) => handleChange('tender_documents_link', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="file_upload_url">{isArabic ? 'رابط رفع الملف' : 'File Upload URL'}</Label>
+                      <Input
+                        id="file_upload_url"
+                        type="url"
+                        placeholder="https://storage.example.com/files/tender.pdf"
+                        value={formData.file_upload_url}
+                        onChange={(e) => handleChange('file_upload_url', e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="deadline">Deadline (Optional)</Label>
-                    <Input
-                      id="deadline"
-                      type="datetime-local"
-                      min={today}
-                      value={formData.deadline}
-                      onChange={(e) => handleChange('deadline', e.target.value)}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      The deadline for submitting proposals
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="duration">Duration (Optional)</Label>
-                    <Input
-                      id="duration"
-                      placeholder="e.g., 12 months, 1 year"
-                      value={formData.duration}
-                      onChange={(e) => handleChange('duration', e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="estimated_start_date">Estimated Start Date (Optional)</Label>
-                  <Input
-                    id="estimated_start_date"
-                    type="datetime-local"
-                    value={formData.estimated_start_date}
-                    onChange={(e) => handleChange('estimated_start_date', e.target.value)}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="tender_documents_link">Tender Documents Link (Optional)</Label>
-                    <Input
-                      id="tender_documents_link"
-                      type="url"
-                      placeholder="https://example.com/tender-documents"
-                      value={formData.tender_documents_link}
-                      onChange={(e) => handleChange('tender_documents_link', e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="file_upload_url">File Upload URL (Optional)</Label>
-                    <Input
-                      id="file_upload_url"
-                      type="url"
-                      placeholder="https://storage.example.com/files/tender.pdf"
-                      value={formData.file_upload_url}
-                      onChange={(e) => handleChange('file_upload_url', e.target.value)}
-                    />
+                {/* 10. رابط التقديم / Application Link */}
+                <div className="space-y-4">
+                  <Label>{isArabic ? 'رابط التقديم' : 'Application Link'}</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="application_link">{isArabic ? 'رابط التقديم من موقع المعلن' : 'Application Link from Publisher Website'}</Label>
+                      <Input
+                        id="application_link"
+                        type="url"
+                        placeholder="https://example.com/apply"
+                        value={formData.application_link}
+                        onChange={(e) => handleChange('application_link', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="drive_link">{isArabic ? 'رابط درايف' : 'Drive Link'}</Label>
+                      <Input
+                        id="drive_link"
+                        type="url"
+                        placeholder="https://drive.google.com/..."
+                        value={formData.drive_link}
+                        onChange={(e) => handleChange('drive_link', e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -422,13 +418,15 @@ const PostTender = () => {
                     variant="outline"
                     onClick={() => navigate(-1)}
                   >
-                    Cancel
+                    {isArabic ? 'إلغاء' : 'Cancel'}
                   </Button>
                   <Button
                     type="submit"
-                    disabled={mutation.isPending || !isApproved}
+                    disabled={mutation.isPending}
                   >
-                    {mutation.isPending ? 'Posting...' : 'Post Tender'}
+                    {mutation.isPending
+                      ? (isArabic ? 'جاري النشر...' : 'Posting...')
+                      : (isArabic ? 'نشر المناقصة' : 'Post Tender')}
                   </Button>
                 </div>
               </form>
@@ -442,4 +440,3 @@ const PostTender = () => {
 };
 
 export default PostTender;
-
