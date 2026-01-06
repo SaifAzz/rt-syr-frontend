@@ -1,7 +1,7 @@
 // Lovable Cloud API integration
 // This file contains functions to interact with the Lovable Cloud database
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = 'https://rt-syr.site/api';
 
 export interface DatabaseRecord {
   id: string;
