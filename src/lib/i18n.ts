@@ -240,6 +240,13 @@ const resources = {
           approvalUpdated: "{{entity}} {{status}} successfully",
           approvalUpdateFailed: "Failed to update {{entity}} approval status",
           postingApprovalUpdateFailed: "Failed to update {{entity}} approval status",
+          postingPermission: "Posting Permission",
+          postingPermissionUpdated: "{{entity}} posting permission {{status}} successfully",
+          postingPermissionUpdateFailed: "Failed to update posting permission",
+          enablePosting: "Enable Posting",
+          disablePosting: "Disable Posting",
+          enabled: "Enabled",
+          disabled: "Disabled",
           users: "Users",
           companies: "Companies",
           organizations: "Organizations",
@@ -313,6 +320,12 @@ const resources = {
         saveChanges: "Save Changes",
         backToWebsite: "Back To Website",
         unauthorized: "Unauthorized",
+        // Status options
+        open: "Open",
+        active: "Active",
+        closed: "Closed",
+        closingSoon: "Closing Soon",
+        draft: "Draft",
       },
       // Homepage
       home: {
@@ -428,6 +441,21 @@ const resources = {
         noJobsFound: "No jobs found",
         noJobsDescription: "Try adjusting your search or filter criteria",
         clearAllFilters: "Clear all filters",
+        // Form fields
+        type: "Job Type",
+        sector: "Sector",
+        selectSector: "Select Sector",
+        employmentType: "Employment Type",
+        experienceLevel: "Experience Level",
+        salaryMin: "Minimum Salary",
+        salaryMax: "Maximum Salary",
+        deadline: "Application Deadline",
+        duration: "Duration",
+        estimatedStartDate: "Estimated Start Date",
+        documentsLink: "Documents Link",
+        aboutCompany: "About Company",
+        projectSummary: "Project Summary",
+        requirements: "Requirements",
       },
       // Tenders Page
       tenders: {
@@ -449,6 +477,17 @@ const resources = {
         noTendersFound: "No tenders found",
         noTendersDescription: "Try adjusting your search or filter criteria",
         clearAllFilters: "Clear all filters",
+        // Form fields
+        type: "Tender Type",
+        sector: "Sector",
+        selectSector: "Select Sector",
+        deadline: "Submission Deadline",
+        duration: "Duration",
+        estimatedStartDate: "Estimated Start Date",
+        documentsLink: "Documents Link",
+        aboutOrganization: "About Organization",
+        projectSummary: "Project Summary",
+        requirements: "Requirements",
       },
       // About Page
       about: {
@@ -968,6 +1007,13 @@ const resources = {
           approvalUpdated: "تم تحديث حالة {{entity}} بنجاح",
           approvalUpdateFailed: "فشل تحديث حالة اعتماد {{entity}}",
           postingApprovalUpdateFailed: "فشل تحديث حالة اعتماد {{entity}}",
+          postingPermission: "صلاحية النشر",
+          postingPermissionUpdated: "تم {{status}} صلاحية نشر {{entity}} بنجاح",
+          postingPermissionUpdateFailed: "فشل تحديث صلاحية النشر",
+          enablePosting: "تفعيل النشر",
+          disablePosting: "إلغاء النشر",
+          enabled: "مفعّل",
+          disabled: "معطّل",
           users: "المستخدمون",
           companies: "الشركات",
           organizations: "المنظمات",
@@ -1041,6 +1087,12 @@ const resources = {
         saveChanges: "حفظ التغييرات",
         backToWebsite: "العودة إلى الموقع",
         unauthorized: "غير مصرح",
+        // Status options
+        open: "مفتوح",
+        active: "نشط",
+        closed: "مغلق",
+        closingSoon: "يغلق قريباً",
+        draft: "مسودة",
       },
       // Homepage
       home: {
@@ -1156,6 +1208,21 @@ const resources = {
         noJobsFound: "لم يتم العثور على وظائف",
         noJobsDescription: "حاول تعديل معايير البحث أو التصفية",
         clearAllFilters: "مسح جميع المرشحات",
+        // Form fields
+        type: "نوع الوظيفة",
+        sector: "القطاع",
+        selectSector: "اختر القطاع",
+        employmentType: "نوع التوظيف",
+        experienceLevel: "مستوى الخبرة",
+        salaryMin: "الحد الأدنى للراتب",
+        salaryMax: "الحد الأعلى للراتب",
+        deadline: "الموعد النهائي للتقديم",
+        duration: "المدة",
+        estimatedStartDate: "تاريخ البدء المتوقع",
+        documentsLink: "رابط المستندات",
+        aboutCompany: "عن الشركة",
+        projectSummary: "ملخص المشروع",
+        requirements: "المتطلبات",
       },
       // Tenders Page
       tenders: {
@@ -1177,6 +1244,17 @@ const resources = {
         noTendersFound: "لم يتم العثور على مناقصات",
         noTendersDescription: "حاول تعديل معايير البحث أو التصفية",
         clearAllFilters: "مسح جميع المرشحات",
+        // Form fields
+        type: "نوع المناقصة",
+        sector: "القطاع",
+        selectSector: "اختر القطاع",
+        deadline: "الموعد النهائي للتقديم",
+        duration: "المدة",
+        estimatedStartDate: "تاريخ البدء المتوقع",
+        documentsLink: "رابط المستندات",
+        aboutOrganization: "عن المنظمة",
+        projectSummary: "ملخص المشروع",
+        requirements: "المتطلبات",
       },
       // About Page
       about: {

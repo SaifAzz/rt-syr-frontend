@@ -60,15 +60,43 @@ const CompanyDashboard = () => {
   const queryClient = useQueryClient();
   const [editingJob, setEditingJob] = useState<{
     id: string;
-    name: string;
+    title: string;
     description: string;
     status: string;
+    type?: string;
+    sector?: string;
+    about_company?: string;
+    project_summary?: string;
+    requirements?: string;
+    deadline?: string;
+    duration?: string;
+    estimated_start_date?: string;
+    tender_documents_link?: string;
+    file_upload_url?: string;
+    salary_min?: number;
+    salary_max?: number;
+    employment_type?: string;
+    experience_level?: string;
+    location?: string;
+    category?: string;
   } | null>(null);
   const [editingTender, setEditingTender] = useState<{
     id: string;
-    name: string;
+    title: string;
     description: string;
     status: string;
+    type?: string;
+    sector?: string;
+    about_organization?: string;
+    project_summary?: string;
+    requirements?: string;
+    deadline?: string;
+    duration?: string;
+    estimated_start_date?: string;
+    tender_documents_link?: string;
+    file_upload_url?: string;
+    location?: string;
+    category?: string;
   } | null>(null);
 
   // Profile state
@@ -235,7 +263,7 @@ const CompanyDashboard = () => {
       if (!user?.id) return [];
       try {
         const all = await applicationsAPI.getAll();
-        const result = Array.isArray(all) ? all : all.data || [];
+        const result = Array.isArray(all) ? all : [];
         // Filter applications for jobs/tenders belonging to this user
         const userJobIds = jobs.map(j => j.id);
         const userTenderIds = tenders.map(t => t.id);
@@ -251,7 +279,7 @@ const CompanyDashboard = () => {
   });
 
   const updateJobMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: { name: string; description: string; status: string } }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<JobRecord> }) => {
       return await jobsAPI.update(id, data);
     },
     onSuccess: () => {
@@ -266,7 +294,7 @@ const CompanyDashboard = () => {
   });
 
   const updateTenderMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: { name: string; description: string; status: string } }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<TenderRecord> }) => {
       return await tendersAPI.update(id, data);
     },
     onSuccess: () => {
@@ -322,9 +350,25 @@ const CompanyDashboard = () => {
     setEditingTender(null);
     setEditingJob({
       id: job.id,
-      name: job.title || job.name || '',
+      title: job.title || job.name || '',
       description: job.description || '',
       status: job.status || 'open',
+      type: job.type || '',
+      sector: job.sector || '',
+      about_company: job.about_company || '',
+      project_summary: job.project_summary || '',
+      requirements: job.requirements || '',
+      deadline: job.deadline || '',
+      duration: job.duration || '',
+      estimated_start_date: job.estimated_start_date || '',
+      tender_documents_link: job.tender_documents_link || '',
+      file_upload_url: job.file_upload_url || '',
+      salary_min: job.salary_min,
+      salary_max: job.salary_max,
+      employment_type: job.employment_type || '',
+      experience_level: job.experience_level || '',
+      location: job.location || '',
+      category: job.category || '',
     });
   };
 
@@ -336,9 +380,21 @@ const CompanyDashboard = () => {
     setEditingJob(null);
     setEditingTender({
       id: tender.id,
-      name: tender.title || tender.name || '',
+      title: tender.title || tender.name || '',
       description: tender.description || '',
       status: tender.status || 'open',
+      type: tender.type || '',
+      sector: tender.sector || '',
+      about_organization: tender.about_organization || '',
+      project_summary: tender.project_summary || '',
+      requirements: tender.requirements || '',
+      deadline: tender.deadline || '',
+      duration: tender.duration || '',
+      estimated_start_date: tender.estimated_start_date || '',
+      tender_documents_link: tender.tender_documents_link || '',
+      file_upload_url: tender.file_upload_url || '',
+      location: tender.location || '',
+      category: tender.category || '',
     });
   };
 
@@ -347,9 +403,25 @@ const CompanyDashboard = () => {
     updateJobMutation.mutate({
       id: editingJob.id,
       data: {
-        name: editingJob.name.trim(),
+        title: editingJob.title.trim(),
         description: editingJob.description.trim(),
-        status: editingJob.status.trim() || 'open',
+        status: (editingJob.status.trim() || 'open') as JobRecord['status'],
+        type: editingJob.type?.trim() || undefined,
+        sector: editingJob.sector as JobRecord['sector'] || undefined,
+        about_company: editingJob.about_company?.trim() || undefined,
+        project_summary: editingJob.project_summary?.trim() || undefined,
+        requirements: editingJob.requirements?.trim() || undefined,
+        deadline: editingJob.deadline || undefined,
+        duration: editingJob.duration?.trim() || undefined,
+        estimated_start_date: editingJob.estimated_start_date || undefined,
+        tender_documents_link: editingJob.tender_documents_link?.trim() || undefined,
+        file_upload_url: editingJob.file_upload_url?.trim() || undefined,
+        salary_min: editingJob.salary_min || undefined,
+        salary_max: editingJob.salary_max || undefined,
+        employment_type: editingJob.employment_type?.trim() || undefined,
+        experience_level: editingJob.experience_level?.trim() || undefined,
+        location: editingJob.location?.trim() || undefined,
+        category: editingJob.category?.trim() || undefined,
       },
     });
   };
@@ -359,15 +431,27 @@ const CompanyDashboard = () => {
     updateTenderMutation.mutate({
       id: editingTender.id,
       data: {
-        name: editingTender.name.trim(),
+        title: editingTender.title.trim(),
         description: editingTender.description.trim(),
-        status: editingTender.status.trim() || 'open',
+        status: (editingTender.status.trim() || 'open') as TenderRecord['status'],
+        type: editingTender.type?.trim() || undefined,
+        sector: editingTender.sector as TenderRecord['sector'] || undefined,
+        about_organization: editingTender.about_organization?.trim() || undefined,
+        project_summary: editingTender.project_summary?.trim() || undefined,
+        requirements: editingTender.requirements?.trim() || undefined,
+        deadline: editingTender.deadline || undefined,
+        duration: editingTender.duration?.trim() || undefined,
+        estimated_start_date: editingTender.estimated_start_date || undefined,
+        tender_documents_link: editingTender.tender_documents_link?.trim() || undefined,
+        file_upload_url: editingTender.file_upload_url?.trim() || undefined,
+        location: editingTender.location?.trim() || undefined,
+        category: editingTender.category?.trim() || undefined,
       },
     });
   };
 
   const activeJobs = jobs.filter(job => job.status === 'open').length;
-  const activeTenders = tenders.filter(tender => tender.status === 'open' || tender.status === 'closing-soon').length;
+  const activeTenders = tenders.filter(tender => tender.status === 'open' || tender.status === 'closing_soon').length;
   const totalApplications = applications.length;
 
   return (
@@ -881,15 +965,137 @@ const CompanyDashboard = () => {
                                   <div className="space-y-2">
                                     <Label>{t('dashboard.admin.fieldTitle')}</Label>
                                     <Input
-                                      value={editingJob.name}
-                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, name: e.target.value } : prev)}
+                                      value={editingJob.title}
+                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, title: e.target.value } : prev)}
                                     />
                                   </div>
                                   <div className="space-y-2">
                                     <Label>{t('dashboard.admin.fieldStatus')}</Label>
-                                    <Input
+                                    <Select
                                       value={editingJob.status}
-                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, status: e.target.value } : prev)}
+                                      onValueChange={(value) => setEditingJob(prev => prev ? { ...prev, status: value } : prev)}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="open">{t('common.open')}</SelectItem>
+                                        <SelectItem value="active">{t('common.active')}</SelectItem>
+                                        <SelectItem value="closed">{t('common.closed')}</SelectItem>
+                                        <SelectItem value="closing_soon">{t('common.closingSoon')}</SelectItem>
+                                        <SelectItem value="draft">{t('common.draft')}</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div className="space-y-2">
+                                    <Label>{t('jobs.location')}</Label>
+                                    <Input
+                                      value={editingJob.location || ''}
+                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, location: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>{t('jobs.category')}</Label>
+                                    <Input
+                                      value={editingJob.category || ''}
+                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, category: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div className="space-y-2">
+                                    <Label>{t('jobs.type')}</Label>
+                                    <Input
+                                      value={editingJob.type || ''}
+                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, type: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>{t('jobs.sector')}</Label>
+                                    <Select
+                                      value={editingJob.sector || ''}
+                                      onValueChange={(value) => setEditingJob(prev => prev ? { ...prev, sector: value } : prev)}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue placeholder={t('jobs.selectSector')} />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {sectors.map((sector) => (
+                                          <SelectItem key={sector} value={sector}>
+                                            {sector}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div className="space-y-2">
+                                    <Label>{t('jobs.employmentType')}</Label>
+                                    <Input
+                                      value={editingJob.employment_type || ''}
+                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, employment_type: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>{t('jobs.experienceLevel')}</Label>
+                                    <Input
+                                      value={editingJob.experience_level || ''}
+                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, experience_level: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div className="space-y-2">
+                                    <Label>{t('jobs.salaryMin')}</Label>
+                                    <Input
+                                      type="number"
+                                      value={editingJob.salary_min || ''}
+                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, salary_min: e.target.value ? Number(e.target.value) : undefined } : prev)}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>{t('jobs.salaryMax')}</Label>
+                                    <Input
+                                      type="number"
+                                      value={editingJob.salary_max || ''}
+                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, salary_max: e.target.value ? Number(e.target.value) : undefined } : prev)}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div className="space-y-2">
+                                    <Label>{t('jobs.deadline')}</Label>
+                                    <Input
+                                      type="date"
+                                      value={editingJob.deadline || ''}
+                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, deadline: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>{t('jobs.duration')}</Label>
+                                    <Input
+                                      value={editingJob.duration || ''}
+                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, duration: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div className="space-y-2">
+                                    <Label>{t('jobs.estimatedStartDate')}</Label>
+                                    <Input
+                                      type="date"
+                                      value={editingJob.estimated_start_date || ''}
+                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, estimated_start_date: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>{t('jobs.documentsLink')}</Label>
+                                    <Input
+                                      value={editingJob.tender_documents_link || ''}
+                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, tender_documents_link: e.target.value } : prev)}
                                     />
                                   </div>
                                 </div>
@@ -899,6 +1105,30 @@ const CompanyDashboard = () => {
                                     value={editingJob.description}
                                     onChange={(e) => setEditingJob(prev => prev ? { ...prev, description: e.target.value } : prev)}
                                     rows={4}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>{t('jobs.aboutCompany')}</Label>
+                                  <Textarea
+                                    value={editingJob.about_company || ''}
+                                    onChange={(e) => setEditingJob(prev => prev ? { ...prev, about_company: e.target.value } : prev)}
+                                    rows={3}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>{t('jobs.projectSummary')}</Label>
+                                  <Textarea
+                                    value={editingJob.project_summary || ''}
+                                    onChange={(e) => setEditingJob(prev => prev ? { ...prev, project_summary: e.target.value } : prev)}
+                                    rows={3}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>{t('jobs.requirements')}</Label>
+                                  <Textarea
+                                    value={editingJob.requirements || ''}
+                                    onChange={(e) => setEditingJob(prev => prev ? { ...prev, requirements: e.target.value } : prev)}
+                                    rows={3}
                                   />
                                 </div>
                                 <div className="flex justify-end gap-2">
@@ -977,7 +1207,7 @@ const CompanyDashboard = () => {
                                 </div>
                               </div>
                               <Badge
-                                variant={tender.status === 'open' ? 'default' : tender.status === 'closing-soon' ? 'secondary' : 'outline'}
+                                variant={tender.status === 'open' ? 'default' : tender.status === 'closing_soon' ? 'secondary' : 'outline'}
                                 className="shrink-0"
                               >
                                 {tender.status}
@@ -1023,15 +1253,103 @@ const CompanyDashboard = () => {
                                   <div className="space-y-2">
                                     <Label>{t('dashboard.admin.fieldTitle')}</Label>
                                     <Input
-                                      value={editingTender.name}
-                                      onChange={(e) => setEditingTender(prev => prev ? { ...prev, name: e.target.value } : prev)}
+                                      value={editingTender.title}
+                                      onChange={(e) => setEditingTender(prev => prev ? { ...prev, title: e.target.value } : prev)}
                                     />
                                   </div>
                                   <div className="space-y-2">
                                     <Label>{t('dashboard.admin.fieldStatus')}</Label>
-                                    <Input
+                                    <Select
                                       value={editingTender.status}
-                                      onChange={(e) => setEditingTender(prev => prev ? { ...prev, status: e.target.value } : prev)}
+                                      onValueChange={(value) => setEditingTender(prev => prev ? { ...prev, status: value } : prev)}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="open">{t('common.open')}</SelectItem>
+                                        <SelectItem value="active">{t('common.active')}</SelectItem>
+                                        <SelectItem value="closed">{t('common.closed')}</SelectItem>
+                                        <SelectItem value="closing_soon">{t('common.closingSoon')}</SelectItem>
+                                        <SelectItem value="draft">{t('common.draft')}</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div className="space-y-2">
+                                    <Label>{t('tenders.location')}</Label>
+                                    <Input
+                                      value={editingTender.location || ''}
+                                      onChange={(e) => setEditingTender(prev => prev ? { ...prev, location: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>{t('tenders.category')}</Label>
+                                    <Input
+                                      value={editingTender.category || ''}
+                                      onChange={(e) => setEditingTender(prev => prev ? { ...prev, category: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div className="space-y-2">
+                                    <Label>{t('tenders.type')}</Label>
+                                    <Input
+                                      value={editingTender.type || ''}
+                                      onChange={(e) => setEditingTender(prev => prev ? { ...prev, type: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>{t('tenders.sector')}</Label>
+                                    <Select
+                                      value={editingTender.sector || ''}
+                                      onValueChange={(value) => setEditingTender(prev => prev ? { ...prev, sector: value } : prev)}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue placeholder={t('tenders.selectSector')} />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {sectors.map((sector) => (
+                                          <SelectItem key={sector} value={sector}>
+                                            {sector}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div className="space-y-2">
+                                    <Label>{t('tenders.deadline')}</Label>
+                                    <Input
+                                      type="date"
+                                      value={editingTender.deadline || ''}
+                                      onChange={(e) => setEditingTender(prev => prev ? { ...prev, deadline: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>{t('tenders.duration')}</Label>
+                                    <Input
+                                      value={editingTender.duration || ''}
+                                      onChange={(e) => setEditingTender(prev => prev ? { ...prev, duration: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div className="space-y-2">
+                                    <Label>{t('tenders.estimatedStartDate')}</Label>
+                                    <Input
+                                      type="date"
+                                      value={editingTender.estimated_start_date || ''}
+                                      onChange={(e) => setEditingTender(prev => prev ? { ...prev, estimated_start_date: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>{t('tenders.documentsLink')}</Label>
+                                    <Input
+                                      value={editingTender.tender_documents_link || ''}
+                                      onChange={(e) => setEditingTender(prev => prev ? { ...prev, tender_documents_link: e.target.value } : prev)}
                                     />
                                   </div>
                                 </div>
@@ -1041,6 +1359,30 @@ const CompanyDashboard = () => {
                                     value={editingTender.description}
                                     onChange={(e) => setEditingTender(prev => prev ? { ...prev, description: e.target.value } : prev)}
                                     rows={4}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>{t('tenders.aboutOrganization')}</Label>
+                                  <Textarea
+                                    value={editingTender.about_organization || ''}
+                                    onChange={(e) => setEditingTender(prev => prev ? { ...prev, about_organization: e.target.value } : prev)}
+                                    rows={3}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>{t('tenders.projectSummary')}</Label>
+                                  <Textarea
+                                    value={editingTender.project_summary || ''}
+                                    onChange={(e) => setEditingTender(prev => prev ? { ...prev, project_summary: e.target.value } : prev)}
+                                    rows={3}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>{t('tenders.requirements')}</Label>
+                                  <Textarea
+                                    value={editingTender.requirements || ''}
+                                    onChange={(e) => setEditingTender(prev => prev ? { ...prev, requirements: e.target.value } : prev)}
+                                    rows={3}
                                   />
                                 </div>
                                 <div className="flex justify-end gap-2">
@@ -1430,10 +1772,10 @@ const CompanyDashboard = () => {
                               </div>
                             </CardHeader>
                             <CardContent>
-                              {application.coverLetter && (
+                              {application.cover_letter && (
                                 <>
                                   <p className="text-sm text-muted-foreground mb-4 line-clamp-3">
-                                    {application.coverLetter}
+                                    {application.cover_letter}
                                   </p>
                                   <Separator className="mb-4" />
                                 </>

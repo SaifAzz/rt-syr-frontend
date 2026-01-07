@@ -975,6 +975,21 @@ export const adminAPI = {
     });
   },
 
+  // Enable or disable posting permission for a company or organization
+  setPostingPermission: async (entityType: 'company' | 'organization', entityId: string, can_post: boolean) => {
+    return apiRequest<{
+      message: string;
+      entity: {
+        id: string;
+        type: string;
+        can_post: boolean;
+      };
+    }>('/admin/set-posting-permission', {
+      method: 'POST',
+      body: JSON.stringify({ entityType, entityId, can_post }),
+    });
+  },
+
   // Check if current user is approved (for posting jobs/tenders)
   // This checks the user's signup request status by email
   // Note: This requires admin access. For regular users, this will fail

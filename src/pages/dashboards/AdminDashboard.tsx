@@ -406,6 +406,44 @@ const AdminDashboard = () => {
     },
   });
 
+  // Company posting permission mutation
+  const approveCompanyPostingMutation = useMutation({
+    mutationFn: async ({ id, can_post }: { id: string; can_post: boolean }) => {
+      return await adminAPI.setPostingPermission('company', id, can_post);
+    },
+    onSuccess: (_, variables) => {
+      toast.success(
+        t('dashboard.admin.postingPermissionUpdated', {
+          entity: t('dashboard.admin.company'),
+          status: t(variables.can_post ? 'dashboard.admin.enabled' : 'dashboard.admin.disabled'),
+        })
+      );
+      queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
+    },
+    onError: () => {
+      toast.error(t('dashboard.admin.postingPermissionUpdateFailed'));
+    },
+  });
+
+  // Organization posting permission mutation
+  const approveOrganizationPostingMutation = useMutation({
+    mutationFn: async ({ id, can_post }: { id: string; can_post: boolean }) => {
+      return await adminAPI.setPostingPermission('organization', id, can_post);
+    },
+    onSuccess: (_, variables) => {
+      toast.success(
+        t('dashboard.admin.postingPermissionUpdated', {
+          entity: t('dashboard.admin.organization'),
+          status: t(variables.can_post ? 'dashboard.admin.enabled' : 'dashboard.admin.disabled'),
+        })
+      );
+      queryClient.invalidateQueries({ queryKey: ['admin-organizations'] });
+    },
+    onError: () => {
+      toast.error(t('dashboard.admin.postingPermissionUpdateFailed'));
+    },
+  });
+
   // Fetch pending approvals
   const { data: pendingData } = useQuery({
     queryKey: ['admin-pending'],
@@ -1121,6 +1159,40 @@ const AdminDashboard = () => {
                           </div>
                         </div>
                       </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center justify-between pt-2 border-t">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">
+                              {t('dashboard.admin.postingPermission')}:
+                            </span>
+                            <Badge variant={(company as any).can_post ? 'default' : 'secondary'}>
+                              {(company as any).can_post ? t('dashboard.admin.enabled') : t('dashboard.admin.disabled')}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => approveCompanyPostingMutation.mutate({ id: company.id, can_post: true })}
+                              className="text-green-600 hover:text-green-700"
+                              disabled={approveCompanyPostingMutation.isPending}
+                            >
+                              <Briefcase className="w-4 h-4 mr-1" />
+                              {t('dashboard.admin.enablePosting')}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => approveCompanyPostingMutation.mutate({ id: company.id, can_post: false })}
+                              className="text-red-600 hover:text-red-700"
+                              disabled={approveCompanyPostingMutation.isPending}
+                            >
+                              <XCircle className="w-4 h-4 mr-1" />
+                              {t('dashboard.admin.disablePosting')}
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
                     </Card>
                   ))}
                 </div>
@@ -1278,6 +1350,40 @@ const AdminDashboard = () => {
                           </div>
                         </div>
                       </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center justify-between pt-2 border-t">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">
+                              {t('dashboard.admin.postingPermission')}:
+                            </span>
+                            <Badge variant={(org as any).can_post ? 'default' : 'secondary'}>
+                              {(org as any).can_post ? t('dashboard.admin.enabled') : t('dashboard.admin.disabled')}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => approveOrganizationPostingMutation.mutate({ id: org.id, can_post: true })}
+                              className="text-green-600 hover:text-green-700"
+                              disabled={approveOrganizationPostingMutation.isPending}
+                            >
+                              <FileText className="w-4 h-4 mr-1" />
+                              {t('dashboard.admin.enablePosting')}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => approveOrganizationPostingMutation.mutate({ id: org.id, can_post: false })}
+                              className="text-red-600 hover:text-red-700"
+                              disabled={approveOrganizationPostingMutation.isPending}
+                            >
+                              <XCircle className="w-4 h-4 mr-1" />
+                              {t('dashboard.admin.disablePosting')}
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
                     </Card>
                   ))}
                     </div>
