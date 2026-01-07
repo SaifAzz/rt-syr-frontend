@@ -32,6 +32,7 @@ import {
   Edit,
   Eye,
   ArrowUpRight,
+  ArrowLeft,
   Building2,
   LayoutDashboard,
   Mail,
@@ -39,6 +40,7 @@ import {
   User,
   Save,
   X,
+  Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { jobsAPI, tendersAPI, applicationsAPI, organizationsAPI, type JobRecord, type TenderRecord, type ApplicationRecord, type OrganizationRecord } from '@/lib/api';
@@ -55,6 +57,18 @@ const OrganizationDashboard = () => {
   const { user } = useAuth();
   const [activeSection, setActiveSection] = useState('overview');
   const queryClient = useQueryClient();
+  const [editingJob, setEditingJob] = useState<{
+    id: string;
+    name: string;
+    description: string;
+    status: string;
+  } | null>(null);
+  const [editingTender, setEditingTender] = useState<{
+    id: string;
+    name: string;
+    description: string;
+    status: string;
+  } | null>(null);
 
   // Profile state
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -76,14 +90,14 @@ const OrganizationDashboard = () => {
   // Menu items organized by category
   const menuItems = [
     {
-      category: 'Dashboard',
+      category: t('dashboard.sections.dashboard'),
       items: [
         { id: 'overview', label: t('dashboard.organization.overview'), icon: LayoutDashboard },
-        { id: 'profile', label: 'Profile', icon: User },
+        { id: 'profile', label: t('dashboard.user.profile'), icon: User },
       ],
     },
     {
-      category: 'Management',
+      category: t('dashboard.sections.management'),
       items: [
         { id: 'jobs', label: t('dashboard.company.jobs'), icon: Briefcase },
         { id: 'tenders', label: t('dashboard.organization.tenders'), icon: FileText },
@@ -98,18 +112,18 @@ const OrganizationDashboard = () => {
   // Update organization mutation
   const updateOrganizationMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      if (!user?.id || !isOrganizationUser) throw new Error('Unauthorized');
+      if (!user?.id || !isOrganizationUser) throw new Error(t('common.unauthorized'));
       return await organizationsAPI.updateProfile(user.id, formData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-organizations', user?.id] });
-      toast.success('Profile updated successfully');
+      toast.success(t('dashboard.organization.profileUpdated'));
       setIsEditingProfile(false);
       setLogoFile(null);
       setRegistrationFile(null);
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to update profile');
+      toast.error(error.message || t('dashboard.organization.profileUpdateFailed'));
     },
   });
 
@@ -140,6 +154,39 @@ const OrganizationDashboard = () => {
 
     updateOrganizationMutation.mutate(formData);
   };
+
+  // Fetch organization profile data
+  const { data: organizationProfileData } = useQuery({
+    queryKey: ['my-organizations', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      try {
+        const organizations = await organizationsAPI.getMy();
+        return Array.isArray(organizations) && organizations.length > 0 ? organizations[0] : null;
+      } catch {
+        return null;
+      }
+    },
+    enabled: !!user?.id,
+  });
+
+  // Update profile data when organization profile is loaded
+  useEffect(() => {
+    if (organizationProfileData) {
+      setProfileData({
+        name: organizationProfileData.name || '',
+        name_ar: organizationProfileData.name_ar || '',
+        description: organizationProfileData.description || '',
+        registration_country: organizationProfileData.registration_country || '',
+        registration_number: organizationProfileData.registration_number || '',
+        registration_file_url: organizationProfileData.registration_file_url || '',
+        contact_person_name: organizationProfileData.contact_person_name || '',
+        contact_person_position: organizationProfileData.contact_person_position || '',
+        contact_person_email: organizationProfileData.contact_person_email || '',
+        logo_url: organizationProfileData.logo_url || '',
+      });
+    }
+  }, [organizationProfileData]);
 
   const { data: jobs = [], isLoading: jobsLoading } = useQuery<JobRecord[]>({
     queryKey: ['organization-jobs', user?.id],
@@ -194,6 +241,122 @@ const OrganizationDashboard = () => {
     enabled: !!user?.id && tenders.length > 0,
   });
 
+  const updateJobMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { name: string; description: string; status: string } }) => {
+      return await jobsAPI.update(id, data);
+    },
+    onSuccess: () => {
+      toast.success(t('dashboard.admin.jobUpdated'));
+      queryClient.invalidateQueries({ queryKey: ['organization-jobs', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['organization-applications', user?.id] });
+      setEditingJob(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || t('dashboard.admin.jobUpdateFailed'));
+    },
+  });
+
+  const updateTenderMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { name: string; description: string; status: string } }) => {
+      return await tendersAPI.update(id, data);
+    },
+    onSuccess: () => {
+      toast.success(t('dashboard.admin.tenderUpdated'));
+      queryClient.invalidateQueries({ queryKey: ['organization-tenders', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['organization-applications', user?.id] });
+      setEditingTender(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || t('dashboard.admin.tenderUpdateFailed'));
+    },
+  });
+
+  const deleteJobMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await jobsAPI.delete(id);
+    },
+    onSuccess: (_data, id) => {
+      toast.success(t('dashboard.admin.jobDeleted'));
+      queryClient.invalidateQueries({ queryKey: ['organization-jobs', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['organization-applications', user?.id] });
+      if (editingJob?.id === id) {
+        setEditingJob(null);
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.message || t('dashboard.admin.jobDeleteFailed'));
+    },
+  });
+
+  const deleteTenderMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await tendersAPI.delete(id);
+    },
+    onSuccess: (_data, id) => {
+      toast.success(t('dashboard.admin.tenderDeleted'));
+      queryClient.invalidateQueries({ queryKey: ['organization-tenders', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['organization-applications', user?.id] });
+      if (editingTender?.id === id) {
+        setEditingTender(null);
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.message || t('dashboard.admin.tenderDeleteFailed'));
+    },
+  });
+
+  const handleJobEdit = (job: JobRecord) => {
+    if (editingJob?.id === job.id) {
+      setEditingJob(null);
+      return;
+    }
+    setEditingTender(null);
+    setEditingJob({
+      id: job.id,
+      name: job.title || job.name || '',
+      description: job.description || '',
+      status: job.status || 'open',
+    });
+  };
+
+  const handleTenderEdit = (tender: TenderRecord) => {
+    if (editingTender?.id === tender.id) {
+      setEditingTender(null);
+      return;
+    }
+    setEditingJob(null);
+    setEditingTender({
+      id: tender.id,
+      name: tender.title || tender.name || '',
+      description: tender.description || '',
+      status: tender.status || 'open',
+    });
+  };
+
+  const handleJobUpdate = () => {
+    if (!editingJob) return;
+    updateJobMutation.mutate({
+      id: editingJob.id,
+      data: {
+        name: editingJob.name.trim(),
+        description: editingJob.description.trim(),
+        status: editingJob.status.trim() || 'open',
+      },
+    });
+  };
+
+  const handleTenderUpdate = () => {
+    if (!editingTender) return;
+    updateTenderMutation.mutate({
+      id: editingTender.id,
+      data: {
+        name: editingTender.name.trim(),
+        description: editingTender.description.trim(),
+        status: editingTender.status.trim() || 'open',
+      },
+    });
+  };
+
   const activeJobs = jobs.filter(job => job.status === 'open').length;
   const activeTenders = tenders.filter(tender => tender.status === 'open' || tender.status === 'closing-soon').length;
   const totalApplications = applications.length;
@@ -211,7 +374,7 @@ const OrganizationDashboard = () => {
                   <div className="flex items-center gap-3">
                     <img
                       src="/logos/3.png"
-                      alt="RT-SYR Logo"
+                      alt={t('logo.alt')}
                       className="h-20 w-auto object-contain flex-shrink-0"
                     />
                     <div className="flex-1 min-w-0">
@@ -223,10 +386,35 @@ const OrganizationDashboard = () => {
                       </div>
                     </div>
                   </div>
+                  
+                  {/* Back Button and Organization Profile Logo */}
+                  <div className="flex items-center gap-3 pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.location.href = 'https://rt-syr.com'}
+                      className="shrink-0 gap-2"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      <span className="text-xs font-medium">{t('common.backToWebsite')}</span>
+                    </Button>
+                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-border flex items-center justify-center bg-muted shrink-0">
+                      {profileData.logo_url ? (
+                        <img
+                          src={profileData.logo_url}
+                          alt={t('dashboard.organization.logoAlt')}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Building2 className="w-6 h-6 text-muted-foreground" />
+                      )}
+                    </div>
+                  </div>
+                  
                   {/* Organization Panel Label */}
                   <div className="pt-1">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Organization Panel
+                      {t('dashboard.organization.panelLabel')}
                     </p>
                   </div>
                 </div>
@@ -322,7 +510,7 @@ const OrganizationDashboard = () => {
                   <CardContent>
                     <div className="text-3xl font-bold text-foreground mb-1">{activeJobs}</div>
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <span>out of {jobs.length} total</span>
+                      <span>{t('dashboard.organization.outOfTotal', { total: jobs.length })}</span>
                       {jobs.length > 0 && (
                         <span className="text-primary font-medium">
                           ({Math.round((activeJobs / jobs.length) * 100)}%)
@@ -341,7 +529,7 @@ const OrganizationDashboard = () => {
                   <CardContent>
                     <div className="text-3xl font-bold text-foreground mb-1">{activeTenders}</div>
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <span>out of {tenders.length} total</span>
+                      <span>{t('dashboard.organization.outOfTotal', { total: tenders.length })}</span>
                       {tenders.length > 0 && (
                         <span className="text-accent font-medium">
                           ({Math.round((activeTenders / tenders.length) * 100)}%)
@@ -386,7 +574,7 @@ const OrganizationDashboard = () => {
                           <CardTitle className="text-lg font-semibold">{t('dashboard.organization.recentJobs')}</CardTitle>
                           <Button variant="ghost" size="sm" asChild>
                             <Link to="#" className="text-xs">
-                              {t('common.view')} All <ArrowUpRight className="w-3 h-3 ml-1" />
+                              {t('common.view')} {t('common.all')} <ArrowUpRight className="w-3 h-3 ml-1" />
                             </Link>
                           </Button>
                         </div>
@@ -411,7 +599,7 @@ const OrganizationDashboard = () => {
                                 className="group flex items-center justify-between p-4 border rounded-lg hover:border-primary/50 hover:bg-accent/5 transition-all cursor-pointer"
                               >
                                 <div className="flex-1 min-w-0">
-                                  <p className="font-semibold text-sm mb-1 truncate">{job.title}</p>
+                                  <p className="font-semibold text-sm mb-1 truncate">{job.title || job.name || t('common.notAvailable')}</p>
                                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
                                     <span className="flex items-center gap-1">
                                       <Calendar className="w-3 h-3" />
@@ -441,7 +629,7 @@ const OrganizationDashboard = () => {
                           <CardTitle className="text-lg font-semibold">{t('dashboard.organization.recentTenders')}</CardTitle>
                           <Button variant="ghost" size="sm" asChild>
                             <Link to="#" className="text-xs">
-                              {t('common.view')} All <ArrowUpRight className="w-3 h-3 ml-1" />
+                              {t('common.view')} {t('common.all')} <ArrowUpRight className="w-3 h-3 ml-1" />
                             </Link>
                           </Button>
                         </div>
@@ -466,7 +654,7 @@ const OrganizationDashboard = () => {
                                 className="group flex items-center justify-between p-4 border rounded-lg hover:border-primary/50 hover:bg-accent/5 transition-all cursor-pointer"
                               >
                                 <div className="flex-1 min-w-0">
-                                  <p className="font-semibold text-sm mb-1 truncate">{tender.title}</p>
+                                  <p className="font-semibold text-sm mb-1 truncate">{tender.title || tender.name || t('common.notAvailable')}</p>
                                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
                                     <span className="flex items-center gap-1">
                                       <Clock className="w-3 h-3" />
@@ -522,7 +710,7 @@ const OrganizationDashboard = () => {
                                     <Briefcase className="w-5 h-5 text-primary" />
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <CardTitle className="text-lg mb-2">{job.title}</CardTitle>
+                                    <CardTitle className="text-lg mb-2">{job.title || job.name || t('common.notAvailable')}</CardTitle>
                                     <CardDescription>
                                       <div className="flex flex-wrap items-center gap-4 mt-2">
                                         <div className="flex items-center gap-1.5 text-sm">
@@ -531,7 +719,11 @@ const OrganizationDashboard = () => {
                                         </div>
                                         <div className="flex items-center gap-1.5 text-sm">
                                           <Calendar className="w-4 h-4 text-muted-foreground" />
-                                          <span>Posted {new Date(job.createdAt).toLocaleDateString()}</span>
+                                          <span>
+                                            {t('dashboard.organization.postedOn', {
+                                              date: new Date(job.created_at || job.createdAt).toLocaleDateString(),
+                                            })}
+                                          </span>
                                         </div>
                                         {job.salary && (
                                           <div className="flex items-center gap-1.5 text-sm font-medium text-primary">
@@ -556,7 +748,12 @@ const OrganizationDashboard = () => {
                             <Separator className="mb-4" />
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                <Button variant="outline" size="sm" className="gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-2"
+                                  onClick={() => handleJobEdit(job)}
+                                >
                                   <Edit className="w-4 h-4" />
                                   {t('common.edit')}
                                 </Button>
@@ -564,11 +761,65 @@ const OrganizationDashboard = () => {
                                   <Eye className="w-4 h-4" />
                                   {t('dashboard.organization.viewApplications')}
                                 </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  className="gap-2"
+                                  onClick={() => deleteJobMutation.mutate(job.id)}
+                                  disabled={deleteJobMutation.isPending}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  {t('common.delete')}
+                                </Button>
                               </div>
                               <Button variant="ghost" size="sm" className="gap-2">
                                 {t('common.view')} <ArrowUpRight className="w-4 h-4" />
                               </Button>
                             </div>
+                            {editingJob?.id === job.id && (
+                              <div className="mt-4 rounded-lg border bg-muted/30 p-4 space-y-4">
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div className="space-y-2">
+                                    <Label>{t('dashboard.admin.fieldTitle')}</Label>
+                                    <Input
+                                      value={editingJob.name}
+                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, name: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>{t('dashboard.admin.fieldStatus')}</Label>
+                                    <Input
+                                      value={editingJob.status}
+                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, status: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>{t('dashboard.admin.fieldDescription')}</Label>
+                                  <Textarea
+                                    value={editingJob.description}
+                                    onChange={(e) => setEditingJob(prev => prev ? { ...prev, description: e.target.value } : prev)}
+                                    rows={4}
+                                  />
+                                </div>
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setEditingJob(null)}
+                                  >
+                                    {t('common.cancel')}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={handleJobUpdate}
+                                    disabled={updateJobMutation.isPending}
+                                  >
+                                    {updateJobMutation.isPending ? t('common.saving') : t('common.saveChanges')}
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
                       ))}
@@ -608,7 +859,7 @@ const OrganizationDashboard = () => {
                                     <FileText className="w-5 h-5 text-accent" />
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <CardTitle className="text-lg mb-2">{tender.title}</CardTitle>
+                                    <CardTitle className="text-lg mb-2">{tender.title || tender.name || t('common.notAvailable')}</CardTitle>
                                     <CardDescription>
                                       <div className="flex flex-wrap items-center gap-4 mt-2">
                                         <div className="flex items-center gap-1.5 text-sm">
@@ -639,7 +890,12 @@ const OrganizationDashboard = () => {
                             <Separator className="mb-4" />
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                <Button variant="outline" size="sm" className="gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-2"
+                                  onClick={() => handleTenderEdit(tender)}
+                                >
                                   <Edit className="w-4 h-4" />
                                   {t('common.edit')}
                                 </Button>
@@ -647,11 +903,65 @@ const OrganizationDashboard = () => {
                                   <Eye className="w-4 h-4" />
                                   {t('dashboard.organization.viewProposals')}
                                 </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  className="gap-2"
+                                  onClick={() => deleteTenderMutation.mutate(tender.id)}
+                                  disabled={deleteTenderMutation.isPending}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  {t('common.delete')}
+                                </Button>
                               </div>
                               <Button variant="ghost" size="sm" className="gap-2">
                                 {t('common.view')} <ArrowUpRight className="w-4 h-4" />
                               </Button>
                             </div>
+                            {editingTender?.id === tender.id && (
+                              <div className="mt-4 rounded-lg border bg-muted/30 p-4 space-y-4">
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div className="space-y-2">
+                                    <Label>{t('dashboard.admin.fieldTitle')}</Label>
+                                    <Input
+                                      value={editingTender.name}
+                                      onChange={(e) => setEditingTender(prev => prev ? { ...prev, name: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>{t('dashboard.admin.fieldStatus')}</Label>
+                                    <Input
+                                      value={editingTender.status}
+                                      onChange={(e) => setEditingTender(prev => prev ? { ...prev, status: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>{t('dashboard.admin.fieldDescription')}</Label>
+                                  <Textarea
+                                    value={editingTender.description}
+                                    onChange={(e) => setEditingTender(prev => prev ? { ...prev, description: e.target.value } : prev)}
+                                    rows={4}
+                                  />
+                                </div>
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setEditingTender(null)}
+                                  >
+                                    {t('common.cancel')}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={handleTenderUpdate}
+                                    disabled={updateTenderMutation.isPending}
+                                  >
+                                    {updateTenderMutation.isPending ? t('common.saving') : t('common.saveChanges')}
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
                       ))}
@@ -665,7 +975,7 @@ const OrganizationDashboard = () => {
                   <Card>
                     <CardHeader>
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg font-semibold">Organization Profile</CardTitle>
+                        <CardTitle className="text-lg font-semibold">{t('dashboard.organization.profileTitle')}</CardTitle>
                         <Button
                           variant={isEditingProfile ? "outline" : "default"}
                           onClick={() => {
@@ -681,12 +991,12 @@ const OrganizationDashboard = () => {
                           {isEditingProfile ? (
                             <>
                               <X className="w-4 h-4 mr-2" />
-                              Cancel
+                              {t('common.cancel')}
                             </>
                           ) : (
                             <>
                               <Edit className="w-4 h-4 mr-2" />
-                              Edit Profile
+                              {t('dashboard.organization.editProfile')}
                             </>
                           )}
                         </Button>
@@ -695,15 +1005,19 @@ const OrganizationDashboard = () => {
                     <CardContent className="space-y-6">
                       {/* Logo Upload */}
                       <div className="space-y-2">
-                        <Label>Logo</Label>
+                        <Label>{t('dashboard.organization.logoLabel')}</Label>
                         <div className="flex items-center gap-4">
-                          {profileData.logo_url && (
-                            <img
-                              src={profileData.logo_url}
-                              alt="Organization logo"
-                              className="w-24 h-24 object-contain border rounded-lg"
-                            />
-                          )}
+                          <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-border flex items-center justify-center bg-muted shrink-0">
+                            {profileData.logo_url ? (
+                              <img
+                                src={profileData.logo_url}
+                                alt={t('dashboard.organization.logoAlt')}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Building2 className="w-12 h-12 text-muted-foreground" />
+                            )}
+                          </div>
                           {isEditingProfile && (
                             <div className="flex flex-col gap-2">
                               <Input
@@ -724,7 +1038,7 @@ const OrganizationDashboard = () => {
                                 }}
                                 className="w-full"
                               />
-                              <p className="text-xs text-muted-foreground">PNG, JPG, JPEG (max 5MB)</p>
+                              <p className="text-xs text-muted-foreground">{t('dashboard.organization.logoHelp')}</p>
                             </div>
                           )}
                         </div>
@@ -732,12 +1046,12 @@ const OrganizationDashboard = () => {
 
                       {/* Full Name (English) */}
                       <div className="space-y-2">
-                        <Label>Full Name (English) *</Label>
+                        <Label>{t('dashboard.organization.fullNameEnLabel')} *</Label>
                         {isEditingProfile ? (
                           <Input
                             value={profileData.name}
                             onChange={(e) => setProfileData(prev => ({ ...prev, name: e.target.value }))}
-                            placeholder="Enter organization name in English"
+                            placeholder={t('dashboard.organization.fullNameEnPlaceholder')}
                           />
                         ) : (
                           <p className="text-sm py-2">{profileData.name || '-'}</p>
@@ -746,12 +1060,12 @@ const OrganizationDashboard = () => {
 
                       {/* Full Name (Arabic) */}
                       <div className="space-y-2">
-                        <Label>Full Name (Arabic)</Label>
+                        <Label>{t('dashboard.organization.fullNameArLabel')}</Label>
                         {isEditingProfile ? (
                           <Input
                             value={profileData.name_ar || ''}
                             onChange={(e) => setProfileData(prev => ({ ...prev, name_ar: e.target.value }))}
-                            placeholder="Enter organization name in Arabic"
+                            placeholder={t('dashboard.organization.fullNameArPlaceholder')}
                             dir="rtl"
                           />
                         ) : (
@@ -761,12 +1075,12 @@ const OrganizationDashboard = () => {
 
                       {/* Registration Country */}
                       <div className="space-y-2">
-                        <Label>Registration Country *</Label>
+                        <Label>{t('dashboard.organization.registrationCountryLabel')} *</Label>
                         {isEditingProfile ? (
                           <Input
                             value={profileData.registration_country || ''}
                             onChange={(e) => setProfileData(prev => ({ ...prev, registration_country: e.target.value }))}
-                            placeholder="Enter registration country"
+                            placeholder={t('dashboard.organization.registrationCountryPlaceholder')}
                           />
                         ) : (
                           <p className="text-sm py-2">{profileData.registration_country || '-'}</p>
@@ -775,12 +1089,12 @@ const OrganizationDashboard = () => {
 
                       {/* Registration Number */}
                       <div className="space-y-2">
-                        <Label>Registration Number *</Label>
+                        <Label>{t('dashboard.organization.registrationNumberLabel')} *</Label>
                         {isEditingProfile ? (
                           <Input
                             value={profileData.registration_number || ''}
                             onChange={(e) => setProfileData(prev => ({ ...prev, registration_number: e.target.value }))}
-                            placeholder="Enter registration number"
+                            placeholder={t('dashboard.organization.registrationNumberPlaceholder')}
                           />
                         ) : (
                           <p className="text-sm py-2">{profileData.registration_number || '-'}</p>
@@ -789,7 +1103,7 @@ const OrganizationDashboard = () => {
 
                       {/* Registration File Upload */}
                       <div className="space-y-2">
-                        <Label>Registration Document (Optional)</Label>
+                        <Label>{t('dashboard.organization.registrationDocumentLabel')}</Label>
                         {isEditingProfile ? (
                           <div className="space-y-2">
                             {profileData.registration_file_url && (
@@ -799,7 +1113,7 @@ const OrganizationDashboard = () => {
                                 rel="noopener noreferrer"
                                 className="text-sm text-primary hover:underline flex items-center gap-2"
                               >
-                                View current file
+                                {t('dashboard.organization.viewCurrentFile')}
                               </a>
                             )}
                             <Input
@@ -812,7 +1126,7 @@ const OrganizationDashboard = () => {
                                 }
                               }}
                             />
-                            <p className="text-xs text-muted-foreground">PDF, DOC, DOCX, or Image (max 10MB)</p>
+                            <p className="text-xs text-muted-foreground">{t('dashboard.organization.registrationHelp')}</p>
                           </div>
                         ) : (
                           profileData.registration_file_url ? (
@@ -822,22 +1136,22 @@ const OrganizationDashboard = () => {
                               rel="noopener noreferrer"
                               className="text-sm text-primary hover:underline"
                             >
-                              View registration document
+                              {t('dashboard.organization.viewRegistrationDocument')}
                             </a>
                           ) : (
-                            <p className="text-sm text-muted-foreground">No file uploaded</p>
+                            <p className="text-sm text-muted-foreground">{t('dashboard.organization.noFileUploaded')}</p>
                           )
                         )}
                       </div>
 
                       {/* Contact Person Name */}
                       <div className="space-y-2">
-                        <Label>Contact Person Name *</Label>
+                        <Label>{t('dashboard.organization.contactPersonNameLabel')} *</Label>
                         {isEditingProfile ? (
                           <Input
                             value={profileData.contact_person_name || ''}
                             onChange={(e) => setProfileData(prev => ({ ...prev, contact_person_name: e.target.value }))}
-                            placeholder="Enter contact person name"
+                            placeholder={t('dashboard.organization.contactPersonNamePlaceholder')}
                           />
                         ) : (
                           <p className="text-sm py-2">{profileData.contact_person_name || '-'}</p>
@@ -846,12 +1160,12 @@ const OrganizationDashboard = () => {
 
                       {/* Contact Person Position */}
                       <div className="space-y-2">
-                        <Label>Contact Person Position *</Label>
+                        <Label>{t('dashboard.organization.contactPersonPositionLabel')} *</Label>
                         {isEditingProfile ? (
                           <Input
                             value={profileData.contact_person_position || ''}
                             onChange={(e) => setProfileData(prev => ({ ...prev, contact_person_position: e.target.value }))}
-                            placeholder="Enter contact person position"
+                            placeholder={t('dashboard.organization.contactPersonPositionPlaceholder')}
                           />
                         ) : (
                           <p className="text-sm py-2">{profileData.contact_person_position || '-'}</p>
@@ -860,13 +1174,13 @@ const OrganizationDashboard = () => {
 
                       {/* Contact Person Email */}
                       <div className="space-y-2">
-                        <Label>Contact Person Email *</Label>
+                        <Label>{t('dashboard.organization.contactPersonEmailLabel')} *</Label>
                         {isEditingProfile ? (
                           <Input
                             type="email"
                             value={profileData.contact_person_email || ''}
                             onChange={(e) => setProfileData(prev => ({ ...prev, contact_person_email: e.target.value }))}
-                            placeholder="Enter contact person email"
+                            placeholder={t('dashboard.organization.contactPersonEmailPlaceholder')}
                           />
                         ) : (
                           <p className="text-sm py-2">{profileData.contact_person_email || '-'}</p>
@@ -883,7 +1197,7 @@ const OrganizationDashboard = () => {
                               setRegistrationFile(null);
                             }}
                           >
-                            Cancel
+                            {t('common.cancel')}
                           </Button>
                           <Button
                             onClick={handleProfileSave}
@@ -892,12 +1206,12 @@ const OrganizationDashboard = () => {
                             {updateOrganizationMutation.isPending ? (
                               <>
                                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                                Saving...
+                                {t('common.saving')}
                               </>
                             ) : (
                               <>
                                 <Save className="w-4 h-4 mr-2" />
-                                Save Changes
+                                {t('common.saveChanges')}
                               </>
                             )}
                           </Button>
@@ -967,7 +1281,7 @@ const OrganizationDashboard = () => {
                                         {application.jobId ? t('dashboard.organization.jobApplication') : t('dashboard.organization.tenderApplication')}
                                       </CardTitle>
                                       <CardDescription className="flex items-center gap-2">
-                                        <span>ID: #{application.id.slice(0, 8)}</span>
+                                        <span>{t('dashboard.organization.applicationId', { id: application.id.slice(0, 8) })}</span>
                                         <span>•</span>
                                         <span className="flex items-center gap-1">
                                           <Calendar className="w-3 h-3" />
@@ -995,7 +1309,7 @@ const OrganizationDashboard = () => {
                               <div className="flex items-center justify-between">
                                 <Button variant="outline" size="sm" className="gap-2">
                                   <Eye className="w-4 h-4" />
-                                  {t('common.view')} Details
+                                  {t('common.viewDetails')}
                                 </Button>
                                 <div className="flex items-center gap-2">
                                   {application.status === 'pending' && (
@@ -1029,4 +1343,3 @@ const OrganizationDashboard = () => {
 };
 
 export default OrganizationDashboard;
-

@@ -67,6 +67,7 @@ export interface OrganizationRecord extends DatabaseRecord {
 
 export interface JobRecord extends DatabaseRecord {
   title: string;
+  name?: string;
   description: string;
   company_id: string;
   type?: string;
@@ -91,6 +92,7 @@ export interface JobRecord extends DatabaseRecord {
 
 export interface TenderRecord extends DatabaseRecord {
   title: string;
+  name?: string;
   description: string;
   organization_id?: string;
   company_id?: string;
@@ -215,7 +217,20 @@ async function apiRequest<T>(
     throw apiError;
   }
 
-  return response.json();
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  const text = await response.text();
+  if (!text) {
+    return undefined as T;
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return text as unknown as T;
+  }
 }
 
 // Auth API - matching API_DOCUMENTATION.md
@@ -1007,6 +1022,4 @@ export const adminAPI = {
     }
   },
 };
-
-
 

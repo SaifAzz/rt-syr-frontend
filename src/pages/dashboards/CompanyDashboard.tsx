@@ -33,12 +33,14 @@ import {
   Edit,
   Eye,
   ArrowUpRight,
+  ArrowLeft,
   LayoutDashboard,
   Mail,
   Settings,
   User,
   Save,
   X,
+  Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { jobsAPI, tendersAPI, applicationsAPI, companiesAPI, type JobRecord, type TenderRecord, type ApplicationRecord, type CompanyRecord } from '@/lib/api';
@@ -56,6 +58,18 @@ const CompanyDashboard = () => {
   const { user } = useAuth();
   const [activeSection, setActiveSection] = useState('overview');
   const queryClient = useQueryClient();
+  const [editingJob, setEditingJob] = useState<{
+    id: string;
+    name: string;
+    description: string;
+    status: string;
+  } | null>(null);
+  const [editingTender, setEditingTender] = useState<{
+    id: string;
+    name: string;
+    description: string;
+    status: string;
+  } | null>(null);
 
   // Profile state
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -78,14 +92,14 @@ const CompanyDashboard = () => {
   // Menu items organized by category
   const menuItems = [
     {
-      category: 'Dashboard',
+      category: t('dashboard.sections.dashboard'),
       items: [
         { id: 'overview', label: t('dashboard.organization.overview'), icon: LayoutDashboard },
-        { id: 'profile', label: 'Profile', icon: User },
+        { id: 'profile', label: t('dashboard.user.profile'), icon: User },
       ],
     },
     {
-      category: 'Management',
+      category: t('dashboard.sections.management'),
       items: [
         { id: 'jobs', label: t('dashboard.company.jobs'), icon: Briefcase },
         { id: 'tenders', label: t('dashboard.organization.tenders'), icon: FileText },
@@ -100,18 +114,18 @@ const CompanyDashboard = () => {
   // Update company mutation
   const updateCompanyMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      if (!user?.id || !isCompanyUser) throw new Error('Unauthorized');
+      if (!user?.id || !isCompanyUser) throw new Error(t('common.unauthorized'));
       return await companiesAPI.updateProfile(user.id, formData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-companies', user?.id] });
-      toast.success('Profile updated successfully');
+      toast.success(t('dashboard.company.profileUpdated'));
       setIsEditingProfile(false);
       setLogoFile(null);
       setRegistrationFile(null);
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to update profile');
+      toast.error(error.message || t('dashboard.company.profileUpdateFailed'));
     },
   });
 
@@ -144,6 +158,40 @@ const CompanyDashboard = () => {
   };
 
   const sectors = ['WASH', 'FSL', 'EDUCATION', 'HEALTH', 'PROTECTION', 'SHELTER', 'NFI', 'CCCM', 'OTHER'];
+
+  // Fetch company profile data
+  const { data: companyProfileData } = useQuery({
+    queryKey: ['my-companies', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      try {
+        const companies = await companiesAPI.getMy();
+        return Array.isArray(companies) && companies.length > 0 ? companies[0] : null;
+      } catch {
+        return null;
+      }
+    },
+    enabled: !!user?.id,
+  });
+
+  // Update profile data when company profile is loaded
+  useEffect(() => {
+    if (companyProfileData) {
+      setProfileData({
+        name: companyProfileData.name || '',
+        name_ar: companyProfileData.name_ar || '',
+        description: companyProfileData.description || '',
+        sector: companyProfileData.sector || '',
+        registration_country: companyProfileData.registration_country || '',
+        registration_number: companyProfileData.registration_number || '',
+        registration_file_url: companyProfileData.registration_file_url || '',
+        contact_person_name: companyProfileData.contact_person_name || '',
+        contact_person_position: companyProfileData.contact_person_position || '',
+        contact_person_email: companyProfileData.contact_person_email || '',
+        logo_url: companyProfileData.logo_url || '',
+      });
+    }
+  }, [companyProfileData]);
 
   const { data: jobsData, isLoading: jobsLoading } = useQuery({
     queryKey: ['company-jobs', user?.id],
@@ -202,6 +250,122 @@ const CompanyDashboard = () => {
     enabled: !!user?.id && jobs.length > 0,
   });
 
+  const updateJobMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { name: string; description: string; status: string } }) => {
+      return await jobsAPI.update(id, data);
+    },
+    onSuccess: () => {
+      toast.success(t('dashboard.admin.jobUpdated'));
+      queryClient.invalidateQueries({ queryKey: ['company-jobs', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['company-applications', user?.id] });
+      setEditingJob(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || t('dashboard.admin.jobUpdateFailed'));
+    },
+  });
+
+  const updateTenderMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { name: string; description: string; status: string } }) => {
+      return await tendersAPI.update(id, data);
+    },
+    onSuccess: () => {
+      toast.success(t('dashboard.admin.tenderUpdated'));
+      queryClient.invalidateQueries({ queryKey: ['company-tenders', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['company-applications', user?.id] });
+      setEditingTender(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || t('dashboard.admin.tenderUpdateFailed'));
+    },
+  });
+
+  const deleteJobMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await jobsAPI.delete(id);
+    },
+    onSuccess: (_data, id) => {
+      toast.success(t('dashboard.admin.jobDeleted'));
+      queryClient.invalidateQueries({ queryKey: ['company-jobs', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['company-applications', user?.id] });
+      if (editingJob?.id === id) {
+        setEditingJob(null);
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.message || t('dashboard.admin.jobDeleteFailed'));
+    },
+  });
+
+  const deleteTenderMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await tendersAPI.delete(id);
+    },
+    onSuccess: (_data, id) => {
+      toast.success(t('dashboard.admin.tenderDeleted'));
+      queryClient.invalidateQueries({ queryKey: ['company-tenders', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['company-applications', user?.id] });
+      if (editingTender?.id === id) {
+        setEditingTender(null);
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.message || t('dashboard.admin.tenderDeleteFailed'));
+    },
+  });
+
+  const handleJobEdit = (job: JobRecord) => {
+    if (editingJob?.id === job.id) {
+      setEditingJob(null);
+      return;
+    }
+    setEditingTender(null);
+    setEditingJob({
+      id: job.id,
+      name: job.title || job.name || '',
+      description: job.description || '',
+      status: job.status || 'open',
+    });
+  };
+
+  const handleTenderEdit = (tender: TenderRecord) => {
+    if (editingTender?.id === tender.id) {
+      setEditingTender(null);
+      return;
+    }
+    setEditingJob(null);
+    setEditingTender({
+      id: tender.id,
+      name: tender.title || tender.name || '',
+      description: tender.description || '',
+      status: tender.status || 'open',
+    });
+  };
+
+  const handleJobUpdate = () => {
+    if (!editingJob) return;
+    updateJobMutation.mutate({
+      id: editingJob.id,
+      data: {
+        name: editingJob.name.trim(),
+        description: editingJob.description.trim(),
+        status: editingJob.status.trim() || 'open',
+      },
+    });
+  };
+
+  const handleTenderUpdate = () => {
+    if (!editingTender) return;
+    updateTenderMutation.mutate({
+      id: editingTender.id,
+      data: {
+        name: editingTender.name.trim(),
+        description: editingTender.description.trim(),
+        status: editingTender.status.trim() || 'open',
+      },
+    });
+  };
+
   const activeJobs = jobs.filter(job => job.status === 'open').length;
   const activeTenders = tenders.filter(tender => tender.status === 'open' || tender.status === 'closing-soon').length;
   const totalApplications = applications.length;
@@ -219,7 +383,7 @@ const CompanyDashboard = () => {
                   <div className="flex items-center gap-3">
                     <img
                       src="/logos/3.png"
-                      alt="RT-SYR Logo"
+                      alt={t('logo.alt')}
                       className="h-20 w-auto object-contain flex-shrink-0"
                     />
                     <div className="flex-1 min-w-0">
@@ -231,10 +395,35 @@ const CompanyDashboard = () => {
                       </div>
                     </div>
                   </div>
+
+                  {/* Back Button and Company Profile Logo */}
+                  <div className="flex items-center gap-3 pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.location.href = 'https://rt-syr.com'}
+                      className="shrink-0 gap-2"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      <span className="text-xs font-medium">{t('common.backToWebsite')}</span>
+                    </Button>
+                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-border flex items-center justify-center bg-muted shrink-0">
+                      {profileData.logo_url ? (
+                        <img
+                          src={profileData.logo_url}
+                          alt={t('dashboard.company.logoAlt')}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Building2 className="w-6 h-6 text-muted-foreground" />
+                      )}
+                    </div>
+                  </div>
+
                   {/* Company Panel Label */}
                   <div className="pt-1">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Company Panel
+                      {t('dashboard.company.panelLabel')}
                     </p>
                   </div>
                 </div>
@@ -297,7 +486,7 @@ const CompanyDashboard = () => {
                     <SidebarTrigger className="md:hidden" />
                     <div>
                       <h1 className="text-3xl font-bold text-foreground">{t('dashboard.company.title')}</h1>
-                      <p className="text-muted-foreground mt-1 text-sm">Manage your jobs, tenders, and applications</p>
+                      <p className="text-muted-foreground mt-1 text-sm">{t('dashboard.company.subtitle')}</p>
                     </div>
                   </div>
                   <div className="flex gap-3">
@@ -330,7 +519,7 @@ const CompanyDashboard = () => {
                   <CardContent>
                     <div className="text-3xl font-bold text-foreground mb-1">{activeJobs}</div>
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <span>out of {jobs.length} total</span>
+                      <span>{t('dashboard.company.outOfTotal', { total: jobs.length })}</span>
                       {jobs.length > 0 && (
                         <span className="text-primary font-medium">
                           ({Math.round((activeJobs / jobs.length) * 100)}%)
@@ -348,7 +537,7 @@ const CompanyDashboard = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="text-3xl font-bold text-foreground mb-1">{totalApplications}</div>
-                    <p className="text-xs text-muted-foreground">applications received</p>
+                    <p className="text-xs text-muted-foreground">{t('dashboard.organization.applicationsReceived')}</p>
                   </CardContent>
                 </Card>
                 <Card className="border-l-4 border-l-accent shadow-sm hover:shadow-md transition-shadow">
@@ -361,7 +550,7 @@ const CompanyDashboard = () => {
                   <CardContent>
                     <div className="text-3xl font-bold text-foreground mb-1">{activeTenders}</div>
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <span>out of {tenders.length} total</span>
+                      <span>{t('dashboard.company.outOfTotal', { total: tenders.length })}</span>
                       {tenders.length > 0 && (
                         <span className="text-accent font-medium">
                           ({Math.round((activeTenders / tenders.length) * 100)}%)
@@ -372,14 +561,14 @@ const CompanyDashboard = () => {
                 </Card>
                 <Card className="border-l-4 border-l-info shadow-sm hover:shadow-md transition-shadow">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Views</CardTitle>
+                    <CardTitle className="text-sm font-medium text-muted-foreground">{t('dashboard.company.views')}</CardTitle>
                     <div className="h-10 w-10 rounded-lg bg-info/10 flex items-center justify-center">
                       <TrendingUp className="h-5 w-5 text-info" />
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="text-3xl font-bold text-foreground mb-1">0</div>
-                    <p className="text-xs text-muted-foreground">job views this month</p>
+                    <p className="text-xs text-muted-foreground">{t('dashboard.company.viewsThisMonth')}</p>
                   </CardContent>
                 </Card>
               </div>
@@ -394,7 +583,7 @@ const CompanyDashboard = () => {
                           <CardTitle className="text-lg font-semibold">{t('dashboard.organization.recentJobs')}</CardTitle>
                           <Button variant="ghost" size="sm" asChild>
                             <Link to="#" className="text-xs">
-                              {t('common.view')} All <ArrowUpRight className="w-3 h-3 ml-1" />
+                              {t('common.view')} {t('common.all')} <ArrowUpRight className="w-3 h-3 ml-1" />
                             </Link>
                           </Button>
                         </div>
@@ -419,7 +608,7 @@ const CompanyDashboard = () => {
                                 className="group flex items-center justify-between p-4 border rounded-lg hover:border-primary/50 hover:bg-accent/5 transition-all cursor-pointer"
                               >
                                 <div className="flex-1 min-w-0">
-                                  <p className="font-semibold text-sm mb-1 truncate">{job.title}</p>
+                                  <p className="font-semibold text-sm mb-1 truncate">{job.title || job.name || t('common.notAvailable')}</p>
                                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
                                     <span className="flex items-center gap-1">
                                       <Calendar className="w-3 h-3" />
@@ -449,7 +638,7 @@ const CompanyDashboard = () => {
                           <CardTitle className="text-lg font-semibold">{t('dashboard.organization.recentTenders')}</CardTitle>
                           <Button variant="ghost" size="sm" asChild>
                             <Link to="#" className="text-xs">
-                              {t('common.view')} All <ArrowUpRight className="w-3 h-3 ml-1" />
+                              {t('common.view')} {t('common.all')} <ArrowUpRight className="w-3 h-3 ml-1" />
                             </Link>
                           </Button>
                         </div>
@@ -474,7 +663,7 @@ const CompanyDashboard = () => {
                                 className="group flex items-center justify-between p-4 border rounded-lg hover:border-primary/50 hover:bg-accent/5 transition-all cursor-pointer"
                               >
                                 <div className="flex-1 min-w-0">
-                                  <p className="font-semibold text-sm mb-1 truncate">{tender.title}</p>
+                                  <p className="font-semibold text-sm mb-1 truncate">{tender.title || tender.name || t('common.notAvailable')}</p>
                                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
                                     <span className="flex items-center gap-1">
                                       <Clock className="w-3 h-3" />
@@ -502,7 +691,7 @@ const CompanyDashboard = () => {
                         <CardTitle className="text-lg font-semibold">{t('dashboard.company.recentApplications')}</CardTitle>
                         <Button variant="ghost" size="sm" asChild>
                           <Link to="#" className="text-xs">
-                            {t('common.view')} All <ArrowUpRight className="w-3 h-3 ml-1" />
+                            {t('common.view')} {t('common.all')} <ArrowUpRight className="w-3 h-3 ml-1" />
                           </Link>
                         </Button>
                       </div>
@@ -517,7 +706,7 @@ const CompanyDashboard = () => {
                           <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
                             <FileText className="w-6 h-6 text-muted-foreground" />
                           </div>
-                          <p className="text-sm text-muted-foreground">No applications yet</p>
+                          <p className="text-sm text-muted-foreground">{t('dashboard.organization.noApplications')}</p>
                         </div>
                       ) : (
                         <div className="space-y-3">
@@ -554,10 +743,12 @@ const CompanyDashboard = () => {
                                     <FileText className="w-5 h-5 text-primary" />
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <p className="font-semibold text-sm mb-1">Application #{application.id.slice(0, 8)}</p>
+                                    <p className="font-semibold text-sm mb-1">
+                                      {t('dashboard.company.applicationNumber', { id: application.id.slice(0, 8) })}
+                                    </p>
                                     <p className="text-xs text-muted-foreground flex items-center gap-1">
                                       <Calendar className="w-3 h-3" />
-                                      Applied on {new Date(application.created_at || application.createdAt).toLocaleDateString()}
+                                      {t('dashboard.organization.appliedOn')} {new Date(application.created_at || application.createdAt).toLocaleDateString()}
                                     </p>
                                   </div>
                                 </div>
@@ -585,9 +776,9 @@ const CompanyDashboard = () => {
                     <Card>
                       <CardContent className="py-12 text-center">
                         <Briefcase className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold mb-2">No jobs posted yet</h3>
+                        <h3 className="text-lg font-semibold mb-2">{t('dashboard.organization.noJobsPosted')}</h3>
                         <p className="text-muted-foreground mb-4">
-                          Start posting jobs to attract candidates
+                          {t('dashboard.organization.startPostingJobs')}
                         </p>
                         <Button asChild>
                           <Link to="/jobs/post">{t('dashboard.company.postJob')}</Link>
@@ -606,7 +797,7 @@ const CompanyDashboard = () => {
                                     <Briefcase className="w-5 h-5 text-primary" />
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <CardTitle className="text-lg mb-2">{job.title}</CardTitle>
+                                    <CardTitle className="text-lg mb-2">{job.title || job.name || t('common.notAvailable')}</CardTitle>
                                     <CardDescription>
                                       <div className="flex flex-wrap items-center gap-4 mt-2">
                                         <div className="flex items-center gap-1.5 text-sm">
@@ -615,15 +806,26 @@ const CompanyDashboard = () => {
                                         </div>
                                         <div className="flex items-center gap-1.5 text-sm">
                                           <Calendar className="w-4 h-4 text-muted-foreground" />
-                                          <span>Posted {new Date(job.created_at || job.createdAt).toLocaleDateString()}</span>
+                                          <span>
+                                            {t('dashboard.company.postedOn', {
+                                              date: new Date(job.created_at || job.createdAt).toLocaleDateString(),
+                                            })}
+                                          </span>
                                         </div>
                                         {(job.salary_min || job.salary_max) && (
                                           <div className="flex items-center gap-1.5 text-sm font-medium text-primary">
                                             {job.salary_min && job.salary_max
-                                              ? `$${job.salary_min.toLocaleString()} - $${job.salary_max.toLocaleString()}`
+                                              ? t('dashboard.company.salaryRange', {
+                                                min: job.salary_min.toLocaleString(),
+                                                max: job.salary_max.toLocaleString(),
+                                              })
                                               : job.salary_min
-                                                ? `From $${job.salary_min.toLocaleString()}`
-                                                : `Up to $${job.salary_max?.toLocaleString()}`
+                                                ? t('dashboard.company.salaryFrom', {
+                                                  min: job.salary_min.toLocaleString(),
+                                                })
+                                                : t('dashboard.company.salaryUpTo', {
+                                                  max: job.salary_max?.toLocaleString() || '',
+                                                })
                                             }
                                           </div>
                                         )}
@@ -645,7 +847,12 @@ const CompanyDashboard = () => {
                             <Separator className="mb-4" />
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                <Button variant="outline" size="sm" className="gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-2"
+                                  onClick={() => handleJobEdit(job)}
+                                >
                                   <Edit className="w-4 h-4" />
                                   {t('common.edit')}
                                 </Button>
@@ -653,11 +860,65 @@ const CompanyDashboard = () => {
                                   <Eye className="w-4 h-4" />
                                   {t('dashboard.company.applications')}
                                 </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  className="gap-2"
+                                  onClick={() => deleteJobMutation.mutate(job.id)}
+                                  disabled={deleteJobMutation.isPending}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  {t('common.delete')}
+                                </Button>
                               </div>
                               <Button variant="ghost" size="sm" className="gap-2">
                                 {t('common.view')} <ArrowUpRight className="w-4 h-4" />
                               </Button>
                             </div>
+                            {editingJob?.id === job.id && (
+                              <div className="mt-4 rounded-lg border bg-muted/30 p-4 space-y-4">
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div className="space-y-2">
+                                    <Label>{t('dashboard.admin.fieldTitle')}</Label>
+                                    <Input
+                                      value={editingJob.name}
+                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, name: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>{t('dashboard.admin.fieldStatus')}</Label>
+                                    <Input
+                                      value={editingJob.status}
+                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, status: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>{t('dashboard.admin.fieldDescription')}</Label>
+                                  <Textarea
+                                    value={editingJob.description}
+                                    onChange={(e) => setEditingJob(prev => prev ? { ...prev, description: e.target.value } : prev)}
+                                    rows={4}
+                                  />
+                                </div>
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setEditingJob(null)}
+                                  >
+                                    {t('common.cancel')}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={handleJobUpdate}
+                                    disabled={updateJobMutation.isPending}
+                                  >
+                                    {updateJobMutation.isPending ? t('common.saving') : t('common.saveChanges')}
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
                       ))}
@@ -697,7 +958,7 @@ const CompanyDashboard = () => {
                                     <FileText className="w-5 h-5 text-accent" />
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <CardTitle className="text-lg mb-2">{tender.title}</CardTitle>
+                                    <CardTitle className="text-lg mb-2">{tender.title || tender.name || t('common.notAvailable')}</CardTitle>
                                     <CardDescription>
                                       <div className="flex flex-wrap items-center gap-4 mt-2">
                                         <div className="flex items-center gap-1.5 text-sm">
@@ -728,7 +989,12 @@ const CompanyDashboard = () => {
                             <Separator className="mb-4" />
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                <Button variant="outline" size="sm" className="gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-2"
+                                  onClick={() => handleTenderEdit(tender)}
+                                >
                                   <Edit className="w-4 h-4" />
                                   {t('common.edit')}
                                 </Button>
@@ -736,11 +1002,65 @@ const CompanyDashboard = () => {
                                   <Eye className="w-4 h-4" />
                                   {t('dashboard.organization.viewProposals')}
                                 </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  className="gap-2"
+                                  onClick={() => deleteTenderMutation.mutate(tender.id)}
+                                  disabled={deleteTenderMutation.isPending}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  {t('common.delete')}
+                                </Button>
                               </div>
                               <Button variant="ghost" size="sm" className="gap-2">
                                 {t('common.view')} <ArrowUpRight className="w-4 h-4" />
                               </Button>
                             </div>
+                            {editingTender?.id === tender.id && (
+                              <div className="mt-4 rounded-lg border bg-muted/30 p-4 space-y-4">
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div className="space-y-2">
+                                    <Label>{t('dashboard.admin.fieldTitle')}</Label>
+                                    <Input
+                                      value={editingTender.name}
+                                      onChange={(e) => setEditingTender(prev => prev ? { ...prev, name: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>{t('dashboard.admin.fieldStatus')}</Label>
+                                    <Input
+                                      value={editingTender.status}
+                                      onChange={(e) => setEditingTender(prev => prev ? { ...prev, status: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>{t('dashboard.admin.fieldDescription')}</Label>
+                                  <Textarea
+                                    value={editingTender.description}
+                                    onChange={(e) => setEditingTender(prev => prev ? { ...prev, description: e.target.value } : prev)}
+                                    rows={4}
+                                  />
+                                </div>
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setEditingTender(null)}
+                                  >
+                                    {t('common.cancel')}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={handleTenderUpdate}
+                                    disabled={updateTenderMutation.isPending}
+                                  >
+                                    {updateTenderMutation.isPending ? t('common.saving') : t('common.saveChanges')}
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
                       ))}
@@ -754,7 +1074,7 @@ const CompanyDashboard = () => {
                   <Card>
                     <CardHeader>
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg font-semibold">Company Profile</CardTitle>
+                        <CardTitle className="text-lg font-semibold">{t('dashboard.company.profileTitle')}</CardTitle>
                         <Button
                           variant={isEditingProfile ? "outline" : "default"}
                           onClick={() => {
@@ -770,12 +1090,12 @@ const CompanyDashboard = () => {
                           {isEditingProfile ? (
                             <>
                               <X className="w-4 h-4 mr-2" />
-                              Cancel
+                              {t('common.cancel')}
                             </>
                           ) : (
                             <>
                               <Edit className="w-4 h-4 mr-2" />
-                              Edit Profile
+                              {t('dashboard.company.editProfile')}
                             </>
                           )}
                         </Button>
@@ -784,15 +1104,19 @@ const CompanyDashboard = () => {
                     <CardContent className="space-y-6">
                       {/* Logo Upload */}
                       <div className="space-y-2">
-                        <Label>Logo</Label>
+                        <Label>{t('dashboard.company.logoLabel')}</Label>
                         <div className="flex items-center gap-4">
-                          {profileData.logo_url && (
-                            <img
-                              src={profileData.logo_url}
-                              alt="Company logo"
-                              className="w-24 h-24 object-contain border rounded-lg"
-                            />
-                          )}
+                          <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-border flex items-center justify-center bg-muted shrink-0">
+                            {profileData.logo_url ? (
+                              <img
+                                src={profileData.logo_url}
+                                alt={t('dashboard.company.logoAlt')}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Building2 className="w-12 h-12 text-muted-foreground" />
+                            )}
+                          </div>
                           {isEditingProfile && (
                             <div className="flex flex-col gap-2">
                               <Input
@@ -813,7 +1137,7 @@ const CompanyDashboard = () => {
                                 }}
                                 className="w-full"
                               />
-                              <p className="text-xs text-muted-foreground">PNG, JPG, JPEG (max 5MB)</p>
+                              <p className="text-xs text-muted-foreground">{t('dashboard.company.logoHelp')}</p>
                             </div>
                           )}
                         </div>
@@ -821,12 +1145,12 @@ const CompanyDashboard = () => {
 
                       {/* Company Profile (Description) */}
                       <div className="space-y-2">
-                        <Label>Company Profile *</Label>
+                        <Label>{t('dashboard.company.companyProfileLabel')} *</Label>
                         {isEditingProfile ? (
                           <Textarea
                             value={profileData.description}
                             onChange={(e) => setProfileData(prev => ({ ...prev, description: e.target.value }))}
-                            placeholder="Enter company description/profile"
+                            placeholder={t('dashboard.company.companyProfilePlaceholder')}
                             rows={4}
                           />
                         ) : (
@@ -836,12 +1160,12 @@ const CompanyDashboard = () => {
 
                       {/* Full Name (English) */}
                       <div className="space-y-2">
-                        <Label>Full Name (English) *</Label>
+                        <Label>{t('dashboard.company.fullNameEnLabel')} *</Label>
                         {isEditingProfile ? (
                           <Input
                             value={profileData.name}
                             onChange={(e) => setProfileData(prev => ({ ...prev, name: e.target.value }))}
-                            placeholder="Enter company name in English"
+                            placeholder={t('dashboard.company.fullNameEnPlaceholder')}
                           />
                         ) : (
                           <p className="text-sm py-2">{profileData.name || '-'}</p>
@@ -850,12 +1174,12 @@ const CompanyDashboard = () => {
 
                       {/* Full Name (Arabic) */}
                       <div className="space-y-2">
-                        <Label>Full Name (Arabic)</Label>
+                        <Label>{t('dashboard.company.fullNameArLabel')}</Label>
                         {isEditingProfile ? (
                           <Input
                             value={profileData.name_ar || ''}
                             onChange={(e) => setProfileData(prev => ({ ...prev, name_ar: e.target.value }))}
-                            placeholder="Enter company name in Arabic"
+                            placeholder={t('dashboard.company.fullNameArPlaceholder')}
                             dir="rtl"
                           />
                         ) : (
@@ -865,14 +1189,14 @@ const CompanyDashboard = () => {
 
                       {/* Sector */}
                       <div className="space-y-2">
-                        <Label>Sector *</Label>
+                        <Label>{t('dashboard.company.sectorLabel')} *</Label>
                         {isEditingProfile ? (
                           <Select
                             value={profileData.sector || ''}
                             onValueChange={(value) => setProfileData(prev => ({ ...prev, sector: value }))}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="Select sector" />
+                              <SelectValue placeholder={t('dashboard.company.sectorPlaceholder')} />
                             </SelectTrigger>
                             <SelectContent>
                               {sectors.map((sector) => (
@@ -889,12 +1213,12 @@ const CompanyDashboard = () => {
 
                       {/* Registration Country */}
                       <div className="space-y-2">
-                        <Label>Registration Country *</Label>
+                        <Label>{t('dashboard.company.registrationCountryLabel')} *</Label>
                         {isEditingProfile ? (
                           <Input
                             value={profileData.registration_country || ''}
                             onChange={(e) => setProfileData(prev => ({ ...prev, registration_country: e.target.value }))}
-                            placeholder="Enter registration country"
+                            placeholder={t('dashboard.company.registrationCountryPlaceholder')}
                           />
                         ) : (
                           <p className="text-sm py-2">{profileData.registration_country || '-'}</p>
@@ -903,12 +1227,12 @@ const CompanyDashboard = () => {
 
                       {/* Registration Number */}
                       <div className="space-y-2">
-                        <Label>Registration Number *</Label>
+                        <Label>{t('dashboard.company.registrationNumberLabel')} *</Label>
                         {isEditingProfile ? (
                           <Input
                             value={profileData.registration_number || ''}
                             onChange={(e) => setProfileData(prev => ({ ...prev, registration_number: e.target.value }))}
-                            placeholder="Enter registration number"
+                            placeholder={t('dashboard.company.registrationNumberPlaceholder')}
                           />
                         ) : (
                           <p className="text-sm py-2">{profileData.registration_number || '-'}</p>
@@ -917,7 +1241,7 @@ const CompanyDashboard = () => {
 
                       {/* Registration File Upload */}
                       <div className="space-y-2">
-                        <Label>Registration Document (Optional)</Label>
+                        <Label>{t('dashboard.company.registrationDocumentLabel')}</Label>
                         {isEditingProfile ? (
                           <div className="space-y-2">
                             {profileData.registration_file_url && (
@@ -927,7 +1251,7 @@ const CompanyDashboard = () => {
                                 rel="noopener noreferrer"
                                 className="text-sm text-primary hover:underline flex items-center gap-2"
                               >
-                                View current file
+                                {t('dashboard.company.viewCurrentFile')}
                               </a>
                             )}
                             <Input
@@ -940,7 +1264,7 @@ const CompanyDashboard = () => {
                                 }
                               }}
                             />
-                            <p className="text-xs text-muted-foreground">PDF, DOC, DOCX, or Image (max 10MB)</p>
+                            <p className="text-xs text-muted-foreground">{t('dashboard.company.registrationHelp')}</p>
                           </div>
                         ) : (
                           profileData.registration_file_url ? (
@@ -950,22 +1274,22 @@ const CompanyDashboard = () => {
                               rel="noopener noreferrer"
                               className="text-sm text-primary hover:underline"
                             >
-                              View registration document
+                              {t('dashboard.company.viewRegistrationDocument')}
                             </a>
                           ) : (
-                            <p className="text-sm text-muted-foreground">No file uploaded</p>
+                            <p className="text-sm text-muted-foreground">{t('dashboard.company.noFileUploaded')}</p>
                           )
                         )}
                       </div>
 
                       {/* Contact Person Name */}
                       <div className="space-y-2">
-                        <Label>Contact Person Name *</Label>
+                        <Label>{t('dashboard.company.contactPersonNameLabel')} *</Label>
                         {isEditingProfile ? (
                           <Input
                             value={profileData.contact_person_name || ''}
                             onChange={(e) => setProfileData(prev => ({ ...prev, contact_person_name: e.target.value }))}
-                            placeholder="Enter contact person name"
+                            placeholder={t('dashboard.company.contactPersonNamePlaceholder')}
                           />
                         ) : (
                           <p className="text-sm py-2">{profileData.contact_person_name || '-'}</p>
@@ -974,12 +1298,12 @@ const CompanyDashboard = () => {
 
                       {/* Contact Person Position */}
                       <div className="space-y-2">
-                        <Label>Contact Person Position *</Label>
+                        <Label>{t('dashboard.company.contactPersonPositionLabel')} *</Label>
                         {isEditingProfile ? (
                           <Input
                             value={profileData.contact_person_position || ''}
                             onChange={(e) => setProfileData(prev => ({ ...prev, contact_person_position: e.target.value }))}
-                            placeholder="Enter contact person position"
+                            placeholder={t('dashboard.company.contactPersonPositionPlaceholder')}
                           />
                         ) : (
                           <p className="text-sm py-2">{profileData.contact_person_position || '-'}</p>
@@ -988,13 +1312,13 @@ const CompanyDashboard = () => {
 
                       {/* Contact Person Email */}
                       <div className="space-y-2">
-                        <Label>Contact Person Email *</Label>
+                        <Label>{t('dashboard.company.contactPersonEmailLabel')} *</Label>
                         {isEditingProfile ? (
                           <Input
                             type="email"
                             value={profileData.contact_person_email || ''}
                             onChange={(e) => setProfileData(prev => ({ ...prev, contact_person_email: e.target.value }))}
-                            placeholder="Enter contact person email"
+                            placeholder={t('dashboard.company.contactPersonEmailPlaceholder')}
                           />
                         ) : (
                           <p className="text-sm py-2">{profileData.contact_person_email || '-'}</p>
@@ -1011,7 +1335,7 @@ const CompanyDashboard = () => {
                               setRegistrationFile(null);
                             }}
                           >
-                            Cancel
+                            {t('common.cancel')}
                           </Button>
                           <Button
                             onClick={handleProfileSave}
@@ -1020,12 +1344,12 @@ const CompanyDashboard = () => {
                             {updateCompanyMutation.isPending ? (
                               <>
                                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                                Saving...
+                                {t('common.saving')}
                               </>
                             ) : (
                               <>
                                 <Save className="w-4 h-4 mr-2" />
-                                Save Changes
+                                {t('common.saveChanges')}
                               </>
                             )}
                           </Button>
@@ -1046,9 +1370,9 @@ const CompanyDashboard = () => {
                     <Card>
                       <CardContent className="py-12 text-center">
                         <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold mb-2">No applications yet</h3>
+                        <h3 className="text-lg font-semibold mb-2">{t('dashboard.organization.noApplications')}</h3>
                         <p className="text-muted-foreground">
-                          Applications will appear here when candidates apply to your jobs
+                          {t('dashboard.organization.applicationsWillAppear')}
                         </p>
                       </CardContent>
                     </Card>
@@ -1087,11 +1411,13 @@ const CompanyDashboard = () => {
                                       <FileText className="w-5 h-5 text-primary" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                      <CardTitle className="text-lg mb-1">Application #{application.id.slice(0, 8)}</CardTitle>
+                                      <CardTitle className="text-lg mb-1">
+                                        {t('dashboard.company.applicationNumber', { id: application.id.slice(0, 8) })}
+                                      </CardTitle>
                                       <CardDescription className="flex items-center gap-2">
                                         <span className="flex items-center gap-1">
                                           <Calendar className="w-3 h-3" />
-                                          Applied on {new Date(application.created_at || application.createdAt).toLocaleDateString()}
+                                          {t('dashboard.organization.appliedOn')} {new Date(application.created_at || application.createdAt).toLocaleDateString()}
                                         </span>
                                       </CardDescription>
                                     </div>
@@ -1115,18 +1441,18 @@ const CompanyDashboard = () => {
                               <div className="flex items-center justify-between">
                                 <Button variant="outline" size="sm" className="gap-2">
                                   <Eye className="w-4 h-4" />
-                                  View Details
+                                  {t('common.viewDetails')}
                                 </Button>
                                 <div className="flex items-center gap-2">
                                   {application.status === 'pending' && (
                                     <>
                                       <Button variant="default" size="sm" className="gap-2 bg-success hover:bg-success/90">
                                         <CheckCircle2 className="w-4 h-4" />
-                                        Accept
+                                        {t('dashboard.organization.accept')}
                                       </Button>
                                       <Button variant="destructive" size="sm" className="gap-2">
                                         <XCircle className="w-4 h-4" />
-                                        Reject
+                                        {t('dashboard.organization.reject')}
                                       </Button>
                                     </>
                                   )}
@@ -1149,6 +1475,3 @@ const CompanyDashboard = () => {
 };
 
 export default CompanyDashboard;
-
-
-

@@ -106,36 +106,36 @@ const AdminDashboard = () => {
   // Menu items organized by category
   const menuItems = [
     {
-      category: 'Dashboard',
+      category: t('dashboard.admin.sections.dashboard'),
       items: [
-        { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+        { id: 'overview', label: t('dashboard.admin.overview'), icon: LayoutDashboard },
       ],
     },
     {
-      category: 'Content Management',
+      category: t('dashboard.admin.sections.contentManagement'),
       items: [
-        { id: 'content', label: 'Content', icon: Globe },
-        { id: 'footer', label: 'Footer', icon: Layout },
-        { id: 'forms', label: 'Forms', icon: FormInput },
-        { id: 'pricing', label: 'Pricing', icon: DollarSign },
-        { id: 'stats', label: 'Statistics', icon: BarChart3 },
+        { id: 'content', label: t('dashboard.admin.content'), icon: Globe },
+        { id: 'footer', label: t('dashboard.admin.footer'), icon: Layout },
+        { id: 'forms', label: t('dashboard.admin.forms'), icon: FormInput },
+        { id: 'pricing', label: t('dashboard.admin.pricing'), icon: DollarSign },
+        { id: 'stats', label: t('dashboard.admin.statistics'), icon: BarChart3 },
       ],
     },
     {
-      category: 'Users & Organizations',
+      category: t('dashboard.admin.sections.usersOrganizations'),
       items: [
-        { id: 'users', label: 'Users', icon: Users },
-        { id: 'signup-requests', label: 'Signup Requests', icon: ClipboardList },
-        { id: 'companies', label: 'Companies', icon: Building2 },
-        { id: 'organizations', label: 'Organizations', icon: FolderTree },
+        { id: 'users', label: t('dashboard.admin.users'), icon: Users },
+        { id: 'signup-requests', label: t('dashboard.admin.signupRequests'), icon: ClipboardList },
+        { id: 'companies', label: t('dashboard.admin.companies'), icon: Building2 },
+        { id: 'organizations', label: t('dashboard.admin.organizations'), icon: FolderTree },
       ],
     },
     {
-      category: 'Jobs & Tenders',
+      category: t('dashboard.admin.sections.jobsTenders'),
       items: [
-        { id: 'jobs', label: 'Jobs', icon: Briefcase },
-        { id: 'tenders', label: 'Tenders', icon: FileText },
-        { id: 'applications', label: 'Applications', icon: Mail },
+        { id: 'jobs', label: t('dashboard.admin.jobs'), icon: Briefcase },
+        { id: 'tenders', label: t('dashboard.admin.tenders'), icon: FileText },
+        { id: 'applications', label: t('dashboard.admin.applications'), icon: Mail },
       ],
     },
   ];
@@ -221,11 +221,11 @@ const AdminDashboard = () => {
       return await usersAPI.delete(id);
     },
     onSuccess: () => {
-      toast.success('User deleted successfully');
+      toast.success(t('dashboard.admin.userDeleted'));
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     },
     onError: () => {
-      toast.error('Failed to delete user');
+      toast.error(t('dashboard.admin.userDeleteFailed'));
     },
   });
 
@@ -234,11 +234,11 @@ const AdminDashboard = () => {
       return await jobsAPI.delete(id);
     },
     onSuccess: () => {
-      toast.success('Job deleted successfully');
+      toast.success(t('dashboard.admin.jobDeleted'));
       queryClient.invalidateQueries({ queryKey: ['admin-jobs'] });
     },
     onError: () => {
-      toast.error('Failed to delete job');
+      toast.error(t('dashboard.admin.jobDeleteFailed'));
     },
   });
 
@@ -247,11 +247,11 @@ const AdminDashboard = () => {
       return await tendersAPI.delete(id);
     },
     onSuccess: () => {
-      toast.success('Tender deleted successfully');
+      toast.success(t('dashboard.admin.tenderDeleted'));
       queryClient.invalidateQueries({ queryKey: ['admin-tenders'] });
     },
     onError: () => {
-      toast.error('Failed to delete tender');
+      toast.error(t('dashboard.admin.tenderDeleteFailed'));
     },
   });
 
@@ -261,12 +261,12 @@ const AdminDashboard = () => {
       return await jobsAPI.update(id, data);
     },
     onSuccess: () => {
-      toast.success('Job updated successfully');
+      toast.success(t('dashboard.admin.jobUpdated'));
       queryClient.invalidateQueries({ queryKey: ['admin-jobs'] });
       setEditingEntity(null);
     },
     onError: () => {
-      toast.error('Failed to update job');
+      toast.error(t('dashboard.admin.jobUpdateFailed'));
     },
   });
 
@@ -275,12 +275,12 @@ const AdminDashboard = () => {
       return await tendersAPI.update(id, data);
     },
     onSuccess: () => {
-      toast.success('Tender updated successfully');
+      toast.success(t('dashboard.admin.tenderUpdated'));
       queryClient.invalidateQueries({ queryKey: ['admin-tenders'] });
       setEditingEntity(null);
     },
     onError: () => {
-      toast.error('Failed to update tender');
+      toast.error(t('dashboard.admin.tenderUpdateFailed'));
     },
   });
 
@@ -289,12 +289,12 @@ const AdminDashboard = () => {
       return await companiesAPI.update(id, data);
     },
     onSuccess: () => {
-      toast.success('Company updated successfully');
+      toast.success(t('dashboard.admin.companyUpdated'));
       queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
       setEditingEntity(null);
     },
     onError: () => {
-      toast.error('Failed to update company');
+      toast.error(t('dashboard.admin.companyUpdateFailed'));
     },
   });
 
@@ -303,12 +303,12 @@ const AdminDashboard = () => {
       return await organizationsAPI.update(id, data);
     },
     onSuccess: () => {
-      toast.success('Organization updated successfully');
+      toast.success(t('dashboard.admin.organizationUpdated'));
       queryClient.invalidateQueries({ queryKey: ['admin-organizations'] });
       setEditingEntity(null);
     },
     onError: () => {
-      toast.error('Failed to update organization');
+      toast.error(t('dashboard.admin.organizationUpdateFailed'));
     },
   });
 
@@ -318,12 +318,21 @@ const AdminDashboard = () => {
       return await adminAPI.approve('company', id, approved);
     },
     onSuccess: (_, variables) => {
-      toast.success(`Company ${variables.approved ? 'approved' : 'rejected'} successfully`);
+      toast.success(
+        t('dashboard.admin.approvalUpdated', {
+          entity: t('dashboard.admin.company'),
+          status: t(variables.approved ? 'dashboard.admin.approved' : 'dashboard.admin.rejected'),
+        })
+      );
       queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
       queryClient.invalidateQueries({ queryKey: ['admin-pending'] });
     },
     onError: () => {
-      toast.error('Failed to update company approval status');
+      toast.error(
+        t('dashboard.admin.approvalUpdateFailed', {
+          entity: t('dashboard.admin.company'),
+        })
+      );
     },
   });
 
@@ -332,12 +341,21 @@ const AdminDashboard = () => {
       return await adminAPI.approve('organization', id, approved);
     },
     onSuccess: (_, variables) => {
-      toast.success(`Organization ${variables.approved ? 'approved' : 'rejected'} successfully`);
+      toast.success(
+        t('dashboard.admin.approvalUpdated', {
+          entity: t('dashboard.admin.organization'),
+          status: t(variables.approved ? 'dashboard.admin.approved' : 'dashboard.admin.rejected'),
+        })
+      );
       queryClient.invalidateQueries({ queryKey: ['admin-organizations'] });
       queryClient.invalidateQueries({ queryKey: ['admin-pending'] });
     },
     onError: () => {
-      toast.error('Failed to update organization approval status');
+      toast.error(
+        t('dashboard.admin.approvalUpdateFailed', {
+          entity: t('dashboard.admin.organization'),
+        })
+      );
     },
   });
 
@@ -347,12 +365,21 @@ const AdminDashboard = () => {
       return await adminAPI.approvePosting('jobs', id, can_post);
     },
     onSuccess: (_, variables) => {
-      toast.success(`Job ${variables.can_post ? 'approved' : 'rejected'} successfully`);
+      toast.success(
+        t('dashboard.admin.approvalUpdated', {
+          entity: t('dashboard.admin.job'),
+          status: t(variables.can_post ? 'dashboard.admin.approved' : 'dashboard.admin.rejected'),
+        })
+      );
       queryClient.invalidateQueries({ queryKey: ['admin-jobs'] });
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
     },
     onError: () => {
-      toast.error('Failed to update job approval status');
+      toast.error(
+        t('dashboard.admin.postingApprovalUpdateFailed', {
+          entity: t('dashboard.admin.job'),
+        })
+      );
     },
   });
 
@@ -361,12 +388,21 @@ const AdminDashboard = () => {
       return await adminAPI.approvePosting('tenders', id, can_post);
     },
     onSuccess: (_, variables) => {
-      toast.success(`Tender ${variables.can_post ? 'approved' : 'rejected'} successfully`);
+      toast.success(
+        t('dashboard.admin.approvalUpdated', {
+          entity: t('dashboard.admin.tender'),
+          status: t(variables.can_post ? 'dashboard.admin.approved' : 'dashboard.admin.rejected'),
+        })
+      );
       queryClient.invalidateQueries({ queryKey: ['admin-tenders'] });
       queryClient.invalidateQueries({ queryKey: ['tenders'] });
     },
     onError: () => {
-      toast.error('Failed to update tender approval status');
+      toast.error(
+        t('dashboard.admin.postingApprovalUpdateFailed', {
+          entity: t('dashboard.admin.tender'),
+        })
+      );
     },
   });
 
@@ -490,6 +526,24 @@ const AdminDashboard = () => {
   const filteredUsers = filterUsers(users);
   const filteredCompanies = filterCompanies(companies);
   const filteredOrganizations = filterOrganizations(organizations);
+  const roleLabelMap: Record<string, string> = {
+    user: t('auth.jobSeeker'),
+    company: t('auth.company'),
+    organization: t('auth.organization'),
+    admin: t('dashboard.admin.title'),
+  };
+  const getStatusLabel = (status?: string) => {
+    switch (status) {
+      case 'approved':
+        return t('dashboard.admin.approved');
+      case 'rejected':
+        return t('dashboard.admin.rejected');
+      case 'pending':
+        return t('dashboard.admin.pending');
+      default:
+        return status || t('dashboard.admin.pending');
+    }
+  };
 
   const handleEdit = (type: string, id: string, data: any) => {
     setEditingEntity({ type, id, data });
@@ -543,7 +597,7 @@ const AdminDashboard = () => {
                   <div className="flex items-center gap-3">
                     <img 
                       src="/logos/3.png" 
-                      alt="RT-SYR Logo" 
+                      alt={t('logo.alt')} 
                       className="h-20 w-auto object-contain flex-shrink-0"
                     />
                     <div className="flex-1 min-w-0">
@@ -558,7 +612,7 @@ const AdminDashboard = () => {
                   {/* Admin Panel Label */}
                   <div className="pt-1">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Admin Panel
+                      {t('dashboard.admin.panelLabel')}
                     </p>
                   </div>
                 </div>
@@ -701,7 +755,11 @@ const AdminDashboard = () => {
               <CardContent>
                 <div className="text-3xl font-bold mb-1">{stats.approvedCompanies}</div>
                 <p className="text-xs text-muted-foreground">
-                  {stats.pendingCompanies} pending • {stats.approvedCompanies} / {stats.totalCompanies} approved
+                  {t('dashboard.admin.companyApprovalSummary', {
+                    pending: stats.pendingCompanies,
+                    approved: stats.approvedCompanies,
+                    total: stats.totalCompanies,
+                  })}
                 </p>
               </CardContent>
             </Card>
@@ -738,7 +796,7 @@ const AdminDashboard = () => {
                         <p className="text-2xl font-bold">{stats.approvedCompanies}</p>
                       </div>
                       <div className="p-4 rounded-lg bg-muted/50">
-                        <p className="text-sm text-muted-foreground mb-1">Pending Approvals</p>
+                        <p className="text-sm text-muted-foreground mb-1">{t('dashboard.admin.pendingApprovals')}</p>
                         <p className="text-2xl font-bold">{stats.pendingCompanies + stats.pendingOrganizations}</p>
                       </div>
                     </div>
@@ -750,7 +808,7 @@ const AdminDashboard = () => {
                       <Activity className="w-5 h-5" />
                       {t('dashboard.admin.recentActivity')}
                     </CardTitle>
-                    <CardDescription>Latest platform activities</CardDescription>
+                    <CardDescription>{t('dashboard.admin.latestActivities')}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
@@ -848,9 +906,16 @@ const AdminDashboard = () => {
               ) : (
                 <div className="grid gap-4">
                   {filteredUsers.map((user) => {
-                    const userName = user.full_name || user.name || 'Unknown';
+                    const userName = user.full_name || user.name || t('common.unknown');
                     const userRole = user.role || user.type || 'user';
+                    const userRoleLabel = roleLabelMap[userRole] || userRole;
                     const isVerified = user.email_verified || user.emailVerified || false;
+                    const approvalStatus = userRole === 'company'
+                      ? companies.find(c => c.user_id === user.id)?.status
+                      : userRole === 'organization'
+                        ? organizations.find(o => o.user_id === user.id)?.status
+                        : undefined;
+                    const approvalLabel = approvalStatus ? getStatusLabel(approvalStatus) : t('common.notAvailable');
                     return (
                       <Card key={user.id}>
                         <CardHeader>
@@ -860,7 +925,7 @@ const AdminDashboard = () => {
                               <CardDescription>{user.email}</CardDescription>
                             </div>
                             <div className="flex items-center gap-2">
-                              <Badge variant="outline">{userRole}</Badge>
+                              <Badge variant="outline">{userRoleLabel}</Badge>
                               <Button
                                 variant="destructive"
                                 size="sm"
@@ -876,20 +941,18 @@ const AdminDashboard = () => {
                             {isVerified ? (
                               <Badge className="bg-green-500">
                                 <CheckCircle className="w-3 h-3 mr-1" />
-                                Verified
+                                {t('dashboard.admin.verified')}
                               </Badge>
                             ) : (
                               <Badge variant="destructive">
                                 <XCircle className="w-3 h-3 mr-1" />
-                                Unverified
+                                {t('dashboard.admin.unverified')}
                               </Badge>
                             )}
                             {/* Show approval status for companies/organizations */}
                             {(userRole === 'company' || userRole === 'organization') && (
                               <Badge variant="outline">
-                                {userRole === 'company' 
-                                  ? companies.find(c => c.user_id === user.id)?.status || 'N/A'
-                                  : organizations.find(o => o.user_id === user.id)?.status || 'N/A'}
+                                {approvalLabel}
                               </Badge>
                             )}
                           </div>
@@ -923,13 +986,13 @@ const AdminDashboard = () => {
                     <Select value={filterStatus} onValueChange={setFilterStatus}>
                       <SelectTrigger className="w-full sm:w-[180px]">
                         <Filter className="w-4 h-4 mr-2" />
-                        <SelectValue placeholder="Filter by status" />
+                        <SelectValue placeholder={t('dashboard.admin.filterByStatus')} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">{t('common.all')}</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="approved">Approved</SelectItem>
-                        <SelectItem value="rejected">Rejected</SelectItem>
+                        <SelectItem value="pending">{t('dashboard.admin.pending')}</SelectItem>
+                        <SelectItem value="approved">{t('dashboard.admin.approved')}</SelectItem>
+                        <SelectItem value="rejected">{t('dashboard.admin.rejected')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -969,7 +1032,7 @@ const AdminDashboard = () => {
                             >
                               {company.status === 'approved' && <CheckCircle className="w-3 h-3 mr-1" />}
                               {company.status === 'rejected' && <XCircle className="w-3 h-3 mr-1" />}
-                              {company.status ? company.status.charAt(0).toUpperCase() + company.status.slice(1) : 'Pending'}
+                              {getStatusLabel(company.status)}
                             </Badge>
                             {company.status === 'pending' && (
                               <>
@@ -980,7 +1043,7 @@ const AdminDashboard = () => {
                                   className="text-green-600 hover:text-green-700"
                                 >
                                   <CheckCircle className="w-4 h-4 mr-1" />
-                                  Approve
+                                  {t('dashboard.admin.approve')}
                                 </Button>
                                 <Button
                                   variant="outline"
@@ -989,7 +1052,7 @@ const AdminDashboard = () => {
                                   className="text-red-600 hover:text-red-700"
                                 >
                                   <XCircle className="w-4 h-4 mr-1" />
-                                  Reject
+                                  {t('dashboard.admin.reject')}
                                 </Button>
                               </>
                             )}
@@ -1005,12 +1068,12 @@ const AdminDashboard = () => {
                               </DialogTrigger>
                               <DialogContent>
                                 <DialogHeader>
-                                  <DialogTitle>Edit Company</DialogTitle>
+                                  <DialogTitle>{t('dashboard.admin.editCompany')}</DialogTitle>
                                 </DialogHeader>
                                 {editingEntity && editingEntity.type === 'company' && (
                                   <div className="space-y-4">
                                     <div className="space-y-2">
-                                      <Label>Name</Label>
+                                      <Label>{t('dashboard.admin.fieldName')}</Label>
                                       <Input
                                         value={editingEntity.data.name || ''}
                                         onChange={(e) =>
@@ -1022,7 +1085,7 @@ const AdminDashboard = () => {
                                       />
                                     </div>
                                     <div className="space-y-2">
-                                      <Label>Description</Label>
+                                      <Label>{t('dashboard.admin.fieldDescription')}</Label>
                                       <Textarea
                                         value={editingEntity.data.description || ''}
                                         onChange={(e) =>
@@ -1037,7 +1100,7 @@ const AdminDashboard = () => {
                                       />
                                     </div>
                                     <div className="space-y-2">
-                                      <Label>Website</Label>
+                                      <Label>{t('dashboard.admin.fieldWebsite')}</Label>
                                       <Input
                                         type="url"
                                         value={editingEntity.data.website || ''}
@@ -1047,10 +1110,10 @@ const AdminDashboard = () => {
                                             data: { ...editingEntity.data, website: e.target.value },
                                           })
                                         }
-                                        placeholder="https://example.com"
+                                        placeholder={t('dashboard.admin.websitePlaceholder')}
                                       />
                                     </div>
-                                    <Button onClick={handleSaveEdit}>Save Changes</Button>
+                                    <Button onClick={handleSaveEdit}>{t('common.saveChanges')}</Button>
                                   </div>
                                 )}
                               </DialogContent>
@@ -1080,13 +1143,13 @@ const AdminDashboard = () => {
                     <Select value={filterStatus} onValueChange={setFilterStatus}>
                       <SelectTrigger className="w-full sm:w-[180px]">
                         <Filter className="w-4 h-4 mr-2" />
-                        <SelectValue placeholder="Filter by status" />
+                        <SelectValue placeholder={t('dashboard.admin.filterByStatus')} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">{t('common.all')}</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="approved">Approved</SelectItem>
-                        <SelectItem value="rejected">Rejected</SelectItem>
+                        <SelectItem value="pending">{t('dashboard.admin.pending')}</SelectItem>
+                        <SelectItem value="approved">{t('dashboard.admin.approved')}</SelectItem>
+                        <SelectItem value="rejected">{t('dashboard.admin.rejected')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1126,7 +1189,7 @@ const AdminDashboard = () => {
                             >
                               {org.status === 'approved' && <CheckCircle className="w-3 h-3 mr-1" />}
                               {org.status === 'rejected' && <XCircle className="w-3 h-3 mr-1" />}
-                              {org.status ? org.status.charAt(0).toUpperCase() + org.status.slice(1) : 'Pending'}
+                              {getStatusLabel(org.status)}
                             </Badge>
                             {org.status === 'pending' && (
                               <>
@@ -1137,7 +1200,7 @@ const AdminDashboard = () => {
                                   className="text-green-600 hover:text-green-700"
                                 >
                                   <CheckCircle className="w-4 h-4 mr-1" />
-                                  Approve
+                                  {t('dashboard.admin.approve')}
                                 </Button>
                                 <Button
                                   variant="outline"
@@ -1146,7 +1209,7 @@ const AdminDashboard = () => {
                                   className="text-red-600 hover:text-red-700"
                                 >
                                   <XCircle className="w-4 h-4 mr-1" />
-                                  Reject
+                                  {t('dashboard.admin.reject')}
                                 </Button>
                               </>
                             )}
@@ -1162,12 +1225,12 @@ const AdminDashboard = () => {
                               </DialogTrigger>
                               <DialogContent>
                                 <DialogHeader>
-                                  <DialogTitle>Edit Organization</DialogTitle>
+                                  <DialogTitle>{t('dashboard.admin.editOrganization')}</DialogTitle>
                                 </DialogHeader>
                                 {editingEntity && editingEntity.type === 'organization' && (
                                   <div className="space-y-4">
                                     <div className="space-y-2">
-                                      <Label>Name</Label>
+                                      <Label>{t('dashboard.admin.fieldName')}</Label>
                                       <Input
                                         value={editingEntity.data.name || ''}
                                         onChange={(e) =>
@@ -1179,7 +1242,7 @@ const AdminDashboard = () => {
                                       />
                                     </div>
                                     <div className="space-y-2">
-                                      <Label>Description</Label>
+                                      <Label>{t('dashboard.admin.fieldDescription')}</Label>
                                       <Textarea
                                         value={editingEntity.data.description || ''}
                                         onChange={(e) =>
@@ -1194,7 +1257,7 @@ const AdminDashboard = () => {
                                       />
                                     </div>
                                     <div className="space-y-2">
-                                      <Label>Website</Label>
+                                      <Label>{t('dashboard.admin.fieldWebsite')}</Label>
                                       <Input
                                         type="url"
                                         value={editingEntity.data.website || ''}
@@ -1204,10 +1267,10 @@ const AdminDashboard = () => {
                                             data: { ...editingEntity.data, website: e.target.value },
                                           })
                                         }
-                                        placeholder="https://example.com"
+                                        placeholder={t('dashboard.admin.websitePlaceholder')}
                                       />
                                     </div>
-                                    <Button onClick={handleSaveEdit}>Save Changes</Button>
+                                    <Button onClick={handleSaveEdit}>{t('common.saveChanges')}</Button>
                                   </div>
                                 )}
                               </DialogContent>
@@ -1271,7 +1334,7 @@ const AdminDashboard = () => {
                           <div>
                             <CardTitle className="text-lg">{job.title}</CardTitle>
                             <CardDescription>
-                              {job.location} • {job.category} • {job.employment_type || job.type || 'N/A'}
+                              {job.location} • {job.category} • {job.employment_type || job.type || t('common.notAvailable')}
                             </CardDescription>
                           </div>
                           <div className="flex items-center gap-2">
@@ -1287,7 +1350,7 @@ const AdminDashboard = () => {
                               disabled={approveJobMutation.isPending}
                             >
                               <CheckCircle className="w-4 h-4 mr-1" />
-                              Approve
+                              {t('dashboard.admin.approve')}
                             </Button>
                             <Button
                               variant="outline"
@@ -1297,7 +1360,7 @@ const AdminDashboard = () => {
                               disabled={approveJobMutation.isPending}
                             >
                               <XCircle className="w-4 h-4 mr-1" />
-                              Reject
+                              {t('dashboard.admin.reject')}
                             </Button>
                             <Dialog>
                               <DialogTrigger asChild>
@@ -1311,12 +1374,12 @@ const AdminDashboard = () => {
                               </DialogTrigger>
                               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                                 <DialogHeader>
-                                  <DialogTitle>Edit Job</DialogTitle>
+                                  <DialogTitle>{t('dashboard.admin.editJob')}</DialogTitle>
                                 </DialogHeader>
                                 {editingEntity && editingEntity.type === 'job' && (
                                   <div className="space-y-4">
                                     <div className="space-y-2">
-                                      <Label>Title</Label>
+                                      <Label>{t('dashboard.admin.fieldTitle')}</Label>
                                       <Input
                                         value={editingEntity.data.title}
                                         onChange={(e) =>
@@ -1328,7 +1391,7 @@ const AdminDashboard = () => {
                                       />
                                     </div>
                                     <div className="space-y-2">
-                                      <Label>Description</Label>
+                                      <Label>{t('dashboard.admin.fieldDescription')}</Label>
                                       <Textarea
                                         value={editingEntity.data.description}
                                         onChange={(e) =>
@@ -1345,7 +1408,7 @@ const AdminDashboard = () => {
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                       <div className="space-y-2">
-                                        <Label>Location</Label>
+                                        <Label>{t('dashboard.admin.fieldLocation')}</Label>
                                         <Input
                                           value={editingEntity.data.location}
                                           onChange={(e) =>
@@ -1360,7 +1423,7 @@ const AdminDashboard = () => {
                                         />
                                       </div>
                                       <div className="space-y-2">
-                                        <Label>Salary Min</Label>
+                                        <Label>{t('dashboard.admin.fieldSalaryMin')}</Label>
                                         <Input
                                           type="number"
                                           value={editingEntity.data.salary_min || ''}
@@ -1376,7 +1439,7 @@ const AdminDashboard = () => {
                                         />
                                       </div>
                                       <div className="space-y-2">
-                                        <Label>Salary Max</Label>
+                                        <Label>{t('dashboard.admin.fieldSalaryMax')}</Label>
                                         <Input
                                           type="number"
                                           value={editingEntity.data.salary_max || ''}
@@ -1394,7 +1457,7 @@ const AdminDashboard = () => {
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                       <div className="space-y-2">
-                                        <Label>Type</Label>
+                                        <Label>{t('dashboard.admin.fieldType')}</Label>
                                         <Select
                                           value={editingEntity.data.type}
                                           onValueChange={(value) =>
@@ -1408,15 +1471,15 @@ const AdminDashboard = () => {
                                             <SelectValue />
                                           </SelectTrigger>
                                           <SelectContent>
-                                            <SelectItem value="full-time">Full-time</SelectItem>
-                                            <SelectItem value="part-time">Part-time</SelectItem>
-                                            <SelectItem value="contract">Contract</SelectItem>
-                                            <SelectItem value="remote">Remote</SelectItem>
+                                            <SelectItem value="full-time">{t('dashboard.admin.jobTypeFullTime')}</SelectItem>
+                                            <SelectItem value="part-time">{t('dashboard.admin.jobTypePartTime')}</SelectItem>
+                                            <SelectItem value="contract">{t('dashboard.admin.jobTypeContract')}</SelectItem>
+                                            <SelectItem value="remote">{t('dashboard.admin.jobTypeRemote')}</SelectItem>
                                           </SelectContent>
                                         </Select>
                                       </div>
                                       <div className="space-y-2">
-                                        <Label>Status</Label>
+                                        <Label>{t('dashboard.admin.fieldStatus')}</Label>
                                         <Select
                                           value={editingEntity.data.status}
                                           onValueChange={(value) =>
@@ -1430,14 +1493,14 @@ const AdminDashboard = () => {
                                             <SelectValue />
                                           </SelectTrigger>
                                           <SelectContent>
-                                            <SelectItem value="open">Open</SelectItem>
-                                            <SelectItem value="closed">Closed</SelectItem>
+                                            <SelectItem value="open">{t('dashboard.admin.open')}</SelectItem>
+                                            <SelectItem value="closed">{t('dashboard.admin.closed')}</SelectItem>
                                           </SelectContent>
                                         </Select>
                                       </div>
                                     </div>
                                     <div className="space-y-2">
-                                      <Label>Requirements</Label>
+                                      <Label>{t('dashboard.admin.fieldRequirements')}</Label>
                                       <Textarea
                                         value={editingEntity.data.requirements || ''}
                                         onChange={(e) =>
@@ -1453,7 +1516,7 @@ const AdminDashboard = () => {
                                       />
                                     </div>
                                     <div className="flex gap-2">
-                                      <Button onClick={handleSaveEdit}>Save Changes</Button>
+                                      <Button onClick={handleSaveEdit}>{t('common.saveChanges')}</Button>
                                       <Button
                                         variant="destructive"
                                         onClick={() => {
@@ -1462,7 +1525,7 @@ const AdminDashboard = () => {
                                         }}
                                       >
                                         <Trash2 className="w-4 h-4 mr-2" />
-                                        Delete
+                                        {t('common.delete')}
                                       </Button>
                                     </div>
                                   </div>
@@ -1506,7 +1569,7 @@ const AdminDashboard = () => {
                   <SelectContent>
                     <SelectItem value="all">{t('common.all')}</SelectItem>
                     <SelectItem value="open">{t('dashboard.admin.active')}</SelectItem>
-                    <SelectItem value="closing-soon">Closing Soon</SelectItem>
+                    <SelectItem value="closing-soon">{t('dashboard.admin.closingSoon')}</SelectItem>
                     <SelectItem value="closed">{t('dashboard.admin.inactive')}</SelectItem>
                   </SelectContent>
                 </Select>
@@ -1536,7 +1599,7 @@ const AdminDashboard = () => {
                           <div>
                             <CardTitle className="text-lg">{tender.title}</CardTitle>
                             <CardDescription>
-                              {tender.location} • {tender.category} • Deadline:{' '}
+                              {tender.location} • {tender.category} • {t('dashboard.organization.deadline')}:{' '}
                               {new Date(tender.deadline).toLocaleDateString()}
                             </CardDescription>
                           </div>
@@ -1551,7 +1614,7 @@ const AdminDashboard = () => {
                               disabled={approveTenderMutation.isPending}
                             >
                               <CheckCircle className="w-4 h-4 mr-1" />
-                              Approve
+                              {t('dashboard.admin.approve')}
                             </Button>
                             <Button
                               variant="outline"
@@ -1561,7 +1624,7 @@ const AdminDashboard = () => {
                               disabled={approveTenderMutation.isPending}
                             >
                               <XCircle className="w-4 h-4 mr-1" />
-                              Reject
+                              {t('dashboard.admin.reject')}
                             </Button>
                             <Dialog>
                               <DialogTrigger asChild>
@@ -1575,12 +1638,12 @@ const AdminDashboard = () => {
                               </DialogTrigger>
                               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                                 <DialogHeader>
-                                  <DialogTitle>Edit Tender</DialogTitle>
+                                  <DialogTitle>{t('dashboard.admin.editTender')}</DialogTitle>
                                 </DialogHeader>
                                 {editingEntity && editingEntity.type === 'tender' && (
                                   <div className="space-y-4">
                                     <div className="space-y-2">
-                                      <Label>Title</Label>
+                                      <Label>{t('dashboard.admin.fieldTitle')}</Label>
                                       <Input
                                         value={editingEntity.data.title}
                                         onChange={(e) =>
@@ -1592,7 +1655,7 @@ const AdminDashboard = () => {
                                       />
                                     </div>
                                     <div className="space-y-2">
-                                      <Label>Description</Label>
+                                      <Label>{t('dashboard.admin.fieldDescription')}</Label>
                                       <Textarea
                                         value={editingEntity.data.description}
                                         onChange={(e) =>
@@ -1609,7 +1672,7 @@ const AdminDashboard = () => {
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                       <div className="space-y-2">
-                                        <Label>Location</Label>
+                                        <Label>{t('dashboard.admin.fieldLocation')}</Label>
                                         <Input
                                           value={editingEntity.data.location}
                                           onChange={(e) =>
@@ -1624,7 +1687,7 @@ const AdminDashboard = () => {
                                         />
                                       </div>
                                       <div className="space-y-2">
-                                        <Label>Deadline</Label>
+                                        <Label>{t('dashboard.admin.fieldDeadline')}</Label>
                                         <Input
                                           type="date"
                                           value={editingEntity.data.deadline.split('T')[0]}
@@ -1642,7 +1705,7 @@ const AdminDashboard = () => {
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                       <div className="space-y-2">
-                                        <Label>Status</Label>
+                                        <Label>{t('dashboard.admin.fieldStatus')}</Label>
                                         <Select
                                           value={editingEntity.data.status}
                                           onValueChange={(value) =>
@@ -1656,15 +1719,15 @@ const AdminDashboard = () => {
                                             <SelectValue />
                                           </SelectTrigger>
                                           <SelectContent>
-                                            <SelectItem value="open">Open</SelectItem>
-                                            <SelectItem value="closing-soon">Closing Soon</SelectItem>
-                                            <SelectItem value="closed">Closed</SelectItem>
+                                            <SelectItem value="open">{t('dashboard.admin.open')}</SelectItem>
+                                            <SelectItem value="closing-soon">{t('dashboard.admin.closingSoon')}</SelectItem>
+                                            <SelectItem value="closed">{t('dashboard.admin.closed')}</SelectItem>
                                           </SelectContent>
                                         </Select>
                                       </div>
                                     </div>
                                     <div className="space-y-2">
-                                      <Label>Requirements</Label>
+                                      <Label>{t('dashboard.admin.fieldRequirements')}</Label>
                                       <Textarea
                                         value={editingEntity.data.requirements || ''}
                                         onChange={(e) =>
@@ -1680,7 +1743,7 @@ const AdminDashboard = () => {
                                       />
                                     </div>
                                     <div className="flex gap-2">
-                                      <Button onClick={handleSaveEdit}>Save Changes</Button>
+                                      <Button onClick={handleSaveEdit}>{t('common.saveChanges')}</Button>
                                       <Button
                                         variant="destructive"
                                         onClick={() => {
@@ -1689,7 +1752,7 @@ const AdminDashboard = () => {
                                         }}
                                       >
                                         <Trash2 className="w-4 h-4 mr-2" />
-                                        Delete
+                                        {t('common.delete')}
                                       </Button>
                                     </div>
                                   </div>
@@ -1727,10 +1790,10 @@ const AdminDashboard = () => {
                         <div className="flex items-start justify-between">
                           <div>
                             <CardTitle className="text-lg">
-                              Application #{application.id.slice(0, 8)}
+                              {t('dashboard.admin.applicationNumber', { id: application.id.slice(0, 8) })}
                             </CardTitle>
                             <CardDescription>
-                              Status: {application.status} • Created:{' '}
+                              {t('dashboard.admin.statusLabel')} {application.status} • {t('dashboard.admin.createdLabel')}{' '}
                               {new Date(application.created_at || application.createdAt).toLocaleDateString()}
                             </CardDescription>
                           </div>
