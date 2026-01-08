@@ -335,34 +335,6 @@ const Signup = () => {
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="driveLink">Google Drive Link (Optional)</Label>
-                  <div className="relative">
-                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <Input
-                      id="driveLink"
-                      type="url"
-                      placeholder="https://drive.google.com/..."
-                      value={driveLink}
-                      onChange={(e) => setDriveLink(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="commercialFileUrl">Commercial File URL (Optional)</Label>
-                  <div className="relative">
-                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <Input
-                      id="commercialFileUrl"
-                      type="url"
-                      placeholder="https://storage.example.com/commercial/file.pdf"
-                      value={commercialFileUrl}
-                      onChange={(e) => setCommercialFileUrl(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
                 <div className="flex items-start space-x-2">
                   <Checkbox
                     id="acceptTerms"
