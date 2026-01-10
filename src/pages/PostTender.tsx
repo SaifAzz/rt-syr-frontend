@@ -374,10 +374,10 @@ const PostTender = () => {
 
                 {/* 9. رفع مستندات المناقصة / Upload Tender Document */}
                 <div className="space-y-4">
-                  <Label>{isArabic ? 'رفع مستند المناقصة' : 'Upload Tender Document'}</Label>
+                  <Label>{isArabic ? 'رفع مستند المناقصة (اختياري)' : 'Upload Tender Document (Optional)'}</Label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="tender_documents_link">{isArabic ? 'رابط مستند المناقصة' : 'Tender Document Link'}</Label>
+                      <Label htmlFor="tender_documents_link">{isArabic ? 'رابط مستند المناقصة (اختياري)' : 'Tender Document Link (Optional)'}</Label>
                       <Input
                         id="tender_documents_link"
                         type="url"
@@ -387,7 +387,7 @@ const PostTender = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="tender_document_file">{isArabic ? 'رفع ملف PDF' : 'Upload PDF File'}</Label>
+                      <Label htmlFor="tender_document_file">{isArabic ? 'رفع ملف PDF (اختياري)' : 'Upload PDF File (Optional)'}</Label>
                       <Input
                         id="tender_document_file"
                         type="file"

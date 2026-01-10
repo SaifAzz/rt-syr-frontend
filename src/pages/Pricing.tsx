@@ -5,6 +5,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
+import { pricingAPI, type PricingPlan } from "@/lib/api";
 import {
   Check,
   Briefcase,
@@ -21,136 +23,65 @@ import {
 const Pricing = () => {
   const { t } = useTranslation();
 
-  const pricingPlans = [
-    {
-      name: "Single Tender",
-      description: "Post one tender",
-      price: "$25",
-      period: "per tender",
-      icon: FileText,
-      color: "primary",
-      popular: false,
-      features: [
-        "Post one tender listing",
-        "Receive proposals",
-        "Full tender management",
-        "Standard visibility",
-        "30 days active",
-      ],
-      cta: "Get Started",
-      ctaLink: "/signup",
+  // Fetch pricing plans from API
+  const { data: pricingData, isLoading } = useQuery({
+    queryKey: ['pricing-plans'],
+    queryFn: async () => {
+      try {
+        return await pricingAPI.getAll();
+      } catch (error) {
+        console.error('Failed to fetch pricing plans:', error);
+        return null;
+      }
     },
-    {
-      name: "Tender Plan",
-      description: "Unlimited tenders for one year",
-      price: "$2,500",
-      period: "per year",
-      icon: FileText,
-      color: "primary",
-      popular: false,
-      features: [
-        "Unlimited tender posts",
-        "Priority visibility",
-        "Advanced analytics",
-        "Dedicated support",
-        "Full year access",
-      ],
-      cta: "Get Started",
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  // Transform API data to component format
+  const transformPlan = (plan: PricingPlan | undefined, icon: any, color: "primary" | "accent", popular: boolean = false, badge?: string) => {
+    if (!plan) return null;
+
+    // Calculate price with discount
+    let displayPrice: string;
+    let originalPrice: number | string = typeof plan.price === 'string' ? parseFloat(plan.price) : plan.price;
+    
+    if (plan.is_discount_active && plan.discount_percentage) {
+      const discount = typeof plan.discount_percentage === 'string' ? parseFloat(plan.discount_percentage) : plan.discount_percentage;
+      const discountedPrice = originalPrice * (1 - discount / 100);
+      displayPrice = `${plan.currency} ${discountedPrice.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    } else {
+      displayPrice = `${plan.currency} ${typeof originalPrice === 'number' ? originalPrice.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : originalPrice}`;
+    }
+
+    const period = plan.period === 'yearly' ? 'per year' : plan.period === 'one-time' ? (plan.plan_type === 'tender' ? 'per tender' : 'per job') : '';
+
+    return {
+      name: plan.name,
+      description: plan.description,
+      price: displayPrice,
+      originalPrice: plan.is_discount_active && plan.discount_percentage ? `${plan.currency} ${originalPrice.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : undefined,
+      period,
+      icon,
+      color,
+      popular,
+      badge,
+      features: plan.features || [],
+      cta: plan.plan_type === 'vendorAdvertisement' ? "Contact Us" : "Get Started",
       ctaLink: "/signup",
-    },
-    {
-      name: "Single Job Ad",
-      description: "Post one job advertisement",
-      price: "$35",
-      period: "per job",
-      icon: Briefcase,
-      color: "accent",
-      popular: false,
-      features: [
-        "Post one job listing",
-        "Receive applications",
-        "Application management",
-        "Standard visibility",
-        "30 days active",
-      ],
-      cta: "Get Started",
-      ctaLink: "/signup",
-    },
-    {
-      name: "Job Advertisement Plan",
-      description: "Unlimited job ads for one year",
-      price: "$3,000",
-      period: "per year",
-      icon: Briefcase,
-      color: "accent",
-      popular: false,
-      features: [
-        "Unlimited job postings",
-        "Priority visibility",
-        "Advanced analytics",
-        "Dedicated support",
-        "Full year access",
-      ],
-      cta: "Get Started",
-      ctaLink: "/signup",
-    },
-    {
-      name: "Unlimited Plan",
-      description: "Both tenders and jobs unlimited",
-      price: "$5,000",
-      period: "per year",
-      icon: Zap,
-      color: "primary",
-      popular: true,
-      badge: "Best Value",
-      features: [
-        "Unlimited tenders",
-        "Unlimited job ads",
-        "Priority visibility",
-        "Advanced analytics",
-        "Dedicated support",
-        "Full year access",
-      ],
-      cta: "Get Started",
-      ctaLink: "/signup",
-    },
-    {
-      name: "Vendor Plan",
-      description: "Vendor account for one year",
-      price: "$500",
-      period: "per year",
-      icon: Store,
-      color: "accent",
-      popular: false,
-      features: [
-        "Vendor account access",
-        "Browse all tenders",
-        "Submit proposals",
-        "Track applications",
-        "Full year access",
-      ],
-      cta: "Get Started",
-      ctaLink: "/signup",
-    },
-    {
-      name: "Vendor Advertisement",
-      description: "Advertisement space for vendors",
-      price: "Contact Us",
-      period: "",
-      icon: ShoppingBag,
-      color: "primary",
-      popular: false,
-      features: [
-        "Advertisement placement",
-        "Premium visibility",
-        "Targeted audience",
-        "Custom placement options",
-        "Flexible pricing",
-      ],
-      cta: "Contact Us",
-      ctaLink: "/signup",
-    },
-  ];
+      planId: plan.plan_id,
+    };
+  };
+
+  // Build pricing plans array from API data
+  const pricingPlans = pricingData ? [
+    transformPlan(pricingData.tender?.single, FileText, "primary", false),
+    transformPlan(pricingData.tender?.yearly, FileText, "primary", false),
+    transformPlan(pricingData.job?.single, Briefcase, "accent", false),
+    transformPlan(pricingData.job?.yearly, Briefcase, "accent", false),
+    transformPlan(pricingData.combined, Zap, "primary", true, "Best Value"),
+    transformPlan(pricingData.vendor, Store, "accent", false),
+    transformPlan(pricingData.vendorAdvertisement, ShoppingBag, "primary", false),
+  ].filter(Boolean) as any[] : [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -192,8 +123,18 @@ const Pricing = () => {
         {/* Pricing Cards */}
         <section className="py-16 lg:py-24">
           <div className="container mx-auto px-4 lg:px-8">
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-7xl mx-auto">
-              {pricingPlans.map((plan, index) => {
+            {isLoading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                <p className="mt-4 text-muted-foreground">Loading pricing plans...</p>
+              </div>
+            ) : pricingPlans.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">No pricing plans available at the moment.</p>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-7xl mx-auto">
+                {pricingPlans.map((plan, index) => {
                 const Icon = plan.icon;
                 const isPopular = plan.popular;
 
@@ -233,6 +174,9 @@ const Pricing = () => {
                     <CardContent className="flex-grow flex flex-col">
                       <div className="text-center mb-6 pb-6 border-b">
                         <div className="flex flex-col items-center justify-center">
+                          {plan.originalPrice && (
+                            <span className="text-sm text-muted-foreground line-through mb-1">{plan.originalPrice}</span>
+                          )}
                           <span className="text-3xl font-bold text-foreground leading-none">{plan.price}</span>
                           {plan.period && (
                             <span className="text-sm text-muted-foreground mt-1">{plan.period}</span>
@@ -274,7 +218,8 @@ const Pricing = () => {
                   </Card>
                 );
               })}
-            </div>
+              </div>
+            )}
           </div>
         </section>
 

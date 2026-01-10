@@ -28,8 +28,24 @@ export function StatsSection() {
   // Update local state when backend stats are available
   useEffect(() => {
     if (backendStats) {
-      setHomeStatsLocal(backendStats);
-      setHomeStats(backendStats);
+      // Map new API structure to display format
+      // Use breakdown.verifiedCompanies for verified companies count
+      // Calculate active opportunities from total jobs and tenders
+      // Prioritize breakdown totals, then top-level jobs/tenders, then activeOpportunities
+      const totalJobs = backendStats.breakdown?.totalJobs ?? backendStats.jobs ?? 0;
+      const totalTenders = backendStats.breakdown?.totalTenders ?? backendStats.tenders ?? 0;
+      const activeOpps = (totalJobs + totalTenders) > 0 
+        ? (totalJobs + totalTenders)
+        : (backendStats.activeOpportunities ?? 0);
+      
+      const safeStats = {
+        activeOpportunities: activeOpps,
+        registeredUsers: backendStats.registeredUsers ?? 0,
+        verifiedCompanies: backendStats.breakdown?.verifiedCompanies ?? 0,
+        organizations: backendStats.organizations ?? 0,
+      };
+      setHomeStatsLocal(safeStats);
+      setHomeStats(safeStats);
     }
   }, [backendStats]);
 

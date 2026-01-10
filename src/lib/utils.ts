@@ -13,6 +13,25 @@ export interface HomeStats {
   organizations: number;
 }
 
+// Full stats response from API
+export interface StatsResponse {
+  activeOpportunities: number;
+  registeredUsers: number;
+  companies: number;
+  organizations: number;
+  jobs: number;
+  tenders: number;
+  breakdown: {
+    activeJobs: number;
+    activeTenders: number;
+    totalJobs: number;
+    totalTenders: number;
+    totalCompanies: number;
+    totalOrganizations: number;
+    verifiedCompanies: number;
+  };
+}
+
 const STATS_STORAGE_KEY = 'homepage_stats';
 const DEFAULT_STATS: HomeStats = {
   activeOpportunities: 0,
@@ -41,7 +60,11 @@ export function setHomeStats(stats: HomeStats): void {
   }
 }
 
-export function formatStatValue(value: number): string {
+export function formatStatValue(value: number | undefined | null): string {
+  // Handle undefined, null, or NaN values
+  if (value === undefined || value === null || isNaN(value)) {
+    return '0';
+  }
   if (value === 0) {
     return '0';
   }
