@@ -25,6 +25,12 @@ export function FooterManagement() {
       linkedin: '#',
       instagram: '#',
     },
+    socialIcons: {
+      facebook: 'facebook',
+      twitter: 'twitter',
+      linkedin: 'linkedin',
+      instagram: 'instagram',
+    },
     platformLinks: [
       { name: 'Browse Jobs', href: '/jobs' },
       { name: 'Browse Tenders', href: '/tenders' },
@@ -163,59 +169,89 @@ export function FooterManagement() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Social Media Links</CardTitle>
+          <CardTitle>Social Media Links & Icons</CardTitle>
+          <CardDescription>Manage social media links and icon types for the footer</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Facebook URL</Label>
-              <Input
-                value={footerContent.socialLinks.facebook || ''}
-                onChange={(e) =>
-                  setFooterContent({
-                    ...footerContent,
-                    socialLinks: { ...footerContent.socialLinks, facebook: e.target.value },
-                  })
-                }
-              />
+          {(['facebook', 'twitter', 'linkedin', 'instagram', 'youtube', 'tiktok', 'whatsapp'] as const).map((platform) => (
+            <div key={platform} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg">
+              <div className="space-y-2">
+                <Label className="capitalize">{platform} URL</Label>
+                <Input
+                  type="url"
+                  placeholder={`https://${platform}.com/...`}
+                  value={footerContent.socialLinks[platform] || ''}
+                  onChange={(e) =>
+                    setFooterContent({
+                      ...footerContent,
+                      socialLinks: { ...footerContent.socialLinks, [platform]: e.target.value },
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="capitalize">{platform} Icon Type</Label>
+                <Select
+                  value={footerContent.socialIcons?.[platform] || platform}
+                  onValueChange={(value) =>
+                    setFooterContent({
+                      ...footerContent,
+                      socialIcons: { ...(footerContent.socialIcons || {}), [platform]: value },
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={platform}>{platform.charAt(0).toUpperCase() + platform.slice(1)}</SelectItem>
+                    <SelectItem value="facebook">Facebook</SelectItem>
+                    <SelectItem value="twitter">Twitter</SelectItem>
+                    <SelectItem value="linkedin">LinkedIn</SelectItem>
+                    <SelectItem value="instagram">Instagram</SelectItem>
+                    <SelectItem value="youtube">YouTube</SelectItem>
+                    <SelectItem value="tiktok">TikTok</SelectItem>
+                    <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                    <SelectItem value="github">GitHub</SelectItem>
+                    <SelectItem value="discord">Discord</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const newSocialLinks = { ...footerContent.socialLinks };
+                    delete newSocialLinks[platform];
+                    const newSocialIcons = { ...(footerContent.socialIcons || {}) };
+                    delete newSocialIcons[platform];
+                    setFooterContent({
+                      ...footerContent,
+                      socialLinks: newSocialLinks,
+                      socialIcons: newSocialIcons,
+                    });
+                  }}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Remove
+                </Button>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Twitter URL</Label>
-              <Input
-                value={footerContent.socialLinks.twitter || ''}
-                onChange={(e) =>
-                  setFooterContent({
-                    ...footerContent,
-                    socialLinks: { ...footerContent.socialLinks, twitter: e.target.value },
-                  })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>LinkedIn URL</Label>
-              <Input
-                value={footerContent.socialLinks.linkedin || ''}
-                onChange={(e) =>
-                  setFooterContent({
-                    ...footerContent,
-                    socialLinks: { ...footerContent.socialLinks, linkedin: e.target.value },
-                  })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Instagram URL</Label>
-              <Input
-                value={footerContent.socialLinks.instagram || ''}
-                onChange={(e) =>
-                  setFooterContent({
-                    ...footerContent,
-                    socialLinks: { ...footerContent.socialLinks, instagram: e.target.value },
-                  })
-                }
-              />
-            </div>
-          </div>
+          ))}
+          <Button
+            variant="outline"
+            onClick={() => {
+              // Add a new social media platform
+              setFooterContent({
+                ...footerContent,
+                socialLinks: { ...footerContent.socialLinks, youtube: '' },
+              });
+            }}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Social Media Platform
+          </Button>
         </CardContent>
       </Card>
 

@@ -75,9 +75,8 @@ const PostJob = () => {
         main_requirements: '',
         // 10. الراتب المخصص (اختياري)
         salary: '',
-        // 11. كيفية التقديم على الوظيفة مع الروابط و البريد الالكتروني
+        // 11. كيفية التقديم على الوظيفة مع البريد الالكتروني
         application_method: '',
-        application_link: '',
         application_email: '',
         // 12. قطاع العمل
         work_sector: '',
@@ -192,10 +191,9 @@ const PostJob = () => {
             if (data.work_sector) jobData.category = data.work_sector;
 
             // Store application method in a custom field or description
-            if (data.application_method?.trim() || data.application_link?.trim() || data.application_email?.trim()) {
+            if (data.application_method?.trim() || data.application_email?.trim()) {
                 const applicationInfo = [
                     data.application_method,
-                    data.application_link ? `رابط التقديم: ${data.application_link}` : '',
                     data.application_email ? `البريد الإلكتروني: ${data.application_email}` : '',
                 ].filter(Boolean).join('\n');
                 jobData.requirements = (jobData.requirements || '') + '\n\nكيفية التقديم:\n' + applicationInfo;
@@ -468,27 +466,15 @@ const PostJob = () => {
                                                 rows={3}
                                             />
                                         </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="application_link">{isArabic ? 'رابط التقديم' : 'Application Link'}</Label>
-                                                <Input
-                                                    id="application_link"
-                                                    type="url"
-                                                    placeholder="https://example.com/apply"
-                                                    value={formData.application_link}
-                                                    onChange={(e) => handleChange('application_link', e.target.value)}
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="application_email">{isArabic ? 'البريد الإلكتروني' : 'Email'}</Label>
-                                                <Input
-                                                    id="application_email"
-                                                    type="email"
-                                                    placeholder="jobs@example.com"
-                                                    value={formData.application_email}
-                                                    onChange={(e) => handleChange('application_email', e.target.value)}
-                                                />
-                                            </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="application_email">{isArabic ? 'البريد الإلكتروني' : 'Email'}</Label>
+                                            <Input
+                                                id="application_email"
+                                                type="email"
+                                                placeholder="jobs@example.com"
+                                                value={formData.application_email}
+                                                onChange={(e) => handleChange('application_email', e.target.value)}
+                                            />
                                         </div>
                                     </div>
                                 </div>

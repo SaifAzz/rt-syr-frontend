@@ -47,7 +47,6 @@ import {
   XCircle,
   Globe,
   Layout,
-  FormInput,
   Search,
   Filter,
   Download,
@@ -64,6 +63,8 @@ import {
   FolderTree,
   DollarSign,
   ClipboardList,
+  Plus,
+  CreditCard,
 } from 'lucide-react';
 import {
   usersAPI,
@@ -84,9 +85,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ContentManagement } from '@/components/admin/ContentManagement';
 import { FooterManagement } from '@/components/admin/FooterManagement';
-import { FormManagement } from '@/components/admin/FormManagement';
 import { PricingManagement } from '@/components/admin/PricingManagement';
 import { StatsManagement } from '@/components/admin/StatsManagement';
+import { PlanManagement } from '@/components/admin/PlanManagement';
 import { SignupRequestsManagement } from '@/components/admin/SignupRequestsManagement';
 
 const AdminDashboard = () => {
@@ -102,6 +103,16 @@ const AdminDashboard = () => {
     id: string;
     data: any;
   } | null>(null);
+  const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
+  const [createUserForm, setCreateUserForm] = useState({
+    email: '',
+    password: '',
+    full_name: '',
+    role: 'user' as 'user' | 'company' | 'organization' | 'admin',
+    phone: '',
+  });
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Menu items organized by category
   const menuItems = [
@@ -116,9 +127,14 @@ const AdminDashboard = () => {
       items: [
         { id: 'content', label: t('dashboard.admin.content'), icon: Globe },
         { id: 'footer', label: t('dashboard.admin.footer'), icon: Layout },
-        { id: 'forms', label: t('dashboard.admin.forms'), icon: FormInput },
         { id: 'pricing', label: t('dashboard.admin.pricing'), icon: DollarSign },
         { id: 'stats', label: t('dashboard.admin.statistics'), icon: BarChart3 },
+      ],
+    },
+    {
+      category: t('dashboard.admin.planManagement'),
+      items: [
+        { id: 'plan-management', label: t('dashboard.admin.planManagement'), icon: CreditCard },
       ],
     },
     {
@@ -212,6 +228,60 @@ const AdminDashboard = () => {
       } catch {
         return [];
       }
+    },
+  });
+
+  // Password validation function
+  const validatePassword = (password: string): string[] => {
+    const errors: string[] = [];
+    if (password.length < 8) {
+      errors.push('Password must be at least 8 characters long');
+    }
+    if (!/[a-z]/.test(password)) {
+      errors.push('Password must contain at least one lowercase letter');
+    }
+    if (!/[A-Z]/.test(password)) {
+      errors.push('Password must contain at least one uppercase letter');
+    }
+    if (!/\d/.test(password)) {
+      errors.push('Password must contain at least one number');
+    }
+    if (!/[@$!%*?&]/.test(password)) {
+      errors.push('Password must contain at least one special character (@$!%*?&)');
+    }
+    return errors;
+  };
+
+  // Create user mutation
+  const createUserMutation = useMutation({
+    mutationFn: async (data: typeof createUserForm) => {
+      const payload: any = {
+        email: data.email,
+        password: data.password,
+        full_name: data.full_name,
+        role: data.role,
+      };
+      if (data.phone?.trim()) {
+        payload.phone = data.phone.trim();
+      }
+      return await usersAPI.create(payload);
+    },
+    onSuccess: () => {
+      toast.success(t('dashboard.admin.userCreated') || 'User created successfully!');
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      setIsCreateUserOpen(false);
+      setCreateUserForm({
+        email: '',
+        password: '',
+        full_name: '',
+        role: 'user',
+        phone: '',
+      });
+      setPasswordErrors([]);
+      setFormErrors({});
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || (t('dashboard.admin.userCreateFailed') || 'Failed to create user'));
     },
   });
 
@@ -583,6 +653,67 @@ const AdminDashboard = () => {
     }
   };
 
+  // Form handlers
+  const handleCreateUserChange = (field: keyof typeof createUserForm, value: string) => {
+    setCreateUserForm(prev => ({ ...prev, [field]: value }));
+    
+    // Clear field error when user starts typing
+    if (formErrors[field]) {
+      setFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+    
+    // Validate password in real-time
+    if (field === 'password') {
+      const errors = validatePassword(value);
+      setPasswordErrors(errors);
+    }
+  };
+
+  const validateCreateUserForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    
+    // Email validation
+    if (!createUserForm.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(createUserForm.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+    
+    // Password validation
+    if (!createUserForm.password) {
+      errors.password = 'Password is required';
+    } else {
+      const passwordErrors = validatePassword(createUserForm.password);
+      if (passwordErrors.length > 0) {
+        errors.password = passwordErrors[0];
+      }
+    }
+    
+    // Full name validation
+    if (!createUserForm.full_name.trim()) {
+      errors.full_name = 'Full name is required';
+    }
+    
+    // Role validation
+    if (!createUserForm.role) {
+      errors.role = 'Role is required';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleCreateUserSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateCreateUserForm()) {
+      createUserMutation.mutate(createUserForm);
+    }
+  };
+
   const handleEdit = (type: string, id: string, data: any) => {
     setEditingEntity({ type, id, data });
   };
@@ -885,12 +1016,6 @@ const AdminDashboard = () => {
                 </div>
               )}
 
-              {activeSection === 'forms' && (
-                <div className="space-y-6">
-              <FormManagement />
-                </div>
-              )}
-
               {activeSection === 'pricing' && (
                 <div className="space-y-6">
               <PricingManagement />
@@ -900,6 +1025,12 @@ const AdminDashboard = () => {
               {activeSection === 'stats' && (
                 <div className="space-y-6">
               <StatsManagement />
+                </div>
+              )}
+
+              {activeSection === 'plan-management' && (
+                <div className="space-y-6">
+              <PlanManagement />
                 </div>
               )}
 
@@ -928,6 +1059,10 @@ const AdminDashboard = () => {
                     <SelectItem value="admin">{t('dashboard.admin.title')}</SelectItem>
                   </SelectContent>
                 </Select>
+                <Button onClick={() => setIsCreateUserOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  {t('dashboard.admin.createUser') || 'Create User'}
+                </Button>
                   </div>
                   {usersLoading ? (
                 <div className="text-center py-12">
@@ -1923,6 +2058,145 @@ const AdminDashboard = () => {
           </main>
         </div>
       </div>
+
+      {/* Create User Dialog */}
+      <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('dashboard.admin.createUser') || 'Create New User'}</DialogTitle>
+            <DialogDescription>
+              {t('dashboard.admin.createUserDescription') || 'Create a new user account with the specified role. The user will be automatically email-verified.'}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateUserSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="create-email">
+                {t('common.email') || 'Email'} *
+              </Label>
+              <Input
+                id="create-email"
+                type="email"
+                placeholder="user@example.com"
+                value={createUserForm.email}
+                onChange={(e) => handleCreateUserChange('email', e.target.value)}
+                required
+              />
+              {formErrors.email && (
+                <p className="text-sm text-destructive">{formErrors.email}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="create-password">
+                {t('common.password') || 'Password'} *
+              </Label>
+              <Input
+                id="create-password"
+                type="password"
+                placeholder="Password123!"
+                value={createUserForm.password}
+                onChange={(e) => handleCreateUserChange('password', e.target.value)}
+                required
+              />
+              {formErrors.password && (
+                <p className="text-sm text-destructive">{formErrors.password}</p>
+              )}
+              {passwordErrors.length > 0 && createUserForm.password && (
+                <div className="text-sm space-y-1">
+                  {passwordErrors.map((error, index) => (
+                    <p key={index} className="text-destructive">{error}</p>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {t('dashboard.admin.passwordRequirements') || 'Password must be at least 8 characters and contain uppercase, lowercase, number, and special character (@$!%*?&)'}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="create-full-name">
+                {t('common.fullName') || 'Full Name'} *
+              </Label>
+              <Input
+                id="create-full-name"
+                type="text"
+                placeholder="John Doe"
+                value={createUserForm.full_name}
+                onChange={(e) => handleCreateUserChange('full_name', e.target.value)}
+                required
+              />
+              {formErrors.full_name && (
+                <p className="text-sm text-destructive">{formErrors.full_name}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="create-role">
+                {t('common.role') || 'Role'} *
+              </Label>
+              <Select
+                value={createUserForm.role}
+                onValueChange={(value) => handleCreateUserChange('role', value)}
+              >
+                <SelectTrigger id="create-role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">{t('auth.jobSeeker') || 'User'}</SelectItem>
+                  <SelectItem value="company">{t('auth.company') || 'Company'}</SelectItem>
+                  <SelectItem value="organization">{t('auth.organization') || 'Organization'}</SelectItem>
+                  <SelectItem value="admin">{t('dashboard.admin.title') || 'Admin'}</SelectItem>
+                </SelectContent>
+              </Select>
+              {formErrors.role && (
+                <p className="text-sm text-destructive">{formErrors.role}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="create-phone">
+                {t('common.phone') || 'Phone'} ({t('common.optional') || 'Optional'})
+              </Label>
+              <Input
+                id="create-phone"
+                type="tel"
+                placeholder="+1234567890"
+                value={createUserForm.phone}
+                onChange={(e) => handleCreateUserChange('phone', e.target.value)}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsCreateUserOpen(false);
+                  setCreateUserForm({
+                    email: '',
+                    password: '',
+                    full_name: '',
+                    role: 'user',
+                    phone: '',
+                  });
+                  setPasswordErrors([]);
+                  setFormErrors({});
+                }}
+              >
+                {t('common.cancel') || 'Cancel'}
+              </Button>
+              <Button
+                type="submit"
+                disabled={createUserMutation.isPending}
+              >
+                {createUserMutation.isPending
+                  ? (t('common.creating') || 'Creating...')
+                  : (t('dashboard.admin.createUser') || 'Create User')}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </SidebarProvider>
   );
 };

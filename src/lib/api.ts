@@ -371,6 +371,19 @@ export const usersAPI = {
     return apiRequest<UserRecord>(`/users/${id}`);
   },
 
+  create: async (data: {
+    email: string;
+    password: string;
+    full_name: string;
+    role: 'user' | 'company' | 'organization' | 'admin';
+    phone?: string;
+  }) => {
+    return apiRequest<UserRecord>('/users', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   update: async (id: string, data: Partial<UserRecord>) => {
     return apiRequest<UserRecord>(`/users/${id}`, {
       method: 'PUT',
@@ -430,10 +443,18 @@ export const companiesAPI = {
       token = localStorage.getItem('access_token');
     }
 
+    // Note: When using FormData, do NOT set Content-Type header manually
+    // The browser will automatically set it with the correct boundary parameter
+    // Required CORS headers (access-control-allow-*) must be set by the server
     const headers: HeadersInit = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
+    // Content-Type will be set automatically by the browser for FormData
+    // Expected server CORS headers:
+    // - access-control-allow-origin: https://rt-syr.com
+    // - access-control-allow-headers: Authorization,Content-Type
+    // - access-control-allow-methods: GET, POST, OPTIONS, PUT, DELETE
 
     const response = await fetch(`${API_BASE_URL}/companies/${userId}/profile`, {
       method: 'PATCH',
@@ -513,10 +534,18 @@ export const organizationsAPI = {
       token = localStorage.getItem('access_token');
     }
 
+    // Note: When using FormData, do NOT set Content-Type header manually
+    // The browser will automatically set it with the correct boundary parameter
+    // Required CORS headers (access-control-allow-*) must be set by the server
     const headers: HeadersInit = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
+    // Content-Type will be set automatically by the browser for FormData
+    // Expected server CORS headers:
+    // - access-control-allow-origin: https://rt-syr.com
+    // - access-control-allow-headers: Authorization,Content-Type
+    // - access-control-allow-methods: GET, POST, OPTIONS, PUT, DELETE
 
     const response = await fetch(`${API_BASE_URL}/organizations/${userId}/profile`, {
       method: 'PATCH',
@@ -696,6 +725,18 @@ export interface FooterContent {
     twitter?: string;
     linkedin?: string;
     instagram?: string;
+    youtube?: string;
+    tiktok?: string;
+    whatsapp?: string;
+  };
+  socialIcons?: {
+    facebook?: string;
+    twitter?: string;
+    linkedin?: string;
+    instagram?: string;
+    youtube?: string;
+    tiktok?: string;
+    whatsapp?: string;
   };
   platformLinks: Array<{ name: string; href: string }>;
   supportLinks: Array<{ name: string; href: string }>;
@@ -816,10 +857,18 @@ async function uploadFile(
   const formData = new FormData();
   formData.append('file', file);
 
+  // Note: When using FormData, do NOT set Content-Type header manually
+  // The browser will automatically set it with the correct boundary parameter
+  // Required CORS headers (access-control-allow-*) must be set by the server
   const headers: HeadersInit = {};
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
+  // Content-Type will be set automatically by the browser for FormData
+  // Expected server CORS headers:
+  // - access-control-allow-origin: https://rt-syr.com
+  // - access-control-allow-headers: Authorization,Content-Type
+  // - access-control-allow-methods: GET, POST, OPTIONS, PUT, DELETE
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     method: 'POST',
@@ -852,6 +901,10 @@ export const uploadAPI = {
   
   avatar: async (file: File) => {
     return uploadFile('/upload/avatar', file, 'avatar');
+  },
+  
+  tenderDocument: async (file: File) => {
+    return uploadFile('/upload/tender-document', file, 'license');
   },
 };
 
@@ -1035,6 +1088,232 @@ export const adminAPI = {
         requestId: null,
       };
     }
+  },
+};
+
+// Stats API
+export const statsAPI = {
+  getHomeStats: async () => {
+    return apiRequest<{
+      activeOpportunities: number;
+      registeredUsers: number;
+      verifiedCompanies: number;
+      organizations: number;
+    }>('/stats');
+  },
+};
+
+// Pricing Plan Types
+export interface PricingPlan {
+  id?: string;
+  plan_id: string;
+  name: string;
+  description: string;
+  price: number | string;
+  originalPrice?: number | string;
+  currency: string;
+  period: 'one-time' | 'yearly';
+  plan_type: 'tender' | 'job' | 'combined' | 'vendor' | 'vendorAdvertisement';
+  features: string[];
+  discount?: {
+    percentage?: number;
+    amount?: number;
+    startDate?: string;
+    endDate?: string;
+  };
+  discount_percentage?: number | string;
+  discount_amount?: number | string | null;
+  discount_start_date?: string | null;
+  discount_end_date?: string | null;
+  is_discount_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface PricingPlansResponse {
+  tender?: {
+    single?: PricingPlan;
+    yearly?: PricingPlan;
+  };
+  job?: {
+    single?: PricingPlan;
+    yearly?: PricingPlan;
+  };
+  combined?: PricingPlan;
+  vendor?: PricingPlan;
+  vendorAdvertisement?: PricingPlan;
+}
+
+export interface PriceCalculation {
+  planId: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  currency: string;
+}
+
+export interface AdminPricingPlan {
+  id: string;
+  plan_id: string;
+  name: string;
+  description: string;
+  price: string;
+  currency: string;
+  period: 'one-time' | 'yearly';
+  plan_type: 'tender' | 'job' | 'combined' | 'vendor' | 'vendorAdvertisement';
+  features: string[];
+  discount_percentage: string | null;
+  discount_amount: string | null;
+  discount_start_date: string | null;
+  discount_end_date: string | null;
+  is_discount_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserPlanUpdate {
+  plan_id?: string;
+  plan_status?: 'free' | 'paid' | 'expired';
+  plan_expires_at?: string;
+}
+
+export interface UserPlanManagement {
+  max_post_count?: number | null;
+  post_count_start_date?: string | null;
+  post_count_end_date?: string | null;
+}
+
+export interface UserPlanResponse {
+  id: string;
+  email: string;
+  full_name: string;
+  plan_status?: string;
+  plan_id?: string;
+  plan_expires_at?: string;
+  max_post_count?: number | null;
+  post_count_start_date?: string | null;
+  post_count_end_date?: string | null;
+}
+
+// Public Pricing API
+export const pricingAPI = {
+  // Get all pricing plans (public)
+  getAll: async () => {
+    return apiRequest<PricingPlansResponse>('/pricing');
+  },
+
+  // Get specific plan by ID (public)
+  getPlan: async (planId: string) => {
+    return apiRequest<PricingPlan>(`/pricing/plan/${planId}`);
+  },
+
+  // Calculate price with quantity and discounts
+  calculate: async (planId: string, quantity: number = 1) => {
+    const params = new URLSearchParams();
+    params.append('planId', planId);
+    if (quantity !== 1) {
+      params.append('quantity', quantity.toString());
+    }
+    return apiRequest<PriceCalculation>(`/pricing/calculate?${params.toString()}`);
+  },
+};
+
+// Admin Pricing API
+export const adminPricingAPI = {
+  // Get all pricing plans (admin - with full details)
+  getAll: async () => {
+    return apiRequest<AdminPricingPlan[]>('/admin/pricing');
+  },
+
+  // Get specific pricing plan by ID (admin)
+  getPlan: async (planId: string) => {
+    return apiRequest<AdminPricingPlan>(`/admin/pricing/${planId}`);
+  },
+
+  // Create new pricing plan
+  create: async (data: {
+    plan_id: string;
+    name: string;
+    description: string;
+    price: number;
+    currency: string;
+    period: 'one-time' | 'yearly';
+    plan_type: 'tender' | 'job' | 'combined' | 'vendor' | 'vendorAdvertisement';
+    features: string[];
+    discount_percentage?: number;
+    discount_amount?: number | null;
+    discount_start_date?: string;
+    discount_end_date?: string;
+    is_discount_active?: boolean;
+  }) => {
+    return apiRequest<{
+      message: string;
+      plan: AdminPricingPlan;
+    }>('/admin/pricing', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Update pricing plan
+  update: async (
+    planId: string,
+    data: Partial<{
+      name: string;
+      description: string;
+      price: number;
+      currency: string;
+      period: 'one-time' | 'yearly';
+      plan_type: 'tender' | 'job' | 'combined' | 'vendor' | 'vendorAdvertisement';
+      features: string[];
+      discount_percentage: number;
+      discount_amount: number | null;
+      discount_start_date: string;
+      discount_end_date: string;
+      is_discount_active: boolean;
+    }>
+  ) => {
+    return apiRequest<{
+      message: string;
+      plan: AdminPricingPlan;
+    }>(`/admin/pricing/${planId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Delete pricing plan
+  delete: async (planId: string) => {
+    return apiRequest<{
+      message: string;
+    }>(`/admin/pricing/${planId}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+// Admin User Plan Management API
+export const adminUserPlanAPI = {
+  // Update user plan
+  updateUserPlan: async (userId: string, data: UserPlanUpdate) => {
+    return apiRequest<{
+      message: string;
+      user: UserPlanResponse;
+    }>(`/admin/users/${userId}/plan`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Manage user post limits
+  managePostLimits: async (userId: string, data: UserPlanManagement) => {
+    return apiRequest<{
+      message: string;
+      user: UserPlanResponse;
+    }>(`/admin/users/${userId}/plan-management`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
   },
 };
 

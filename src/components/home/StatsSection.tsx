@@ -1,16 +1,42 @@
 import { Briefcase, Users, Building2, FileText } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { getHomeStats, formatStatValue } from "@/lib/utils";
+import { getHomeStats, formatStatValue, setHomeStats } from "@/lib/utils";
 import { useEffect, useState } from "react";
+import { statsAPI } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
 
 export function StatsSection() {
   const { t } = useTranslation();
-  const [homeStats, setHomeStats] = useState(getHomeStats());
+  const [homeStats, setHomeStatsLocal] = useState(getHomeStats());
+
+  // Fetch stats from backend
+  const { data: backendStats } = useQuery({
+    queryKey: ['home-stats'],
+    queryFn: async () => {
+      try {
+        return await statsAPI.getHomeStats();
+      } catch (error) {
+        console.error('Failed to fetch stats from backend:', error);
+        // Fallback to localStorage stats
+        return null;
+      }
+    },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    refetchOnWindowFocus: false,
+  });
+
+  // Update local state when backend stats are available
+  useEffect(() => {
+    if (backendStats) {
+      setHomeStatsLocal(backendStats);
+      setHomeStats(backendStats);
+    }
+  }, [backendStats]);
 
   // Listen for storage changes to update stats in real-time
   useEffect(() => {
     const handleStorageChange = () => {
-      setHomeStats(getHomeStats());
+      setHomeStatsLocal(getHomeStats());
     };
 
     // Listen for custom event when stats are updated

@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { tendersAPI, organizationsAPI, companiesAPI } from '@/lib/api';
+import { tendersAPI, organizationsAPI, companiesAPI, uploadAPI } from '@/lib/api';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { FileText, ArrowLeft, Upload } from 'lucide-react';
@@ -74,9 +74,7 @@ const PostTender = () => {
     // 9. رفع مستندات المناقصة
     tender_documents_link: '',
     file_upload_url: '',
-    // 10. رابط التقديم من موقع المعلن او رابط درايف
-    application_link: '',
-    drive_link: '',
+    tender_document_file: null as File | null,
   });
 
   // قطاع المناقصة options
@@ -142,9 +140,22 @@ const PostTender = () => {
       if (data.project_summary?.trim()) tenderData.project_summary = data.project_summary;
       if (data.requirements?.trim()) tenderData.requirements = data.requirements;
       if (data.tender_documents_link?.trim()) tenderData.tender_documents_link = data.tender_documents_link;
-      if (data.file_upload_url?.trim()) tenderData.file_upload_url = data.file_upload_url;
-      // Note: application_link and drive_link are not part of the API spec, 
-      // so we don't include them in the payload
+
+      // Handle PDF file upload
+      if (data.tender_document_file) {
+        try {
+          const uploadResult = await uploadAPI.tenderDocument(data.tender_document_file);
+          if (uploadResult?.url) {
+            tenderData.file_upload_url = uploadResult.url;
+          }
+        } catch (error) {
+          console.error('File upload failed:', error);
+          toast.error(isArabic ? 'فشل رفع الملف' : 'File upload failed');
+          throw error;
+        }
+      } else if (data.file_upload_url?.trim()) {
+        tenderData.file_upload_url = data.file_upload_url;
+      }
 
       return await tendersAPI.create(tenderData);
     },
@@ -187,10 +198,13 @@ const PostTender = () => {
 
     // Validate deadline is in the future
     const deadlineDate = new Date(formData.deadline);
-    if (deadlineDate <= new Date()) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    deadlineDate.setHours(0, 0, 0, 0);
+    if (deadlineDate <= today) {
       toast.error(isArabic
-        ? 'يجب أن يكون آخر موعد للتقديم في المستقبل'
-        : 'Deadline must be in the future');
+        ? 'يجب أن يكون آخر موعد للتقديم في المستقبل (لا يمكن اختيار تاريخ قديم)'
+        : 'Deadline must be in the future (old dates are not allowed)');
       return;
     }
 
@@ -202,7 +216,7 @@ const PostTender = () => {
     mutation.mutate(formData);
   };
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = (field: string, value: string | File | null) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -358,56 +372,42 @@ const PostTender = () => {
                   />
                 </div>
 
-                {/* 9. رفع مستندات المناقصة / Upload Tender Documents */}
+                {/* 9. رفع مستندات المناقصة / Upload Tender Document */}
                 <div className="space-y-4">
-                  <Label>{isArabic ? 'رفع مستندات المناقصة' : 'Upload Tender Documents'}</Label>
+                  <Label>{isArabic ? 'رفع مستند المناقصة' : 'Upload Tender Document'}</Label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="tender_documents_link">{isArabic ? 'رابط مستندات المناقصة' : 'Tender Documents Link'}</Label>
+                      <Label htmlFor="tender_documents_link">{isArabic ? 'رابط مستند المناقصة' : 'Tender Document Link'}</Label>
                       <Input
                         id="tender_documents_link"
                         type="url"
-                        placeholder="https://example.com/tender-documents"
+                        placeholder="https://example.com/tender-document"
                         value={formData.tender_documents_link}
                         onChange={(e) => handleChange('tender_documents_link', e.target.value)}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="file_upload_url">{isArabic ? 'رابط رفع الملف' : 'File Upload URL'}</Label>
+                      <Label htmlFor="tender_document_file">{isArabic ? 'رفع ملف PDF' : 'Upload PDF File'}</Label>
                       <Input
-                        id="file_upload_url"
-                        type="url"
-                        placeholder="https://storage.example.com/files/tender.pdf"
-                        value={formData.file_upload_url}
-                        onChange={(e) => handleChange('file_upload_url', e.target.value)}
+                        id="tender_document_file"
+                        type="file"
+                        accept=".pdf"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            if (file.type !== 'application/pdf') {
+                              toast.error(isArabic ? 'يرجى رفع ملف PDF فقط' : 'Please upload a PDF file only');
+                              return;
+                            }
+                            setFormData(prev => ({ ...prev, tender_document_file: file }));
+                          }
+                        }}
                       />
-                    </div>
-                  </div>
-                </div>
-
-                {/* 10. رابط التقديم / Application Link */}
-                <div className="space-y-4">
-                  <Label>{isArabic ? 'رابط التقديم' : 'Application Link'}</Label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="application_link">{isArabic ? 'رابط التقديم من موقع المعلن' : 'Application Link from Publisher Website'}</Label>
-                      <Input
-                        id="application_link"
-                        type="url"
-                        placeholder="https://example.com/apply"
-                        value={formData.application_link}
-                        onChange={(e) => handleChange('application_link', e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="drive_link">{isArabic ? 'رابط درايف' : 'Drive Link'}</Label>
-                      <Input
-                        id="drive_link"
-                        type="url"
-                        placeholder="https://drive.google.com/..."
-                        value={formData.drive_link}
-                        onChange={(e) => handleChange('drive_link', e.target.value)}
-                      />
+                      {formData.tender_document_file && (
+                        <p className="text-xs text-muted-foreground">
+                          {isArabic ? 'تم اختيار الملف:' : 'Selected file:'} {formData.tender_document_file.name}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>

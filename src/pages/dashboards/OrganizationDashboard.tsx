@@ -69,8 +69,6 @@ const OrganizationDashboard = () => {
     project_summary?: string;
     requirements?: string;
     deadline?: string;
-    duration?: string;
-    estimated_start_date?: string;
     tender_documents_link?: string;
     file_upload_url?: string;
     salary_min?: number;
@@ -91,8 +89,6 @@ const OrganizationDashboard = () => {
     project_summary?: string;
     requirements?: string;
     deadline?: string;
-    duration?: string;
-    estimated_start_date?: string;
     tender_documents_link?: string;
     file_upload_url?: string;
     location?: string;
@@ -351,8 +347,6 @@ const OrganizationDashboard = () => {
       project_summary: job.project_summary || '',
       requirements: job.requirements || '',
       deadline: job.deadline || '',
-      duration: job.duration || '',
-      estimated_start_date: job.estimated_start_date || '',
       tender_documents_link: job.tender_documents_link || '',
       file_upload_url: job.file_upload_url || '',
       salary_min: job.salary_min,
@@ -381,8 +375,6 @@ const OrganizationDashboard = () => {
       project_summary: tender.project_summary || '',
       requirements: tender.requirements || '',
       deadline: tender.deadline || '',
-      duration: tender.duration || '',
-      estimated_start_date: tender.estimated_start_date || '',
       tender_documents_link: tender.tender_documents_link || '',
       file_upload_url: tender.file_upload_url || '',
       location: tender.location || '',
@@ -406,8 +398,6 @@ const OrganizationDashboard = () => {
         project_summary: editingJob.project_summary?.trim() || undefined,
         requirements: editingJob.requirements?.trim() || undefined,
         deadline: editingJob.deadline || undefined,
-        duration: editingJob.duration?.trim() || undefined,
-        estimated_start_date: editingJob.estimated_start_date || undefined,
         tender_documents_link: editingJob.tender_documents_link?.trim() || undefined,
         file_upload_url: editingJob.file_upload_url?.trim() || undefined,
         salary_min: editingJob.salary_min || undefined,
@@ -434,8 +424,6 @@ const OrganizationDashboard = () => {
         project_summary: editingTender.project_summary?.trim() || undefined,
         requirements: editingTender.requirements?.trim() || undefined,
         deadline: editingTender.deadline || undefined,
-        duration: editingTender.duration?.trim() || undefined,
-        estimated_start_date: editingTender.estimated_start_date || undefined,
         tender_documents_link: editingTender.tender_documents_link?.trim() || undefined,
         file_upload_url: editingTender.file_upload_url?.trim() || undefined,
         location: editingTender.location?.trim() || undefined,
@@ -978,23 +966,8 @@ const OrganizationDashboard = () => {
                                       onChange={(e) => setEditingJob(prev => prev ? { ...prev, deadline: e.target.value } : prev)}
                                     />
                                   </div>
-                                  <div className="space-y-2">
-                                    <Label>{t('jobs.duration')}</Label>
-                                    <Input
-                                      value={editingJob.duration || ''}
-                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, duration: e.target.value } : prev)}
-                                    />
-                                  </div>
                                 </div>
                                 <div className="grid gap-4 md:grid-cols-2">
-                                  <div className="space-y-2">
-                                    <Label>{t('jobs.estimatedStartDate')}</Label>
-                                    <Input
-                                      type="date"
-                                      value={editingJob.estimated_start_date || ''}
-                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, estimated_start_date: e.target.value } : prev)}
-                                    />
-                                  </div>
                                   <div className="space-y-2">
                                     <Label>{t('jobs.documentsLink')}</Label>
                                     <Input
@@ -1232,23 +1205,8 @@ const OrganizationDashboard = () => {
                                       onChange={(e) => setEditingTender(prev => prev ? { ...prev, deadline: e.target.value } : prev)}
                                     />
                                   </div>
-                                  <div className="space-y-2">
-                                    <Label>{t('tenders.duration')}</Label>
-                                    <Input
-                                      value={editingTender.duration || ''}
-                                      onChange={(e) => setEditingTender(prev => prev ? { ...prev, duration: e.target.value } : prev)}
-                                    />
-                                  </div>
                                 </div>
                                 <div className="grid gap-4 md:grid-cols-2">
-                                  <div className="space-y-2">
-                                    <Label>{t('tenders.estimatedStartDate')}</Label>
-                                    <Input
-                                      type="date"
-                                      value={editingTender.estimated_start_date || ''}
-                                      onChange={(e) => setEditingTender(prev => prev ? { ...prev, estimated_start_date: e.target.value } : prev)}
-                                    />
-                                  </div>
                                   <div className="space-y-2">
                                     <Label>{t('tenders.documentsLink')}</Label>
                                     <Input

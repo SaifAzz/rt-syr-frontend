@@ -22,6 +22,7 @@ import AdminDashboard from "./pages/dashboards/AdminDashboard";
 import PostTender from "./pages/PostTender";
 import PostJob from "./pages/PostJob";
 import JobDetails from "./pages/JobDetails";
+import TenderDetails from "./pages/TenderDetails";
 import CreateAdmin from "./pages/CreateAdmin";
 import NotFound from "./pages/NotFound";
 import "./lib/i18n";
@@ -48,6 +49,14 @@ const App = () => (
                 }
               />
               <Route path="/tenders" element={<Tenders />} />
+              <Route
+                path="/tenders/:id"
+                element={
+                  <ProtectedRoute requireAuth={true} requireEmailVerification={true}>
+                    <TenderDetails />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/about" element={<About />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/login" element={<Login />} />

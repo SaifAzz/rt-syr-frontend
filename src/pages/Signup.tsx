@@ -24,7 +24,6 @@ const Signup = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
-  const [driveLink, setDriveLink] = useState('');
   const [commercialFileUrl, setCommercialFileUrl] = useState('');
   const [userType, setUserType] = useState<UserType>(
     (searchParams.get('type') as UserType) || 'job_seeker'
@@ -96,10 +95,6 @@ const Signup = () => {
     }
 
     // Validate URLs if provided
-    if (driveLink && !isValidUrl(driveLink)) {
-      setError('Drive link must be a valid URL');
-      return;
-    }
     if (commercialFileUrl && !isValidUrl(commercialFileUrl)) {
       setError('Commercial file URL must be a valid URL');
       return;
@@ -110,7 +105,7 @@ const Signup = () => {
     try {
       // Map userType to role: job_seeker -> user, others stay the same
       const role = userType === 'job_seeker' ? 'user' : userType;
-      
+
       // Call signup API with optional fields
       const result = await signup(
         email,
@@ -118,14 +113,14 @@ const Signup = () => {
         fullName,
         role,
         phone || undefined,
-        driveLink || undefined,
+        undefined, // drive_link removed
         commercialFileUrl || undefined
       );
-      
+
       // Always redirect to OTP verification page after successful signup
       // The API returns userId for OTP verification
       const userId = result.userId || result.requestId;
-      
+
       if (userId) {
         // Validate that userId is a valid UUID before redirecting
         if (isValidUUID(userId)) {
@@ -142,7 +137,7 @@ const Signup = () => {
     } catch (err: any) {
       // Handle API error responses
       let errorMessage = 'Failed to create account. Please try again.';
-      
+
       if (err.message) {
         // Check if it's an array of validation errors
         if (Array.isArray(err.message)) {
@@ -157,7 +152,7 @@ const Signup = () => {
           errorMessage = err.response.data.message;
         }
       }
-      
+
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -204,7 +199,7 @@ const Signup = () => {
                   <AlertDescription className="text-green-800 dark:text-green-200">
                     <p className="font-semibold mb-2">Signup request submitted successfully!</p>
                     <p className="text-sm">
-                      Your signup request has been submitted and is pending admin approval. 
+                      Your signup request has been submitted and is pending admin approval.
                       You will be able to log in once your account is approved.
                     </p>
                     {requestId && (
@@ -216,166 +211,166 @@ const Signup = () => {
                 </Alert>
               )}
               {!success && (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="userType">{t('auth.accountType')}</Label>
-                  <RadioGroup value={userType} onValueChange={(value) => setUserType(value as UserType)}>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="job_seeker" id="job_seeker" />
-                      <Label htmlFor="job_seeker" className="flex items-center gap-2 cursor-pointer">
-                        <Briefcase className="w-4 h-4" />
-                        {t('auth.jobSeeker')}
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="company" id="company" />
-                      <Label htmlFor="company" className="flex items-center gap-2 cursor-pointer">
-                        <Building2 className="w-4 h-4" />
-                        {t('auth.company')}
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="organization" id="organization" />
-                      <Label htmlFor="organization" className="flex items-center gap-2 cursor-pointer">
-                        <Building2 className="w-4 h-4" />
-                        {t('auth.organization')}
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">
-                    {userType === 'company'
-                      ? t('auth.companyName')
-                      : userType === 'organization'
-                      ? t('auth.organizationName')
-                      : t('auth.fullName')}
-                  </Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <Input
-                      id="fullName"
-                      type="text"
-                      placeholder={
-                        userType === 'company'
-                          ? 'Company Name'
-                          : userType === 'organization'
-                          ? 'Organization Name'
-                          : 'Full Name'
-                      }
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="pl-10"
-                      required
-                    />
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="userType">{t('auth.accountType')}</Label>
+                    <RadioGroup value={userType} onValueChange={(value) => setUserType(value as UserType)}>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="job_seeker" id="job_seeker" />
+                        <Label htmlFor="job_seeker" className="flex items-center gap-2 cursor-pointer">
+                          <Briefcase className="w-4 h-4" />
+                          {t('auth.jobSeeker')}
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="company" id="company" />
+                        <Label htmlFor="company" className="flex items-center gap-2 cursor-pointer">
+                          <Building2 className="w-4 h-4" />
+                          {t('auth.company')}
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="organization" id="organization" />
+                        <Label htmlFor="organization" className="flex items-center gap-2 cursor-pointer">
+                          <Building2 className="w-4 h-4" />
+                          {t('auth.organization')}
+                        </Label>
+                      </div>
+                    </RadioGroup>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">{t('auth.phone')} (Optional)</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="+1234567890"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="pl-10"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      If provided, must be unique
+                  <div className="space-y-2">
+                    <Label htmlFor="fullName">
+                      {userType === 'company'
+                        ? t('auth.companyName')
+                        : userType === 'organization'
+                          ? t('auth.organizationName')
+                          : t('auth.fullName')}
+                    </Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <Input
+                        id="fullName"
+                        type="text"
+                        placeholder={
+                          userType === 'company'
+                            ? 'Company Name'
+                            : userType === 'organization'
+                              ? 'Organization Name'
+                              : 'Full Name'
+                        }
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="pl-10"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">{t('auth.phone')} (Optional)</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="+1234567890"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="pl-10"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        If provided, must be unique
+                      </p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">{t('auth.email')}</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="name@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="pl-10"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">{t('auth.password')}</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <Input
+                        id="password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="pl-10"
+                        required
+                        minLength={8}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Must be at least 8 characters with uppercase, lowercase, number, and special character (@$!%*?&)
                     </p>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">{t('auth.email')}</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="name@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10"
-                      required
-                    />
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">{t('auth.confirmPassword')}</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="pl-10"
+                        required
+                        minLength={8}
+                      />
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">{t('auth.password')}</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <Input
-                      id="password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10"
-                      required
-                      minLength={8}
+                  <div className="flex items-start space-x-2">
+                    <Checkbox
+                      id="acceptTerms"
+                      checked={acceptedTerms}
+                      onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
+                      className="mt-1"
                     />
+                    <Label
+                      htmlFor="acceptTerms"
+                      className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      I accept the{' '}
+                      <Link to="/about#terms" className="text-primary hover:underline">
+                        Terms and Conditions
+                      </Link>
+                      {' '}and{' '}
+                      <Link to="/about#privacy-policy" className="text-primary hover:underline">
+                        Privacy Policy
+                      </Link>
+                    </Label>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Must be at least 8 characters with uppercase, lowercase, number, and special character (@$!%*?&)
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">{t('auth.confirmPassword')}</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="pl-10"
-                      required
-                      minLength={8}
-                    />
-                  </div>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <Checkbox
-                    id="acceptTerms"
-                    checked={acceptedTerms}
-                    onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
-                    className="mt-1"
-                  />
-                  <Label
-                    htmlFor="acceptTerms"
-                    className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                  >
-                    I accept the{' '}
-                    <Link to="/about#terms" className="text-primary hover:underline">
-                      Terms and Conditions
-                    </Link>
-                    {' '}and{' '}
-                    <Link to="/about#privacy-policy" className="text-primary hover:underline">
-                      Privacy Policy
-                    </Link>
-                  </Label>
-                </div>
-                <Button type="submit" className="w-full" disabled={loading || !acceptedTerms}>
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  {loading ? t('common.loading') : t('auth.signup')}
-                </Button>
-              </form>
+                  <Button type="submit" className="w-full" disabled={loading || !acceptedTerms}>
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    {loading ? t('common.loading') : t('auth.signup')}
+                  </Button>
+                </form>
               )}
               {!success && (
-              <div className="mt-4 text-center text-sm">
-                <span className="text-muted-foreground">{t('auth.alreadyHaveAccount')} </span>
-                <Link to="/login" className="text-primary hover:underline font-medium">
-                  {t('auth.signInHere')}
-                </Link>
-              </div>
+                <div className="mt-4 text-center text-sm">
+                  <span className="text-muted-foreground">{t('auth.alreadyHaveAccount')} </span>
+                  <Link to="/login" className="text-primary hover:underline font-medium">
+                    {t('auth.signInHere')}
+                  </Link>
+                </div>
               )}
               {success && (
-              <div className="mt-4 text-center text-sm">
-                <Link to="/login" className="text-primary hover:underline font-medium">
-                  Go to Login
-                </Link>
-              </div>
+                <div className="mt-4 text-center text-sm">
+                  <Link to="/login" className="text-primary hover:underline font-medium">
+                    Go to Login
+                  </Link>
+                </div>
               )}
             </CardContent>
           </Card>
