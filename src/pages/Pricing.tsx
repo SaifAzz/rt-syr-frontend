@@ -41,17 +41,28 @@ const Pricing = () => {
   const transformPlan = (plan: PricingPlan | undefined, icon: any, color: "primary" | "accent", popular: boolean = false, badge?: string) => {
     if (!plan) return null;
 
-    // Calculate price with discount
-    let displayPrice: string;
-    let originalPrice: number | string = typeof plan.price === 'string' ? parseFloat(plan.price) : plan.price;
+    // Use originalPrice from API if available (indicates discount)
+    const hasDiscount = plan.originalPrice !== undefined && plan.originalPrice !== null;
     
-    if (plan.is_discount_active && plan.discount_percentage) {
-      const discount = typeof plan.discount_percentage === 'string' ? parseFloat(plan.discount_percentage) : plan.discount_percentage;
-      const discountedPrice = originalPrice * (1 - discount / 100);
-      displayPrice = `${plan.currency} ${discountedPrice.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-    } else {
-      displayPrice = `${plan.currency} ${typeof originalPrice === 'number' ? originalPrice.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : originalPrice}`;
-    }
+    // Format prices
+    const formatPrice = (price: number | string, currency: string): string => {
+      const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+      if (isNaN(numPrice)) return `${currency} ${price}`;
+      // Handle decimal prices (show decimals if needed, otherwise show as integer)
+      if (numPrice % 1 !== 0) {
+        return `${currency} ${numPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      }
+      return `${currency} ${numPrice.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    };
+
+    // If originalPrice exists, price is the discounted price
+    const displayPrice = hasDiscount 
+      ? formatPrice(plan.price, plan.currency)
+      : formatPrice(plan.price, plan.currency);
+    
+    const originalPriceDisplay = hasDiscount 
+      ? formatPrice(plan.originalPrice!, plan.currency)
+      : undefined;
 
     const period = plan.period === 'yearly' ? 'per year' : plan.period === 'one-time' ? (plan.plan_type === 'tender' ? 'per tender' : 'per job') : '';
 
@@ -59,7 +70,7 @@ const Pricing = () => {
       name: plan.name,
       description: plan.description,
       price: displayPrice,
-      originalPrice: plan.is_discount_active && plan.discount_percentage ? `${plan.currency} ${originalPrice.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : undefined,
+      originalPrice: originalPriceDisplay,
       period,
       icon,
       color,
@@ -175,7 +186,7 @@ const Pricing = () => {
                       <div className="text-center mb-6 pb-6 border-b">
                         <div className="flex flex-col items-center justify-center">
                           {plan.originalPrice && (
-                            <span className="text-sm text-muted-foreground line-through mb-1">{plan.originalPrice}</span>
+                            <span className="text-lg text-muted-foreground line-through mb-1">{plan.originalPrice}</span>
                           )}
                           <span className="text-3xl font-bold text-foreground leading-none">{plan.price}</span>
                           {plan.period && (
