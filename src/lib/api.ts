@@ -1043,6 +1043,21 @@ export const adminAPI = {
     });
   },
 
+  // Disable posting for a company or organization
+  disablePosting: async (entityType: 'company' | 'organization', entityId: string, posting_disabled: boolean) => {
+    return apiRequest<{
+      message: string;
+      entity: {
+        id: string;
+        type: string;
+        posting_disabled: boolean;
+      };
+    }>('/admin/disable-posting', {
+      method: 'POST',
+      body: JSON.stringify({ entityType, entityId, posting_disabled }),
+    });
+  },
+
   // Check if current user is approved (for posting jobs/tenders)
   // This checks the user's signup request status by email
   // Note: This requires admin access. For regular users, this will fail
@@ -1097,8 +1112,19 @@ export const statsAPI = {
     return apiRequest<{
       activeOpportunities: number;
       registeredUsers: number;
-      verifiedCompanies: number;
+      companies: number;
       organizations: number;
+      jobs: number;
+      tenders: number;
+      breakdown: {
+        activeJobs: number;
+        activeTenders: number;
+        totalJobs: number;
+        totalTenders: number;
+        totalCompanies: number;
+        totalOrganizations: number;
+        verifiedCompanies: number;
+      };
     }>('/stats');
   },
 };

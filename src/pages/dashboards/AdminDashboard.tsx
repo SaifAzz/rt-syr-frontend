@@ -65,6 +65,7 @@ import {
   ClipboardList,
   Plus,
   CreditCard,
+  Power,
 } from 'lucide-react';
 import {
   usersAPI,
@@ -382,6 +383,47 @@ const AdminDashboard = () => {
     },
   });
 
+  // Disable/Enable mutations
+  const toggleJobStatusMutation = useMutation({
+    mutationFn: async ({ id, currentStatus }: { id: string; currentStatus: string }) => {
+      const newStatus = currentStatus === 'open' || currentStatus === 'active' ? 'closed' : 'open';
+      return await jobsAPI.update(id, { status: newStatus as 'open' | 'closed' });
+    },
+    onSuccess: (_, variables) => {
+      const newStatus = variables.currentStatus === 'open' || variables.currentStatus === 'active' ? 'closed' : 'open';
+      toast.success(
+        newStatus === 'closed'
+          ? t('dashboard.admin.jobDisabled') || 'Job disabled successfully'
+          : t('dashboard.admin.jobEnabled') || 'Job enabled successfully'
+      );
+      queryClient.invalidateQueries({ queryKey: ['admin-jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+    },
+    onError: () => {
+      toast.error(t('dashboard.admin.jobStatusUpdateFailed') || 'Failed to update job status');
+    },
+  });
+
+  const toggleTenderStatusMutation = useMutation({
+    mutationFn: async ({ id, currentStatus }: { id: string; currentStatus: string }) => {
+      const newStatus = currentStatus === 'open' || currentStatus === 'active' || currentStatus === 'closing_soon' ? 'closed' : 'open';
+      return await tendersAPI.update(id, { status: newStatus as 'open' | 'closed' });
+    },
+    onSuccess: (_, variables) => {
+      const newStatus = variables.currentStatus === 'open' || variables.currentStatus === 'active' || variables.currentStatus === 'closing_soon' ? 'closed' : 'open';
+      toast.success(
+        newStatus === 'closed'
+          ? t('dashboard.admin.tenderDisabled') || 'Tender disabled successfully'
+          : t('dashboard.admin.tenderEnabled') || 'Tender enabled successfully'
+      );
+      queryClient.invalidateQueries({ queryKey: ['admin-tenders'] });
+      queryClient.invalidateQueries({ queryKey: ['tenders'] });
+    },
+    onError: () => {
+      toast.error(t('dashboard.admin.tenderStatusUpdateFailed') || 'Failed to update tender status');
+    },
+  });
+
   // Approval mutations
   const approveCompanyMutation = useMutation({
     mutationFn: async ({ id, approved }: { id: string; approved: boolean }) => {
@@ -479,7 +521,8 @@ const AdminDashboard = () => {
   // Company posting permission mutation
   const approveCompanyPostingMutation = useMutation({
     mutationFn: async ({ id, can_post }: { id: string; can_post: boolean }) => {
-      return await adminAPI.setPostingPermission('company', id, can_post);
+      // Use the new disable-posting endpoint
+      return await adminAPI.disablePosting('company', id, !can_post);
     },
     onSuccess: (_, variables) => {
       toast.success(
@@ -498,7 +541,8 @@ const AdminDashboard = () => {
   // Organization posting permission mutation
   const approveOrganizationPostingMutation = useMutation({
     mutationFn: async ({ id, can_post }: { id: string; can_post: boolean }) => {
-      return await adminAPI.setPostingPermission('organization', id, can_post);
+      // Use the new disable-posting endpoint
+      return await adminAPI.disablePosting('organization', id, !can_post);
     },
     onSuccess: (_, variables) => {
       toast.success(
@@ -1582,6 +1626,23 @@ const AdminDashboard = () => {
                             <Badge variant={job.status === 'open' ? 'default' : 'secondary'}>
                               {job.status}
                             </Badge>
+                            {/* Disable/Enable button */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => toggleJobStatusMutation.mutate({ id: job.id, currentStatus: job.status })}
+                              className={
+                                job.status === 'open' || job.status === 'active'
+                                  ? 'text-orange-600 hover:text-orange-700'
+                                  : 'text-green-600 hover:text-green-700'
+                              }
+                              disabled={toggleJobStatusMutation.isPending}
+                            >
+                              <Power className="w-4 h-4 mr-1" />
+                              {job.status === 'open' || job.status === 'active'
+                                ? t('dashboard.admin.disable') || 'Disable'
+                                : t('dashboard.admin.enable') || 'Enable'}
+                            </Button>
                             {/* Approval buttons - allow admin to approve/reject job postings */}
                             <Button
                               variant="outline"
@@ -1846,6 +1907,23 @@ const AdminDashboard = () => {
                           </div>
                           <div className="flex items-center gap-2">
                             <Badge variant="outline">{tender.status}</Badge>
+                            {/* Disable/Enable button */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => toggleTenderStatusMutation.mutate({ id: tender.id, currentStatus: tender.status })}
+                              className={
+                                tender.status === 'open' || tender.status === 'active' || tender.status === 'closing_soon'
+                                  ? 'text-orange-600 hover:text-orange-700'
+                                  : 'text-green-600 hover:text-green-700'
+                              }
+                              disabled={toggleTenderStatusMutation.isPending}
+                            >
+                              <Power className="w-4 h-4 mr-1" />
+                              {tender.status === 'open' || tender.status === 'active' || tender.status === 'closing_soon'
+                                ? t('dashboard.admin.disable') || 'Disable'
+                                : t('dashboard.admin.enable') || 'Enable'}
+                            </Button>
                             {/* Approval buttons - allow admin to approve/reject tender postings */}
                             <Button
                               variant="outline"
