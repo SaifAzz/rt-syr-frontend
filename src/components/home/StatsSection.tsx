@@ -30,6 +30,7 @@ export function StatsSection() {
     if (backendStats) {
       // Map new API structure to display format
       // Use breakdown.verifiedCompanies for verified companies count
+      // Use breakdown.totalCompanies and totalOrganizations for company and organization counts
       // Calculate active opportunities from total jobs and tenders
       // Prioritize breakdown totals, then top-level jobs/tenders, then activeOpportunities
       const totalJobs = backendStats.breakdown?.totalJobs ?? backendStats.jobs ?? 0;
@@ -41,8 +42,8 @@ export function StatsSection() {
       const safeStats = {
         activeOpportunities: activeOpps,
         registeredUsers: backendStats.registeredUsers ?? 0,
-        verifiedCompanies: backendStats.breakdown?.verifiedCompanies ?? 0,
-        organizations: backendStats.organizations ?? 0,
+        verifiedCompanies: backendStats.breakdown?.totalCompanies ?? backendStats.breakdown?.verifiedCompanies ?? backendStats.companies ?? 0,
+        organizations: backendStats.breakdown?.totalOrganizations ?? backendStats.organizations ?? 0,
       };
       setHomeStatsLocal(safeStats);
       setHomeStats(safeStats);
