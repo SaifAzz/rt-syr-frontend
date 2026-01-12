@@ -211,9 +211,9 @@ const Jobs = () => {
                 <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
                   <Briefcase className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">Error loading jobs</h3>
+                <h3 className="text-lg font-semibold text-foreground mb-2">{t('jobs.errorLoadingJobs')}</h3>
                 <p className="text-muted-foreground mb-4">
-                  {error instanceof Error ? error.message : 'Failed to load jobs. Please try again later.'}
+                  {error instanceof Error ? error.message : t('jobs.failedToLoadJobs')}
                 </p>
               </div>
             ) : filteredJobs.length > 0 ? (

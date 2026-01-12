@@ -22,31 +22,31 @@ import {
   HelpCircle
 } from "lucide-react";
 
-const howItWorks = [
-  {
-    step: "01",
-    title: "Create Your Account",
-    description: "Sign up for free as a job seeker, company, or organization.",
-  },
-  {
-    step: "02",
-    title: "Get Verified",
-    description: "Companies and organizations undergo admin verification for authenticity.",
-  },
-  {
-    step: "03",
-    title: "Post or Apply",
-    description: "Post opportunities or apply to listings with just a few clicks.",
-  },
-  {
-    step: "04",
-    title: "Connect & Succeed",
-    description: "Review applications, conduct interviews, and find the perfect match.",
-  },
-];
-
 const About = () => {
   const { t } = useTranslation();
+  
+  const howItWorks = [
+    {
+      step: t('about.howItWorks.step1.step'),
+      title: t('about.howItWorks.step1.title'),
+      description: t('about.howItWorks.step1.description'),
+    },
+    {
+      step: t('about.howItWorks.step2.step'),
+      title: t('about.howItWorks.step2.title'),
+      description: t('about.howItWorks.step2.description'),
+    },
+    {
+      step: t('about.howItWorks.step3.step'),
+      title: t('about.howItWorks.step3.title'),
+      description: t('about.howItWorks.step3.description'),
+    },
+    {
+      step: t('about.howItWorks.step4.step'),
+      title: t('about.howItWorks.step4.title'),
+      description: t('about.howItWorks.step4.description'),
+    },
+  ];
   const location = useLocation();
 
   // Handle scroll to hash on mount
@@ -99,23 +99,21 @@ const About = () => {
           <div className="container mx-auto px-4 lg:px-8">
             <div className="max-w-3xl mx-auto text-center">
               <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-6">
-                Connecting Syrian Talent with
-                <span className="text-gradient-primary block mt-2">Real Opportunities</span>
+                {t('about.hero.title')}
+                <span className="text-gradient-primary block mt-2">{t('about.hero.titleHighlight')}</span>
               </h1>
               <p className="text-lg text-muted-foreground mb-8">
-                RT-SYR is Syria's trusted platform for job seekers and tender opportunities. 
-                We bridge the gap between talented individuals and reputable organizations, 
-                all without charging applicants a single fee.
+                {t('about.hero.description')}
               </p>
               <div className="flex flex-wrap items-center justify-center gap-4">
                 <Button variant="hero" size="lg" asChild>
                   <Link to="/signup">
-                    Get Started Free
+                    {t('about.hero.getStarted')}
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Link>
                 </Button>
                 <Button variant="outline" size="lg" asChild>
-                  <Link to="/jobs">Browse Opportunities</Link>
+                  <Link to="/jobs">{t('about.hero.browseOpportunities')}</Link>
                 </Button>
               </div>
             </div>
@@ -256,10 +254,10 @@ const About = () => {
           <div className="container mx-auto px-4 lg:px-8">
             <div className="text-center max-w-2xl mx-auto mb-12">
               <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-4">
-                How It Works
+                {t('about.howItWorks.title')}
               </h2>
               <p className="text-muted-foreground">
-                Getting started with RT-SYR is quick and easy.
+                {t('about.howItWorks.subtitle')}
               </p>
             </div>
 
@@ -736,24 +734,23 @@ const About = () => {
                 <Lock className="w-8 h-8 text-success" />
               </div>
               <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground mb-4">
-                Your Trust is Our Priority
+                {t('about.security.title')}
               </h2>
               <p className="text-muted-foreground mb-6">
-                We take security seriously. All data is encrypted, all companies and organizations 
-                are verified, and we never share your personal information without your consent.
+                {t('about.security.description')}
               </p>
               <div className="flex flex-wrap items-center justify-center gap-6 text-sm">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <CheckCircle className="w-5 h-5 text-success" />
-                  <span>No fees for applicants</span>
+                  <span>{t('about.security.noFees')}</span>
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <CheckCircle className="w-5 h-5 text-success" />
-                  <span>Verified listings only</span>
+                  <span>{t('about.security.verifiedListings')}</span>
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <CheckCircle className="w-5 h-5 text-success" />
-                  <span>Report suspicious activity</span>
+                  <span>{t('about.security.reportSuspicious')}</span>
                 </div>
               </div>
             </div>

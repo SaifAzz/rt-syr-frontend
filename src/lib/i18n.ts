@@ -464,6 +464,8 @@ const resources = {
         jobs: "jobs",
         noJobsFound: "No jobs found",
         noJobsDescription: "Try adjusting your search or filter criteria",
+        errorLoadingJobs: "Error loading jobs",
+        failedToLoadJobs: "Failed to load jobs. Please try again later.",
         clearAllFilters: "Clear all filters",
         backToJobs: "Back to Jobs",
         jobNotFound: "Job not found or has been removed",
@@ -553,6 +555,13 @@ const resources = {
       about: {
         title: "About Us",
         subtitle: "Learn more about RT-SYR",
+        hero: {
+          title: "Connecting Syrian Talent with",
+          titleHighlight: "Real Opportunities",
+          description: "RT-SYR is Syria's trusted platform for job seekers and tender opportunities. We bridge the gap between talented individuals and reputable organizations, all without charging applicants a single fee.",
+          getStarted: "Get Started Free",
+          browseOpportunities: "Browse Opportunities",
+        },
         whoAreWe: {
           title: "Who Are We",
           paragraph1: "RT-SYR is a specialized digital platform dedicated to supporting the humanitarian, development, and private sectors operating in and for Syria. We provide a centralized, transparent, and accessible space for publishing and accessing job opportunities, consultancy assignments, tenders, and professional announcements.",
@@ -596,9 +605,33 @@ const resources = {
             description: "We focus on creating tangible value by supporting employment, professional development, and effective program implementation.",
           },
         },
+        howItWorks: {
+          title: "How It Works",
+          subtitle: "Getting started with RT-SYR is quick and easy.",
+          step1: {
+            step: "01",
+            title: "Create Your Account",
+            description: "Sign up for free as a job seeker, company, or organization.",
+          },
+          step2: {
+            step: "02",
+            title: "Get Verified",
+            description: "Companies and organizations undergo admin verification for authenticity.",
+          },
+          step3: {
+            step: "03",
+            title: "Post or Apply",
+            description: "Post opportunities or apply to listings with just a few clicks.",
+          },
+          step4: {
+            step: "04",
+            title: "Connect & Succeed",
+            description: "Review applications, conduct interviews, and find the perfect match.",
+          },
+        },
         publishingPolicy: {
           title: "Publishing Policy",
-          introduction: "RT-SYR is committed to maintaining a professional, transparent, and trustworthy platform. All content published on the platform is subject to the following principles:",
+          introduction: "RT-SYR platform is committed to providing a professional, transparent, and reliable environment. All materials published on the platform are subject to the following principles:",
           eligibility: {
             title: "Eligibility of Content",
             subtitle: "RT-SYR accepts the publication of:",
@@ -662,7 +695,7 @@ const resources = {
         },
         disclaimer: {
           title: "Disclaimer",
-          paragraph1: "RT-SYR is an independent digital platform that publishes information provided by third parties.",
+          paragraph1: "RT-SYR is an independent digital platform that publishes content provided by third parties.",
           paragraph2: "RT-SYR does not verify, endorse, or guarantee the legitimacy, accuracy, or outcomes of any opportunity published.",
           paragraph3: "All recruitment, contracting, and procurement processes are conducted independently by the publishing entities.",
           paragraph4: "RT-SYR bears no responsibility for financial loss, fraud, disputes, or damages resulting from user interactions.",
@@ -670,7 +703,7 @@ const resources = {
         },
         antiFraud: {
           title: "Anti-Fraud & Scam Warning",
-          subtitle: "RT-SYR will never:",
+          subtitle: "RT-SYR will never request:",
           item1: "Request payment or fees for job applications",
           item2: "Ask for banking, financial, or confidential documents",
           item3: "Act as an intermediary for payments or contracts",
@@ -722,6 +755,13 @@ const resources = {
             question: "Does RT-SYR charge job seekers?",
             answer: "Never.",
           },
+        },
+        security: {
+          title: "Your Trust is Our Priority",
+          description: "We take security seriously. All data is encrypted, all companies and organizations are verified, and we never share your personal information without your consent.",
+          noFees: "No fees for applicants",
+          verifiedListings: "Verified listings only",
+          reportSuspicious: "Report suspicious activity",
         },
       },
       // Pricing Page
@@ -1291,6 +1331,8 @@ const resources = {
         jobs: "وظيفة",
         noJobsFound: "لم يتم العثور على وظائف",
         noJobsDescription: "حاول تعديل معايير البحث أو التصفية",
+        errorLoadingJobs: "خطأ في تحميل الوظائف",
+        failedToLoadJobs: "فشل تحميل الوظائف. يرجى المحاولة مرة أخرى لاحقًا.",
         clearAllFilters: "مسح جميع المرشحات",
         backToJobs: "العودة إلى الوظائف",
         jobNotFound: "الوظيفة غير موجودة أو تم حذفها",
@@ -1380,6 +1422,13 @@ const resources = {
       about: {
         title: "من نحن",
         subtitle: "اعرف المزيد عن RT-SYR",
+        hero: {
+          title: "ربط المواهب السورية مع",
+          titleHighlight: "فرص حقيقية",
+          description: "RT-SYR هي منصة موثوقة في سوريا للباحثين عن عمل وفرص المناقصات. نحن نربط بين الأفراد الموهوبين والمنظمات الموثوقة، دون فرض أي رسوم على المتقدمين.",
+          getStarted: "ابدأ مجانًا",
+          browseOpportunities: "تصفح الفرص",
+        },
         whoAreWe: {
           title: "من نحن",
           paragraph1: "RT-SYR هي منصة رقمية متخصصة تهدف إلى دعم القطاعات الإنسانية والتنموية والقطاع الخاص العاملة في سوريا أو المرتبطة بالسياق السوري. توفر المنصة مساحة مركزية، شفافة، وسهلة الوصول لنشر واستعراض فرص العمل، والاستشارات، والمناقصات، والإعلانات المهنية.",
@@ -1421,6 +1470,30 @@ const resources = {
           impactDriven: {
             title: "الأثر",
             description: "نركز على إحداث قيمة حقيقية من خلال دعم التوظيف، وبناء القدرات، وتحسين تنفيذ البرامج.",
+          },
+        },
+        howItWorks: {
+          title: "كيف يعمل",
+          subtitle: "البدء في RT-SYR سريع وسهل.",
+          step1: {
+            step: "01",
+            title: "إنشاء حسابك",
+            description: "سجل مجانًا كباحث عن عمل، أو شركة، أو منظمة.",
+          },
+          step2: {
+            step: "02",
+            title: "الحصول على التحقق",
+            description: "تخضع الشركات والمنظمات للتحقق من قبل الإدارة للتأكد من صحتها.",
+          },
+          step3: {
+            step: "03",
+            title: "النشر أو التقديم",
+            description: "انشر الفرص أو تقدم للوظائف بنقرة واحدة فقط.",
+          },
+          step4: {
+            step: "04",
+            title: "تواصل ونجح",
+            description: "راجع الطلبات، وأجر المقابلات، وابحث عن المطابقة المثالية.",
           },
         },
         publishingPolicy: {
@@ -1497,7 +1570,7 @@ const resources = {
         },
         antiFraud: {
           title: "تحذير مكافحة الاحتيال",
-          subtitle: "لن تطلب RT-SYR أبدًا:",
+          subtitle: "RT-SYR لن تطلب أبدًا:",
           item1: "أي رسوم مقابل التقديم على الوظائف",
           item2: "معلومات مالية أو مصرفية",
           item3: "التدخل في عمليات الدفع أو التعاقد",
@@ -1549,6 +1622,13 @@ const resources = {
             question: "هل توجد رسوم على الباحثين عن عمل؟",
             answer: "لا يوجد أي رسوم.",
           },
+        },
+        security: {
+          title: "ثقتك هي أولويتنا",
+          description: "نأخذ الأمان على محمل الجد. جميع البيانات مشفرة، وجميع الشركات والمنظمات معتمدة، ولا نشارك معلوماتك الشخصية أبدًا دون موافقتك.",
+          noFees: "لا رسوم للمتقدمين",
+          verifiedListings: "إعلانات معتمدة فقط",
+          reportSuspicious: "الإبلاغ عن نشاط مشبوه",
         },
       },
       // Pricing Page
