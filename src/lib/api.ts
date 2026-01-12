@@ -1044,17 +1044,23 @@ export const adminAPI = {
   },
 
   // Disable posting for a company or organization
-  disablePosting: async (entityType: 'company' | 'organization', entityId: string, posting_disabled: boolean) => {
+  disablePosting: async (
+    entityType: 'company' | 'organization',
+    entityId: string,
+    postingType: 'jobs' | 'tenders',
+    disabled: boolean
+  ) => {
     return apiRequest<{
       message: string;
       entity: {
         id: string;
         type: string;
-        posting_disabled: boolean;
+        postingType: string;
+        disabled: boolean;
       };
     }>('/admin/disable-posting', {
       method: 'POST',
-      body: JSON.stringify({ entityType, entityId, posting_disabled }),
+      body: JSON.stringify({ entityType, entityId, postingType, disabled }),
     });
   },
 

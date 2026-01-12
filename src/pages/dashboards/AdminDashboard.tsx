@@ -114,6 +114,18 @@ const AdminDashboard = () => {
   });
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [postingDialogOpen, setPostingDialogOpen] = useState<{
+    open: boolean;
+    entityType: 'company' | 'organization' | null;
+    entityId: string | null;
+    action: 'enable' | 'disable' | null;
+  }>({
+    open: false,
+    entityType: null,
+    entityId: null,
+    action: null,
+  });
+  const [selectedPostingType, setSelectedPostingType] = useState<'jobs' | 'tenders' | 'both'>('both');
 
   // Menu items organized by category
   const menuItems = [
@@ -520,18 +532,32 @@ const AdminDashboard = () => {
 
   // Company posting permission mutation
   const approveCompanyPostingMutation = useMutation({
-    mutationFn: async ({ id, can_post }: { id: string; can_post: boolean }) => {
-      // Use the new disable-posting endpoint
-      return await adminAPI.disablePosting('company', id, !can_post);
+    mutationFn: async ({ id, can_post, postingType }: { id: string; can_post: boolean; postingType: 'jobs' | 'tenders' | 'both' }) => {
+      const disabled = !can_post;
+
+      // If "both" is selected, make two API calls
+      if (postingType === 'both') {
+        await Promise.all([
+          adminAPI.disablePosting('company', id, 'jobs', disabled),
+          adminAPI.disablePosting('company', id, 'tenders', disabled),
+        ]);
+        return { postingType: 'both' };
+      } else {
+        // Single API call for jobs or tenders
+        return await adminAPI.disablePosting('company', id, postingType, disabled);
+      }
     },
     onSuccess: (_, variables) => {
+      const postingTypeLabel = variables.postingType === 'jobs'
+        ? t('dashboard.admin.jobs')
+        : variables.postingType === 'tenders'
+          ? t('dashboard.admin.tenders')
+          : t('dashboard.admin.both');
       toast.success(
-        t('dashboard.admin.postingPermissionUpdated', {
-          entity: t('dashboard.admin.company'),
-          status: t(variables.can_post ? 'dashboard.admin.enabled' : 'dashboard.admin.disabled'),
-        })
+        `${postingTypeLabel} ${t(variables.can_post ? 'dashboard.admin.enabled' : 'dashboard.admin.disabled')} ${t('dashboard.admin.forCompany')}`
       );
       queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
+      setPostingDialogOpen({ open: false, entityType: null, entityId: null, action: null });
     },
     onError: () => {
       toast.error(t('dashboard.admin.postingPermissionUpdateFailed'));
@@ -540,18 +566,32 @@ const AdminDashboard = () => {
 
   // Organization posting permission mutation
   const approveOrganizationPostingMutation = useMutation({
-    mutationFn: async ({ id, can_post }: { id: string; can_post: boolean }) => {
-      // Use the new disable-posting endpoint
-      return await adminAPI.disablePosting('organization', id, !can_post);
+    mutationFn: async ({ id, can_post, postingType }: { id: string; can_post: boolean; postingType: 'jobs' | 'tenders' | 'both' }) => {
+      const disabled = !can_post;
+
+      // If "both" is selected, make two API calls
+      if (postingType === 'both') {
+        await Promise.all([
+          adminAPI.disablePosting('organization', id, 'jobs', disabled),
+          adminAPI.disablePosting('organization', id, 'tenders', disabled),
+        ]);
+        return { postingType: 'both' };
+      } else {
+        // Single API call for jobs or tenders
+        return await adminAPI.disablePosting('organization', id, postingType, disabled);
+      }
     },
     onSuccess: (_, variables) => {
+      const postingTypeLabel = variables.postingType === 'jobs'
+        ? t('dashboard.admin.jobs')
+        : variables.postingType === 'tenders'
+          ? t('dashboard.admin.tenders')
+          : t('dashboard.admin.both');
       toast.success(
-        t('dashboard.admin.postingPermissionUpdated', {
-          entity: t('dashboard.admin.organization'),
-          status: t(variables.can_post ? 'dashboard.admin.enabled' : 'dashboard.admin.disabled'),
-        })
+        `${postingTypeLabel} ${t(variables.can_post ? 'dashboard.admin.enabled' : 'dashboard.admin.disabled')} ${t('dashboard.admin.forOrganization')}`
       );
       queryClient.invalidateQueries({ queryKey: ['admin-organizations'] });
+      setPostingDialogOpen({ open: false, entityType: null, entityId: null, action: null });
     },
     onError: () => {
       toast.error(t('dashboard.admin.postingPermissionUpdateFailed'));
@@ -700,7 +740,7 @@ const AdminDashboard = () => {
   // Form handlers
   const handleCreateUserChange = (field: keyof typeof createUserForm, value: string) => {
     setCreateUserForm(prev => ({ ...prev, [field]: value }));
-    
+
     // Clear field error when user starts typing
     if (formErrors[field]) {
       setFormErrors(prev => {
@@ -709,7 +749,7 @@ const AdminDashboard = () => {
         return newErrors;
       });
     }
-    
+
     // Validate password in real-time
     if (field === 'password') {
       const errors = validatePassword(value);
@@ -719,14 +759,14 @@ const AdminDashboard = () => {
 
   const validateCreateUserForm = (): boolean => {
     const errors: Record<string, string> = {};
-    
+
     // Email validation
     if (!createUserForm.email.trim()) {
       errors.email = 'Email is required';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(createUserForm.email)) {
       errors.email = 'Please enter a valid email address';
     }
-    
+
     // Password validation
     if (!createUserForm.password) {
       errors.password = 'Password is required';
@@ -736,17 +776,17 @@ const AdminDashboard = () => {
         errors.password = passwordErrors[0];
       }
     }
-    
+
     // Full name validation
     if (!createUserForm.full_name.trim()) {
       errors.full_name = 'Full name is required';
     }
-    
+
     // Role validation
     if (!createUserForm.role) {
       errors.role = 'Role is required';
     }
-    
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -808,9 +848,9 @@ const AdminDashboard = () => {
                 <div className="flex flex-col gap-3">
                   {/* Logo and Branding */}
                   <div className="flex items-center gap-3">
-                    <img 
-                      src="/logos/3.png" 
-                      alt={t('logo.alt')} 
+                    <img
+                      src="/logos/3.png"
+                      alt={t('logo.alt')}
                       className="h-20 w-auto object-contain flex-shrink-0"
                     />
                     <div className="flex-1 min-w-0">
@@ -830,7 +870,7 @@ const AdminDashboard = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex-1 overflow-y-auto py-2 bg-white">
                 {menuItems.map((category, categoryIndex) => (
                   <SidebarGroup key={categoryIndex} className="px-2">
@@ -847,11 +887,10 @@ const AdminDashboard = () => {
                               <SidebarMenuButton
                                 onClick={() => setActiveSection(item.id)}
                                 isActive={isActive}
-                                className={`w-full justify-start gap-3 px-3 py-2.5 rounded-lg transition-all ${
-                                  isActive 
-                                    ? 'bg-muted text-foreground font-medium' 
-                                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-                                }`}
+                                className={`w-full justify-start gap-3 px-3 py-2.5 rounded-lg transition-all ${isActive
+                                  ? 'bg-muted text-foreground font-medium'
+                                  : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                                  }`}
                                 tooltip={item.label}
                               >
                                 <Icon className="w-4 h-4 flex-shrink-0" />
@@ -867,9 +906,9 @@ const AdminDashboard = () => {
               </div>
 
               <div className="p-4 border-t border-border bg-white">
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start gap-2 text-muted-foreground hover:bg-muted hover:text-foreground" 
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-2 text-muted-foreground hover:bg-muted hover:text-foreground"
                   size="sm"
                 >
                   <Settings className="w-4 h-4" />
@@ -905,280 +944,280 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-          {/* Enhanced Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <Card className="border-l-4 border-l-blue-500 shadow-md hover:shadow-lg transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {t('dashboard.admin.totalUsers')}
-                </CardTitle>
-                <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                  <Users className="h-5 w-5 text-blue-500" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold mb-1">{stats.totalUsers}</div>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <CheckCircle className="w-3 h-3 text-green-500" />
-                  {stats.verifiedUsers} {t('dashboard.admin.verified')}
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="border-l-4 border-l-green-500 shadow-md hover:shadow-lg transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {t('dashboard.admin.activeJobs')}
-                </CardTitle>
-                <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                  <Briefcase className="h-5 w-5 text-green-500" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold mb-1">{stats.activeJobs}</div>
-                <p className="text-xs text-muted-foreground">
-                  {t('dashboard.admin.active')} / {stats.totalJobs} {t('dashboard.admin.jobs').toLowerCase()}
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="border-l-4 border-l-purple-500 shadow-md hover:shadow-lg transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {t('dashboard.admin.openTenders')}
-                </CardTitle>
-                <div className="h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                  <FileText className="h-5 w-5 text-purple-500" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold mb-1">{stats.openTenders}</div>
-                <p className="text-xs text-muted-foreground">
-                  {t('dashboard.admin.active')} / {stats.totalTenders} {t('dashboard.admin.tenders').toLowerCase()}
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="border-l-4 border-l-orange-500 shadow-md hover:shadow-lg transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {t('dashboard.admin.approvedCompanies')}
-                </CardTitle>
-                <div className="h-10 w-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                  <Building2 className="h-5 w-5 text-orange-500" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold mb-1">{stats.approvedCompanies}</div>
-                <p className="text-xs text-muted-foreground">
-                  {t('dashboard.admin.companyApprovalSummary', {
-                    pending: stats.pendingCompanies,
-                    approved: stats.approvedCompanies,
-                    total: stats.totalCompanies,
-                  })}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+              {/* Enhanced Stats Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <Card className="border-l-4 border-l-blue-500 shadow-md hover:shadow-lg transition-shadow">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      {t('dashboard.admin.totalUsers')}
+                    </CardTitle>
+                    <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                      <Users className="h-5 w-5 text-blue-500" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold mb-1">{stats.totalUsers}</div>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3 text-green-500" />
+                      {stats.verifiedUsers} {t('dashboard.admin.verified')}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="border-l-4 border-l-green-500 shadow-md hover:shadow-lg transition-shadow">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      {t('dashboard.admin.activeJobs')}
+                    </CardTitle>
+                    <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                      <Briefcase className="h-5 w-5 text-green-500" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold mb-1">{stats.activeJobs}</div>
+                    <p className="text-xs text-muted-foreground">
+                      {t('dashboard.admin.active')} / {stats.totalJobs} {t('dashboard.admin.jobs').toLowerCase()}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="border-l-4 border-l-purple-500 shadow-md hover:shadow-lg transition-shadow">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      {t('dashboard.admin.openTenders')}
+                    </CardTitle>
+                    <div className="h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                      <FileText className="h-5 w-5 text-purple-500" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold mb-1">{stats.openTenders}</div>
+                    <p className="text-xs text-muted-foreground">
+                      {t('dashboard.admin.active')} / {stats.totalTenders} {t('dashboard.admin.tenders').toLowerCase()}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="border-l-4 border-l-orange-500 shadow-md hover:shadow-lg transition-shadow">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      {t('dashboard.admin.approvedCompanies')}
+                    </CardTitle>
+                    <div className="h-10 w-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                      <Building2 className="h-5 w-5 text-orange-500" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold mb-1">{stats.approvedCompanies}</div>
+                    <p className="text-xs text-muted-foreground">
+                      {t('dashboard.admin.companyApprovalSummary', {
+                        pending: stats.pendingCompanies,
+                        approved: stats.approvedCompanies,
+                        total: stats.totalCompanies,
+                      })}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
 
               {/* Content Sections */}
               {activeSection === 'overview' && (
                 <div className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-2">
-                <Card className="shadow-md">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <BarChart3 className="w-5 h-5" />
-                      {t('dashboard.admin.platformOverview')}
-                    </CardTitle>
-                    <CardDescription>{t('dashboard.admin.quickStats')}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="p-4 rounded-lg bg-muted/50">
-                        <p className="text-sm text-muted-foreground mb-1">{t('dashboard.admin.totalUsers')}</p>
-                        <p className="text-2xl font-bold">{stats.totalUsers}</p>
-                      </div>
-                      <div className="p-4 rounded-lg bg-muted/50">
-                        <p className="text-sm text-muted-foreground mb-1">{t('dashboard.admin.activeJobs')}</p>
-                        <p className="text-2xl font-bold">{stats.activeJobs}</p>
-                      </div>
-                      <div className="p-4 rounded-lg bg-muted/50">
-                        <p className="text-sm text-muted-foreground mb-1">{t('dashboard.admin.openTenders')}</p>
-                        <p className="text-2xl font-bold">{stats.openTenders}</p>
-                      </div>
-                      <div className="p-4 rounded-lg bg-muted/50">
-                        <p className="text-sm text-muted-foreground mb-1">{t('dashboard.admin.approvedCompanies')}</p>
-                        <p className="text-2xl font-bold">{stats.approvedCompanies}</p>
-                      </div>
-                      <div className="p-4 rounded-lg bg-muted/50">
-                        <p className="text-sm text-muted-foreground mb-1">{t('dashboard.admin.pendingApprovals')}</p>
-                        <p className="text-2xl font-bold">{stats.pendingCompanies + stats.pendingOrganizations}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="shadow-md">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Activity className="w-5 h-5" />
-                      {t('dashboard.admin.recentActivity')}
-                    </CardTitle>
-                    <CardDescription>{t('dashboard.admin.latestActivities')}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {jobs.slice(0, 3).map((job) => (
-                        <div key={job.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                          <Briefcase className="w-4 h-4 text-muted-foreground" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{job.title}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(job.created_at || job.createdAt).toLocaleDateString()}
-                            </p>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Card className="shadow-md">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <BarChart3 className="w-5 h-5" />
+                          {t('dashboard.admin.platformOverview')}
+                        </CardTitle>
+                        <CardDescription>{t('dashboard.admin.quickStats')}</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="p-4 rounded-lg bg-muted/50">
+                            <p className="text-sm text-muted-foreground mb-1">{t('dashboard.admin.totalUsers')}</p>
+                            <p className="text-2xl font-bold">{stats.totalUsers}</p>
+                          </div>
+                          <div className="p-4 rounded-lg bg-muted/50">
+                            <p className="text-sm text-muted-foreground mb-1">{t('dashboard.admin.activeJobs')}</p>
+                            <p className="text-2xl font-bold">{stats.activeJobs}</p>
+                          </div>
+                          <div className="p-4 rounded-lg bg-muted/50">
+                            <p className="text-sm text-muted-foreground mb-1">{t('dashboard.admin.openTenders')}</p>
+                            <p className="text-2xl font-bold">{stats.openTenders}</p>
+                          </div>
+                          <div className="p-4 rounded-lg bg-muted/50">
+                            <p className="text-sm text-muted-foreground mb-1">{t('dashboard.admin.approvedCompanies')}</p>
+                            <p className="text-2xl font-bold">{stats.approvedCompanies}</p>
+                          </div>
+                          <div className="p-4 rounded-lg bg-muted/50">
+                            <p className="text-sm text-muted-foreground mb-1">{t('dashboard.admin.pendingApprovals')}</p>
+                            <p className="text-2xl font-bold">{stats.pendingCompanies + stats.pendingOrganizations}</p>
                           </div>
                         </div>
-                      ))}
-                      {jobs.length === 0 && (
-                        <p className="text-sm text-muted-foreground text-center py-4">
-                          {t('dashboard.admin.noData')}
-                        </p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="shadow-md">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Activity className="w-5 h-5" />
+                          {t('dashboard.admin.recentActivity')}
+                        </CardTitle>
+                        <CardDescription>{t('dashboard.admin.latestActivities')}</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {jobs.slice(0, 3).map((job) => (
+                            <div key={job.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                              <Briefcase className="w-4 h-4 text-muted-foreground" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{job.title}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {new Date(job.created_at || job.createdAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                          {jobs.length === 0 && (
+                            <p className="text-sm text-muted-foreground text-center py-4">
+                              {t('dashboard.admin.noData')}
+                            </p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
                 </div>
               )}
 
               {activeSection === 'content' && (
                 <div className="space-y-6">
-              <ContentManagement />
+                  <ContentManagement />
                 </div>
               )}
 
               {activeSection === 'footer' && (
                 <div className="space-y-6">
-              <FooterManagement />
+                  <FooterManagement />
                 </div>
               )}
 
               {activeSection === 'pricing' && (
                 <div className="space-y-6">
-              <PricingManagement />
+                  <PricingManagement />
                 </div>
               )}
 
               {activeSection === 'stats' && (
                 <div className="space-y-6">
-              <StatsManagement />
+                  <StatsManagement />
                 </div>
               )}
 
               {activeSection === 'plan-management' && (
                 <div className="space-y-6">
-              <PlanManagement />
+                  <PlanManagement />
                 </div>
               )}
 
               {activeSection === 'users' && (
                 <div className="space-y-4">
                   <div className="flex flex-col sm:flex-row gap-4 mb-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder={t('dashboard.admin.search')}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-full sm:w-[180px]">
-                    <Filter className="w-4 h-4 mr-2" />
-                    <SelectValue placeholder={t('dashboard.admin.filter')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t('common.all')}</SelectItem>
-                    <SelectItem value="job_seeker">{t('auth.jobSeeker')}</SelectItem>
-                    <SelectItem value="company">{t('auth.company')}</SelectItem>
-                    <SelectItem value="organization">{t('auth.organization')}</SelectItem>
-                    <SelectItem value="admin">{t('dashboard.admin.title')}</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button onClick={() => setIsCreateUserOpen(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  {t('dashboard.admin.createUser') || 'Create User'}
-                </Button>
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        placeholder={t('dashboard.admin.search')}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    <Select value={filterStatus} onValueChange={setFilterStatus}>
+                      <SelectTrigger className="w-full sm:w-[180px]">
+                        <Filter className="w-4 h-4 mr-2" />
+                        <SelectValue placeholder={t('dashboard.admin.filter')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('common.all')}</SelectItem>
+                        <SelectItem value="job_seeker">{t('auth.jobSeeker')}</SelectItem>
+                        <SelectItem value="company">{t('auth.company')}</SelectItem>
+                        <SelectItem value="organization">{t('auth.organization')}</SelectItem>
+                        <SelectItem value="admin">{t('dashboard.admin.title')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button onClick={() => setIsCreateUserOpen(true)}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      {t('dashboard.admin.createUser') || 'Create User'}
+                    </Button>
                   </div>
                   {usersLoading ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                  <p className="mt-4 text-muted-foreground">{t('dashboard.admin.loading')}</p>
-                </div>
-              ) : filteredUsers.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">{t('dashboard.admin.noData')}</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid gap-4">
-                  {filteredUsers.map((user) => {
-                    const userName = user.full_name || user.name || t('common.unknown');
-                    const userRole = user.role || user.type || 'user';
-                    const userRoleLabel = roleLabelMap[userRole] || userRole;
-                    const isVerified = user.email_verified || user.emailVerified || false;
-                    const approvalStatus = userRole === 'company'
-                      ? companies.find(c => c.user_id === user.id)?.status
-                      : userRole === 'organization'
-                        ? organizations.find(o => o.user_id === user.id)?.status
-                        : undefined;
-                    const approvalLabel = approvalStatus ? getStatusLabel(approvalStatus) : t('common.notAvailable');
-                    return (
-                      <Card key={user.id}>
-                        <CardHeader>
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <CardTitle className="text-lg">{userName}</CardTitle>
-                              <CardDescription>{user.email}</CardDescription>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline">{userRoleLabel}</Badge>
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => deleteUserMutation.mutate(user.id)}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="flex items-center gap-2">
-                            {isVerified ? (
-                              <Badge className="bg-green-500">
-                                <CheckCircle className="w-3 h-3 mr-1" />
-                                {t('dashboard.admin.verified')}
-                              </Badge>
-                            ) : (
-                              <Badge variant="destructive">
-                                <XCircle className="w-3 h-3 mr-1" />
-                                {t('dashboard.admin.unverified')}
-                              </Badge>
-                            )}
-                            {/* Show approval status for companies/organizations */}
-                            {(userRole === 'company' || userRole === 'organization') && (
-                              <Badge variant="outline">
-                                {approvalLabel}
-                              </Badge>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
+                    <div className="text-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                      <p className="mt-4 text-muted-foreground">{t('dashboard.admin.loading')}</p>
+                    </div>
+                  ) : filteredUsers.length === 0 ? (
+                    <Card>
+                      <CardContent className="py-12 text-center">
+                        <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                        <p className="text-muted-foreground">{t('dashboard.admin.noData')}</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="grid gap-4">
+                      {filteredUsers.map((user) => {
+                        const userName = user.full_name || user.name || t('common.unknown');
+                        const userRole = user.role || user.type || 'user';
+                        const userRoleLabel = roleLabelMap[userRole] || userRole;
+                        const isVerified = user.email_verified || user.emailVerified || false;
+                        const approvalStatus = userRole === 'company'
+                          ? companies.find(c => c.user_id === user.id)?.status
+                          : userRole === 'organization'
+                            ? organizations.find(o => o.user_id === user.id)?.status
+                            : undefined;
+                        const approvalLabel = approvalStatus ? getStatusLabel(approvalStatus) : t('common.notAvailable');
+                        return (
+                          <Card key={user.id}>
+                            <CardHeader>
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <CardTitle className="text-lg">{userName}</CardTitle>
+                                  <CardDescription>{user.email}</CardDescription>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline">{userRoleLabel}</Badge>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => deleteUserMutation.mutate(user.id)}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="flex items-center gap-2">
+                                {isVerified ? (
+                                  <Badge className="bg-green-500">
+                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                    {t('dashboard.admin.verified')}
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="destructive">
+                                    <XCircle className="w-3 h-3 mr-1" />
+                                    {t('dashboard.admin.unverified')}
+                                  </Badge>
+                                )}
+                                {/* Show approval status for companies/organizations */}
+                                {(userRole === 'company' || userRole === 'organization') && (
+                                  <Badge variant="outline">
+                                    {approvalLabel}
+                                  </Badge>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1214,168 +1253,286 @@ const AdminDashboard = () => {
                     </Select>
                   </div>
                   {companiesLoading ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                </div>
-              ) : filteredCompanies.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">{t('dashboard.admin.noData')}</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid gap-4">
-                  {filteredCompanies.map((company) => (
-                    <Card key={company.id}>
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <CardTitle className="text-lg">{company.name}</CardTitle>
-                            <CardDescription>{company.location}</CardDescription>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge 
-                              variant={
-                                company.status === 'approved' ? 'default' : 
-                                company.status === 'rejected' ? 'destructive' : 
-                                'outline'
-                              }
-                              className={
-                                company.status === 'approved' ? 'bg-green-500' : 
-                                company.status === 'rejected' ? 'bg-red-500' : 
-                                ''
-                              }
-                            >
-                              {company.status === 'approved' && <CheckCircle className="w-3 h-3 mr-1" />}
-                              {company.status === 'rejected' && <XCircle className="w-3 h-3 mr-1" />}
-                              {getStatusLabel(company.status)}
-                            </Badge>
-                            {company.status === 'pending' && (
-                              <>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => approveCompanyMutation.mutate({ id: company.id, approved: true })}
-                                  className="text-green-600 hover:text-green-700"
-                                >
-                                  <CheckCircle className="w-4 h-4 mr-1" />
-                                  {t('dashboard.admin.approve')}
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => approveCompanyMutation.mutate({ id: company.id, approved: false })}
-                                  className="text-red-600 hover:text-red-700"
-                                >
-                                  <XCircle className="w-4 h-4 mr-1" />
-                                  {t('dashboard.admin.reject')}
-                                </Button>
-                              </>
-                            )}
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleEdit('company', company.id, company)}
-                                >
-                                  <Edit className="w-4 h-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>{t('dashboard.admin.editCompany')}</DialogTitle>
-                                </DialogHeader>
-                                {editingEntity && editingEntity.type === 'company' && (
-                                  <div className="space-y-4">
-                                    <div className="space-y-2">
-                                      <Label>{t('dashboard.admin.fieldName')}</Label>
-                                      <Input
-                                        value={editingEntity.data.name || ''}
-                                        onChange={(e) =>
-                                          setEditingEntity({
-                                            ...editingEntity,
-                                            data: { ...editingEntity.data, name: e.target.value },
-                                          })
-                                        }
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label>{t('dashboard.admin.fieldDescription')}</Label>
-                                      <Textarea
-                                        value={editingEntity.data.description || ''}
-                                        onChange={(e) =>
-                                          setEditingEntity({
-                                            ...editingEntity,
-                                            data: {
-                                              ...editingEntity.data,
-                                              description: e.target.value,
-                                            },
-                                          })
-                                        }
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label>{t('dashboard.admin.fieldWebsite')}</Label>
-                                      <Input
-                                        type="url"
-                                        value={editingEntity.data.website || ''}
-                                        onChange={(e) =>
-                                          setEditingEntity({
-                                            ...editingEntity,
-                                            data: { ...editingEntity.data, website: e.target.value },
-                                          })
-                                        }
-                                        placeholder={t('dashboard.admin.websitePlaceholder')}
-                                      />
-                                    </div>
-                                    <Button onClick={handleSaveEdit}>{t('common.saveChanges')}</Button>
-                                  </div>
-                                )}
-                              </DialogContent>
-                            </Dialog>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex items-center justify-between pt-2 border-t">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground">
-                              {t('dashboard.admin.postingPermission')}:
-                            </span>
-                            <Badge variant={(company as any).can_post ? 'default' : 'secondary'}>
-                              {(company as any).can_post ? t('dashboard.admin.enabled') : t('dashboard.admin.disabled')}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => approveCompanyPostingMutation.mutate({ id: company.id, can_post: true })}
-                              className="text-green-600 hover:text-green-700"
-                              disabled={approveCompanyPostingMutation.isPending}
-                            >
-                              <Briefcase className="w-4 h-4 mr-1" />
-                              {t('dashboard.admin.enablePosting')}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => approveCompanyPostingMutation.mutate({ id: company.id, can_post: false })}
-                              className="text-red-600 hover:text-red-700"
-                              disabled={approveCompanyPostingMutation.isPending}
-                            >
-                              <XCircle className="w-4 h-4 mr-1" />
-                              {t('dashboard.admin.disablePosting')}
-                            </Button>
-                          </div>
-                        </div>
+                    <div className="text-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                    </div>
+                  ) : filteredCompanies.length === 0 ? (
+                    <Card>
+                      <CardContent className="py-12 text-center">
+                        <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                        <p className="text-muted-foreground">{t('dashboard.admin.noData')}</p>
                       </CardContent>
                     </Card>
-                  ))}
-                </div>
-              )}
+                  ) : (
+                    <div className="grid gap-4">
+                      {filteredCompanies.map((company) => (
+                        <Card key={company.id}>
+                          <CardHeader>
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <CardTitle className="text-lg">{company.name}</CardTitle>
+                                <CardDescription>{company.location}</CardDescription>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge
+                                  variant={
+                                    company.status === 'approved' ? 'default' :
+                                      company.status === 'rejected' ? 'destructive' :
+                                        'outline'
+                                  }
+                                  className={
+                                    company.status === 'approved' ? 'bg-green-500' :
+                                      company.status === 'rejected' ? 'bg-red-500' :
+                                        ''
+                                  }
+                                >
+                                  {company.status === 'approved' && <CheckCircle className="w-3 h-3 mr-1" />}
+                                  {company.status === 'rejected' && <XCircle className="w-3 h-3 mr-1" />}
+                                  {getStatusLabel(company.status)}
+                                </Badge>
+                                {company.status === 'pending' && (
+                                  <>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => approveCompanyMutation.mutate({ id: company.id, approved: true })}
+                                      className="text-green-600 hover:text-green-700"
+                                    >
+                                      <CheckCircle className="w-4 h-4 mr-1" />
+                                      {t('dashboard.admin.approve')}
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => approveCompanyMutation.mutate({ id: company.id, approved: false })}
+                                      className="text-red-600 hover:text-red-700"
+                                    >
+                                      <XCircle className="w-4 h-4 mr-1" />
+                                      {t('dashboard.admin.reject')}
+                                    </Button>
+                                  </>
+                                )}
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleEdit('company', company.id, company)}
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>{t('dashboard.admin.editCompany')}</DialogTitle>
+                                    </DialogHeader>
+                                    {editingEntity && editingEntity.type === 'company' && (
+                                      <div className="space-y-4">
+                                        <div className="space-y-2">
+                                          <Label>{t('dashboard.admin.fieldName')}</Label>
+                                          <Input
+                                            value={editingEntity.data.name || ''}
+                                            onChange={(e) =>
+                                              setEditingEntity({
+                                                ...editingEntity,
+                                                data: { ...editingEntity.data, name: e.target.value },
+                                              })
+                                            }
+                                          />
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Label>{t('dashboard.admin.fieldDescription')}</Label>
+                                          <Textarea
+                                            value={editingEntity.data.description || ''}
+                                            onChange={(e) =>
+                                              setEditingEntity({
+                                                ...editingEntity,
+                                                data: {
+                                                  ...editingEntity.data,
+                                                  description: e.target.value,
+                                                },
+                                              })
+                                            }
+                                          />
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Label>{t('dashboard.admin.fieldWebsite')}</Label>
+                                          <Input
+                                            type="url"
+                                            value={editingEntity.data.website || ''}
+                                            onChange={(e) =>
+                                              setEditingEntity({
+                                                ...editingEntity,
+                                                data: { ...editingEntity.data, website: e.target.value },
+                                              })
+                                            }
+                                            placeholder={t('dashboard.admin.websitePlaceholder')}
+                                          />
+                                        </div>
+                                        <Button onClick={handleSaveEdit}>{t('common.saveChanges')}</Button>
+                                      </div>
+                                    )}
+                                  </DialogContent>
+                                </Dialog>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-center justify-between pt-2 border-t">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-muted-foreground">
+                                  {t('dashboard.admin.postingPermission')}:
+                                </span>
+                                <Badge variant={(company as any).can_post ? 'default' : 'secondary'}>
+                                  {(company as any).can_post ? t('dashboard.admin.enabled') : t('dashboard.admin.disabled')}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Dialog
+                                  open={postingDialogOpen.open && postingDialogOpen.entityType === 'company' && postingDialogOpen.entityId === company.id && postingDialogOpen.action === 'enable'}
+                                  onOpenChange={(open) => {
+                                    if (!open) {
+                                      setPostingDialogOpen({ open: false, entityType: null, entityId: null, action: null });
+                                      setSelectedPostingType('both');
+                                    }
+                                  }}
+                                >
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setPostingDialogOpen({ open: true, entityType: 'company', entityId: company.id, action: 'enable' });
+                                      setSelectedPostingType('both');
+                                    }}
+                                    className="text-green-600 hover:text-green-700"
+                                  >
+                                    <Briefcase className="w-4 h-4 mr-1" />
+                                    {t('dashboard.admin.enablePosting')}
+                                  </Button>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>{t('dashboard.admin.enablePosting')}</DialogTitle>
+                                      <DialogDescription>
+                                        {t('dashboard.admin.selectPostingType')}
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4">
+                                      <div className="space-y-2">
+                                        <Label>{t('dashboard.admin.postingType')}</Label>
+                                        <Select value={selectedPostingType} onValueChange={(value: 'jobs' | 'tenders' | 'both') => setSelectedPostingType(value)}>
+                                          <SelectTrigger>
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="jobs">{t('dashboard.admin.jobs')}</SelectItem>
+                                            <SelectItem value="tenders">{t('dashboard.admin.tenders')}</SelectItem>
+                                            <SelectItem value="both">{t('dashboard.admin.both')}</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      <div className="flex gap-2 justify-end">
+                                        <Button
+                                          variant="outline"
+                                          onClick={() => {
+                                            setPostingDialogOpen({ open: false, entityType: null, entityId: null, action: null });
+                                            setSelectedPostingType('both');
+                                          }}
+                                        >
+                                          {t('common.cancel')}
+                                        </Button>
+                                        <Button
+                                          onClick={() => {
+                                            approveCompanyPostingMutation.mutate({
+                                              id: company.id,
+                                              can_post: true,
+                                              postingType: selectedPostingType,
+                                            });
+                                          }}
+                                          disabled={approveCompanyPostingMutation.isPending}
+                                          className="text-green-600 hover:text-green-700"
+                                        >
+                                          {t('dashboard.admin.enable')}
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                                <Dialog
+                                  open={postingDialogOpen.open && postingDialogOpen.entityType === 'company' && postingDialogOpen.entityId === company.id && postingDialogOpen.action === 'disable'}
+                                  onOpenChange={(open) => {
+                                    if (!open) {
+                                      setPostingDialogOpen({ open: false, entityType: null, entityId: null, action: null });
+                                      setSelectedPostingType('both');
+                                    }
+                                  }}
+                                >
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setPostingDialogOpen({ open: true, entityType: 'company', entityId: company.id, action: 'disable' });
+                                      setSelectedPostingType('both');
+                                    }}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <XCircle className="w-4 h-4 mr-1" />
+                                    {t('dashboard.admin.disablePosting')}
+                                  </Button>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>{t('dashboard.admin.disablePosting')}</DialogTitle>
+                                      <DialogDescription>
+                                        {t('dashboard.admin.selectPostingTypeToDisable')}
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4">
+                                      <div className="space-y-2">
+                                        <Label>{t('dashboard.admin.postingType')}</Label>
+                                        <Select value={selectedPostingType} onValueChange={(value: 'jobs' | 'tenders' | 'both') => setSelectedPostingType(value)}>
+                                          <SelectTrigger>
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="jobs">{t('dashboard.admin.jobs')}</SelectItem>
+                                            <SelectItem value="tenders">{t('dashboard.admin.tenders')}</SelectItem>
+                                            <SelectItem value="both">{t('dashboard.admin.both')}</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      <div className="flex gap-2 justify-end">
+                                        <Button
+                                          variant="outline"
+                                          onClick={() => {
+                                            setPostingDialogOpen({ open: false, entityType: null, entityId: null, action: null });
+                                            setSelectedPostingType('both');
+                                          }}
+                                        >
+                                          {t('common.cancel')}
+                                        </Button>
+                                        <Button
+                                          variant="destructive"
+                                          onClick={() => {
+                                            approveCompanyPostingMutation.mutate({
+                                              id: company.id,
+                                              can_post: false,
+                                              postingType: selectedPostingType,
+                                            });
+                                          }}
+                                          disabled={approveCompanyPostingMutation.isPending}
+                                        >
+                                          {t('dashboard.admin.disable')}
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1417,154 +1574,272 @@ const AdminDashboard = () => {
                     </Card>
                   ) : (
                     <div className="grid gap-4">
-                  {filteredOrganizations.map((org) => (
-                    <Card key={org.id}>
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <CardTitle className="text-lg">{org.name}</CardTitle>
-                            <CardDescription>{org.location}</CardDescription>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge 
-                              variant={
-                                org.status === 'approved' ? 'default' : 
-                                org.status === 'rejected' ? 'destructive' : 
-                                'outline'
-                              }
-                              className={
-                                org.status === 'approved' ? 'bg-green-500' : 
-                                org.status === 'rejected' ? 'bg-red-500' : 
-                                ''
-                              }
-                            >
-                              {org.status === 'approved' && <CheckCircle className="w-3 h-3 mr-1" />}
-                              {org.status === 'rejected' && <XCircle className="w-3 h-3 mr-1" />}
-                              {getStatusLabel(org.status)}
-                            </Badge>
-                            {org.status === 'pending' && (
-                              <>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => approveOrganizationMutation.mutate({ id: org.id, approved: true })}
-                                  className="text-green-600 hover:text-green-700"
+                      {filteredOrganizations.map((org) => (
+                        <Card key={org.id}>
+                          <CardHeader>
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <CardTitle className="text-lg">{org.name}</CardTitle>
+                                <CardDescription>{org.location}</CardDescription>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge
+                                  variant={
+                                    org.status === 'approved' ? 'default' :
+                                      org.status === 'rejected' ? 'destructive' :
+                                        'outline'
+                                  }
+                                  className={
+                                    org.status === 'approved' ? 'bg-green-500' :
+                                      org.status === 'rejected' ? 'bg-red-500' :
+                                        ''
+                                  }
                                 >
-                                  <CheckCircle className="w-4 h-4 mr-1" />
-                                  {t('dashboard.admin.approve')}
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => approveOrganizationMutation.mutate({ id: org.id, approved: false })}
-                                  className="text-red-600 hover:text-red-700"
-                                >
-                                  <XCircle className="w-4 h-4 mr-1" />
-                                  {t('dashboard.admin.reject')}
-                                </Button>
-                              </>
-                            )}
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleEdit('organization', org.id, org)}
-                                >
-                                  <Edit className="w-4 h-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>{t('dashboard.admin.editOrganization')}</DialogTitle>
-                                </DialogHeader>
-                                {editingEntity && editingEntity.type === 'organization' && (
-                                  <div className="space-y-4">
-                                    <div className="space-y-2">
-                                      <Label>{t('dashboard.admin.fieldName')}</Label>
-                                      <Input
-                                        value={editingEntity.data.name || ''}
-                                        onChange={(e) =>
-                                          setEditingEntity({
-                                            ...editingEntity,
-                                            data: { ...editingEntity.data, name: e.target.value },
-                                          })
-                                        }
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label>{t('dashboard.admin.fieldDescription')}</Label>
-                                      <Textarea
-                                        value={editingEntity.data.description || ''}
-                                        onChange={(e) =>
-                                          setEditingEntity({
-                                            ...editingEntity,
-                                            data: {
-                                              ...editingEntity.data,
-                                              description: e.target.value,
-                                            },
-                                          })
-                                        }
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label>{t('dashboard.admin.fieldWebsite')}</Label>
-                                      <Input
-                                        type="url"
-                                        value={editingEntity.data.website || ''}
-                                        onChange={(e) =>
-                                          setEditingEntity({
-                                            ...editingEntity,
-                                            data: { ...editingEntity.data, website: e.target.value },
-                                          })
-                                        }
-                                        placeholder={t('dashboard.admin.websitePlaceholder')}
-                                      />
-                                    </div>
-                                    <Button onClick={handleSaveEdit}>{t('common.saveChanges')}</Button>
-                                  </div>
+                                  {org.status === 'approved' && <CheckCircle className="w-3 h-3 mr-1" />}
+                                  {org.status === 'rejected' && <XCircle className="w-3 h-3 mr-1" />}
+                                  {getStatusLabel(org.status)}
+                                </Badge>
+                                {org.status === 'pending' && (
+                                  <>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => approveOrganizationMutation.mutate({ id: org.id, approved: true })}
+                                      className="text-green-600 hover:text-green-700"
+                                    >
+                                      <CheckCircle className="w-4 h-4 mr-1" />
+                                      {t('dashboard.admin.approve')}
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => approveOrganizationMutation.mutate({ id: org.id, approved: false })}
+                                      className="text-red-600 hover:text-red-700"
+                                    >
+                                      <XCircle className="w-4 h-4 mr-1" />
+                                      {t('dashboard.admin.reject')}
+                                    </Button>
+                                  </>
                                 )}
-                              </DialogContent>
-                            </Dialog>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex items-center justify-between pt-2 border-t">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground">
-                              {t('dashboard.admin.postingPermission')}:
-                            </span>
-                            <Badge variant={(org as any).can_post ? 'default' : 'secondary'}>
-                              {(org as any).can_post ? t('dashboard.admin.enabled') : t('dashboard.admin.disabled')}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => approveOrganizationPostingMutation.mutate({ id: org.id, can_post: true })}
-                              className="text-green-600 hover:text-green-700"
-                              disabled={approveOrganizationPostingMutation.isPending}
-                            >
-                              <FileText className="w-4 h-4 mr-1" />
-                              {t('dashboard.admin.enablePosting')}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => approveOrganizationPostingMutation.mutate({ id: org.id, can_post: false })}
-                              className="text-red-600 hover:text-red-700"
-                              disabled={approveOrganizationPostingMutation.isPending}
-                            >
-                              <XCircle className="w-4 h-4 mr-1" />
-                              {t('dashboard.admin.disablePosting')}
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleEdit('organization', org.id, org)}
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>{t('dashboard.admin.editOrganization')}</DialogTitle>
+                                    </DialogHeader>
+                                    {editingEntity && editingEntity.type === 'organization' && (
+                                      <div className="space-y-4">
+                                        <div className="space-y-2">
+                                          <Label>{t('dashboard.admin.fieldName')}</Label>
+                                          <Input
+                                            value={editingEntity.data.name || ''}
+                                            onChange={(e) =>
+                                              setEditingEntity({
+                                                ...editingEntity,
+                                                data: { ...editingEntity.data, name: e.target.value },
+                                              })
+                                            }
+                                          />
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Label>{t('dashboard.admin.fieldDescription')}</Label>
+                                          <Textarea
+                                            value={editingEntity.data.description || ''}
+                                            onChange={(e) =>
+                                              setEditingEntity({
+                                                ...editingEntity,
+                                                data: {
+                                                  ...editingEntity.data,
+                                                  description: e.target.value,
+                                                },
+                                              })
+                                            }
+                                          />
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Label>{t('dashboard.admin.fieldWebsite')}</Label>
+                                          <Input
+                                            type="url"
+                                            value={editingEntity.data.website || ''}
+                                            onChange={(e) =>
+                                              setEditingEntity({
+                                                ...editingEntity,
+                                                data: { ...editingEntity.data, website: e.target.value },
+                                              })
+                                            }
+                                            placeholder={t('dashboard.admin.websitePlaceholder')}
+                                          />
+                                        </div>
+                                        <Button onClick={handleSaveEdit}>{t('common.saveChanges')}</Button>
+                                      </div>
+                                    )}
+                                  </DialogContent>
+                                </Dialog>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-center justify-between pt-2 border-t">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-muted-foreground">
+                                  {t('dashboard.admin.postingPermission')}:
+                                </span>
+                                <Badge variant={(org as any).can_post ? 'default' : 'secondary'}>
+                                  {(org as any).can_post ? t('dashboard.admin.enabled') : t('dashboard.admin.disabled')}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Dialog
+                                  open={postingDialogOpen.open && postingDialogOpen.entityType === 'organization' && postingDialogOpen.entityId === org.id && postingDialogOpen.action === 'enable'}
+                                  onOpenChange={(open) => {
+                                    if (!open) {
+                                      setPostingDialogOpen({ open: false, entityType: null, entityId: null, action: null });
+                                      setSelectedPostingType('both');
+                                    }
+                                  }}
+                                >
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setPostingDialogOpen({ open: true, entityType: 'organization', entityId: org.id, action: 'enable' });
+                                      setSelectedPostingType('both');
+                                    }}
+                                    className="text-green-600 hover:text-green-700"
+                                  >
+                                    <FileText className="w-4 h-4 mr-1" />
+                                    {t('dashboard.admin.enablePosting')}
+                                  </Button>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>{t('dashboard.admin.enablePosting')}</DialogTitle>
+                                      <DialogDescription>
+                                        {t('dashboard.admin.selectPostingType')}
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4">
+                                      <div className="space-y-2">
+                                        <Label>{t('dashboard.admin.postingType')}</Label>
+                                        <Select value={selectedPostingType} onValueChange={(value: 'jobs' | 'tenders' | 'both') => setSelectedPostingType(value)}>
+                                          <SelectTrigger>
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="jobs">{t('dashboard.admin.jobs')}</SelectItem>
+                                            <SelectItem value="tenders">{t('dashboard.admin.tenders')}</SelectItem>
+                                            <SelectItem value="both">{t('dashboard.admin.both')}</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      <div className="flex gap-2 justify-end">
+                                        <Button
+                                          variant="outline"
+                                          onClick={() => {
+                                            setPostingDialogOpen({ open: false, entityType: null, entityId: null, action: null });
+                                            setSelectedPostingType('both');
+                                          }}
+                                        >
+                                          {t('common.cancel')}
+                                        </Button>
+                                        <Button
+                                          onClick={() => {
+                                            approveOrganizationPostingMutation.mutate({
+                                              id: org.id,
+                                              can_post: true,
+                                              postingType: selectedPostingType,
+                                            });
+                                          }}
+                                          disabled={approveOrganizationPostingMutation.isPending}
+                                          className="text-green-600 hover:text-green-700"
+                                        >
+                                          {t('dashboard.admin.enable')}
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                                <Dialog
+                                  open={postingDialogOpen.open && postingDialogOpen.entityType === 'organization' && postingDialogOpen.entityId === org.id && postingDialogOpen.action === 'disable'}
+                                  onOpenChange={(open) => {
+                                    if (!open) {
+                                      setPostingDialogOpen({ open: false, entityType: null, entityId: null, action: null });
+                                      setSelectedPostingType('both');
+                                    }
+                                  }}
+                                >
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setPostingDialogOpen({ open: true, entityType: 'organization', entityId: org.id, action: 'disable' });
+                                      setSelectedPostingType('both');
+                                    }}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <XCircle className="w-4 h-4 mr-1" />
+                                    {t('dashboard.admin.disablePosting')}
+                                  </Button>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>{t('dashboard.admin.disablePosting')}</DialogTitle>
+                                      <DialogDescription>
+                                        {t('dashboard.admin.selectPostingTypeToDisable')}
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4">
+                                      <div className="space-y-2">
+                                        <Label>{t('dashboard.admin.postingType')}</Label>
+                                        <Select value={selectedPostingType} onValueChange={(value: 'jobs' | 'tenders' | 'both') => setSelectedPostingType(value)}>
+                                          <SelectTrigger>
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="jobs">{t('dashboard.admin.jobs')}</SelectItem>
+                                            <SelectItem value="tenders">{t('dashboard.admin.tenders')}</SelectItem>
+                                            <SelectItem value="both">{t('dashboard.admin.both')}</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      <div className="flex gap-2 justify-end">
+                                        <Button
+                                          variant="outline"
+                                          onClick={() => {
+                                            setPostingDialogOpen({ open: false, entityType: null, entityId: null, action: null });
+                                            setSelectedPostingType('both');
+                                          }}
+                                        >
+                                          {t('common.cancel')}
+                                        </Button>
+                                        <Button
+                                          variant="destructive"
+                                          onClick={() => {
+                                            approveOrganizationPostingMutation.mutate({
+                                              id: org.id,
+                                              can_post: false,
+                                              postingType: selectedPostingType,
+                                            });
+                                          }}
+                                          disabled={approveOrganizationPostingMutation.isPending}
+                                        >
+                                          {t('dashboard.admin.disable')}
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -1572,564 +1847,564 @@ const AdminDashboard = () => {
 
               {activeSection === 'jobs' && (
                 <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row gap-4 mb-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder={t('dashboard.admin.search')}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-full sm:w-[180px]">
-                    <Filter className="w-4 h-4 mr-2" />
-                    <SelectValue placeholder={t('dashboard.admin.status')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t('common.all')}</SelectItem>
-                    <SelectItem value="open">{t('dashboard.admin.active')}</SelectItem>
-                    <SelectItem value="closed">{t('dashboard.admin.inactive')}</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button variant="outline" size="sm">
-                  <Download className="w-4 h-4 mr-2" />
-                  {t('dashboard.admin.export')}
-                </Button>
-              </div>
-              {jobsLoading ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                  <p className="mt-4 text-muted-foreground">{t('dashboard.admin.loading')}</p>
-                </div>
-              ) : filteredJobs.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <Briefcase className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">{t('dashboard.admin.noData')}</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid gap-4">
-                  {filteredJobs.map((job) => (
-                    <Card key={job.id}>
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <CardTitle className="text-lg">{job.title}</CardTitle>
-                            <CardDescription>
-                              {job.location} • {job.category} • {job.employment_type || job.type || t('common.notAvailable')}
-                            </CardDescription>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant={job.status === 'open' ? 'default' : 'secondary'}>
-                              {job.status}
-                            </Badge>
-                            {/* Disable/Enable button */}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => toggleJobStatusMutation.mutate({ id: job.id, currentStatus: job.status })}
-                              className={
-                                job.status === 'open' || job.status === 'active'
-                                  ? 'text-orange-600 hover:text-orange-700'
-                                  : 'text-green-600 hover:text-green-700'
-                              }
-                              disabled={toggleJobStatusMutation.isPending}
-                            >
-                              <Power className="w-4 h-4 mr-1" />
-                              {job.status === 'open' || job.status === 'active'
-                                ? t('dashboard.admin.disable') || 'Disable'
-                                : t('dashboard.admin.enable') || 'Enable'}
-                            </Button>
-                            {/* Approval buttons - allow admin to approve/reject job postings */}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => approveJobMutation.mutate({ id: job.id, can_post: true })}
-                              className="text-green-600 hover:text-green-700"
-                              disabled={approveJobMutation.isPending}
-                            >
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              {t('dashboard.admin.approve')}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => approveJobMutation.mutate({ id: job.id, can_post: false })}
-                              className="text-red-600 hover:text-red-700"
-                              disabled={approveJobMutation.isPending}
-                            >
-                              <XCircle className="w-4 h-4 mr-1" />
-                              {t('dashboard.admin.reject')}
-                            </Button>
-                            <Dialog>
-                              <DialogTrigger asChild>
+                  <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        placeholder={t('dashboard.admin.search')}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    <Select value={filterStatus} onValueChange={setFilterStatus}>
+                      <SelectTrigger className="w-full sm:w-[180px]">
+                        <Filter className="w-4 h-4 mr-2" />
+                        <SelectValue placeholder={t('dashboard.admin.status')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('common.all')}</SelectItem>
+                        <SelectItem value="open">{t('dashboard.admin.active')}</SelectItem>
+                        <SelectItem value="closed">{t('dashboard.admin.inactive')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button variant="outline" size="sm">
+                      <Download className="w-4 h-4 mr-2" />
+                      {t('dashboard.admin.export')}
+                    </Button>
+                  </div>
+                  {jobsLoading ? (
+                    <div className="text-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                      <p className="mt-4 text-muted-foreground">{t('dashboard.admin.loading')}</p>
+                    </div>
+                  ) : filteredJobs.length === 0 ? (
+                    <Card>
+                      <CardContent className="py-12 text-center">
+                        <Briefcase className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                        <p className="text-muted-foreground">{t('dashboard.admin.noData')}</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="grid gap-4">
+                      {filteredJobs.map((job) => (
+                        <Card key={job.id}>
+                          <CardHeader>
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <CardTitle className="text-lg">{job.title}</CardTitle>
+                                <CardDescription>
+                                  {job.location} • {job.category} • {job.employment_type || job.type || t('common.notAvailable')}
+                                </CardDescription>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge variant={job.status === 'open' ? 'default' : 'secondary'}>
+                                  {job.status}
+                                </Badge>
+                                {/* Disable/Enable button */}
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleEdit('job', job.id, job)}
+                                  onClick={() => toggleJobStatusMutation.mutate({ id: job.id, currentStatus: job.status })}
+                                  className={
+                                    job.status === 'open' || job.status === 'active'
+                                      ? 'text-orange-600 hover:text-orange-700'
+                                      : 'text-green-600 hover:text-green-700'
+                                  }
+                                  disabled={toggleJobStatusMutation.isPending}
                                 >
-                                  <Edit className="w-4 h-4" />
+                                  <Power className="w-4 h-4 mr-1" />
+                                  {job.status === 'open' || job.status === 'active'
+                                    ? t('dashboard.admin.disable')
+                                    : t('dashboard.admin.enable')}
                                 </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                                <DialogHeader>
-                                  <DialogTitle>{t('dashboard.admin.editJob')}</DialogTitle>
-                                </DialogHeader>
-                                {editingEntity && editingEntity.type === 'job' && (
-                                  <div className="space-y-4">
-                                    <div className="space-y-2">
-                                      <Label>{t('dashboard.admin.fieldTitle')}</Label>
-                                      <Input
-                                        value={editingEntity.data.title}
-                                        onChange={(e) =>
-                                          setEditingEntity({
-                                            ...editingEntity,
-                                            data: { ...editingEntity.data, title: e.target.value },
-                                          })
-                                        }
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label>{t('dashboard.admin.fieldDescription')}</Label>
-                                      <Textarea
-                                        value={editingEntity.data.description}
-                                        onChange={(e) =>
-                                          setEditingEntity({
-                                            ...editingEntity,
-                                            data: {
-                                              ...editingEntity.data,
-                                              description: e.target.value,
-                                            },
-                                          })
-                                        }
-                                        rows={6}
-                                      />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                      <div className="space-y-2">
-                                        <Label>{t('dashboard.admin.fieldLocation')}</Label>
-                                        <Input
-                                          value={editingEntity.data.location}
-                                          onChange={(e) =>
-                                            setEditingEntity({
-                                              ...editingEntity,
-                                              data: {
-                                                ...editingEntity.data,
-                                                location: e.target.value,
-                                              },
-                                            })
-                                          }
-                                        />
+                                {/* Approval buttons - allow admin to approve/reject job postings */}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => approveJobMutation.mutate({ id: job.id, can_post: true })}
+                                  className="text-green-600 hover:text-green-700"
+                                  disabled={approveJobMutation.isPending}
+                                >
+                                  <CheckCircle className="w-4 h-4 mr-1" />
+                                  {t('dashboard.admin.approve')}
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => approveJobMutation.mutate({ id: job.id, can_post: false })}
+                                  className="text-red-600 hover:text-red-700"
+                                  disabled={approveJobMutation.isPending}
+                                >
+                                  <XCircle className="w-4 h-4 mr-1" />
+                                  {t('dashboard.admin.reject')}
+                                </Button>
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleEdit('job', job.id, job)}
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                                    <DialogHeader>
+                                      <DialogTitle>{t('dashboard.admin.editJob')}</DialogTitle>
+                                    </DialogHeader>
+                                    {editingEntity && editingEntity.type === 'job' && (
+                                      <div className="space-y-4">
+                                        <div className="space-y-2">
+                                          <Label>{t('dashboard.admin.fieldTitle')}</Label>
+                                          <Input
+                                            value={editingEntity.data.title}
+                                            onChange={(e) =>
+                                              setEditingEntity({
+                                                ...editingEntity,
+                                                data: { ...editingEntity.data, title: e.target.value },
+                                              })
+                                            }
+                                          />
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Label>{t('dashboard.admin.fieldDescription')}</Label>
+                                          <Textarea
+                                            value={editingEntity.data.description}
+                                            onChange={(e) =>
+                                              setEditingEntity({
+                                                ...editingEntity,
+                                                data: {
+                                                  ...editingEntity.data,
+                                                  description: e.target.value,
+                                                },
+                                              })
+                                            }
+                                            rows={6}
+                                          />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                          <div className="space-y-2">
+                                            <Label>{t('dashboard.admin.fieldLocation')}</Label>
+                                            <Input
+                                              value={editingEntity.data.location}
+                                              onChange={(e) =>
+                                                setEditingEntity({
+                                                  ...editingEntity,
+                                                  data: {
+                                                    ...editingEntity.data,
+                                                    location: e.target.value,
+                                                  },
+                                                })
+                                              }
+                                            />
+                                          </div>
+                                          <div className="space-y-2">
+                                            <Label>{t('dashboard.admin.fieldSalaryMin')}</Label>
+                                            <Input
+                                              type="number"
+                                              value={editingEntity.data.salary_min || ''}
+                                              onChange={(e) =>
+                                                setEditingEntity({
+                                                  ...editingEntity,
+                                                  data: {
+                                                    ...editingEntity.data,
+                                                    salary_min: e.target.value ? parseInt(e.target.value) : undefined,
+                                                  },
+                                                })
+                                              }
+                                            />
+                                          </div>
+                                          <div className="space-y-2">
+                                            <Label>{t('dashboard.admin.fieldSalaryMax')}</Label>
+                                            <Input
+                                              type="number"
+                                              value={editingEntity.data.salary_max || ''}
+                                              onChange={(e) =>
+                                                setEditingEntity({
+                                                  ...editingEntity,
+                                                  data: {
+                                                    ...editingEntity.data,
+                                                    salary_max: e.target.value ? parseInt(e.target.value) : undefined,
+                                                  },
+                                                })
+                                              }
+                                            />
+                                          </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                          <div className="space-y-2">
+                                            <Label>{t('dashboard.admin.fieldType')}</Label>
+                                            <Select
+                                              value={editingEntity.data.type}
+                                              onValueChange={(value) =>
+                                                setEditingEntity({
+                                                  ...editingEntity,
+                                                  data: { ...editingEntity.data, type: value },
+                                                })
+                                              }
+                                            >
+                                              <SelectTrigger>
+                                                <SelectValue />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="full-time">{t('dashboard.admin.jobTypeFullTime')}</SelectItem>
+                                                <SelectItem value="part-time">{t('dashboard.admin.jobTypePartTime')}</SelectItem>
+                                                <SelectItem value="contract">{t('dashboard.admin.jobTypeContract')}</SelectItem>
+                                                <SelectItem value="remote">{t('dashboard.admin.jobTypeRemote')}</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
+                                          <div className="space-y-2">
+                                            <Label>{t('dashboard.admin.fieldStatus')}</Label>
+                                            <Select
+                                              value={editingEntity.data.status}
+                                              onValueChange={(value) =>
+                                                setEditingEntity({
+                                                  ...editingEntity,
+                                                  data: { ...editingEntity.data, status: value },
+                                                })
+                                              }
+                                            >
+                                              <SelectTrigger>
+                                                <SelectValue />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="open">{t('dashboard.admin.open')}</SelectItem>
+                                                <SelectItem value="closed">{t('dashboard.admin.closed')}</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Label>{t('dashboard.admin.fieldRequirements')}</Label>
+                                          <Textarea
+                                            value={editingEntity.data.requirements || ''}
+                                            onChange={(e) =>
+                                              setEditingEntity({
+                                                ...editingEntity,
+                                                data: {
+                                                  ...editingEntity.data,
+                                                  requirements: e.target.value,
+                                                },
+                                              })
+                                            }
+                                            rows={3}
+                                          />
+                                        </div>
+                                        <div className="flex gap-2">
+                                          <Button onClick={handleSaveEdit}>{t('common.saveChanges')}</Button>
+                                          <Button
+                                            variant="destructive"
+                                            onClick={() => {
+                                              deleteJobMutation.mutate(job.id);
+                                              setEditingEntity(null);
+                                            }}
+                                          >
+                                            <Trash2 className="w-4 h-4 mr-2" />
+                                            {t('common.delete')}
+                                          </Button>
+                                        </div>
                                       </div>
-                                      <div className="space-y-2">
-                                        <Label>{t('dashboard.admin.fieldSalaryMin')}</Label>
-                                        <Input
-                                          type="number"
-                                          value={editingEntity.data.salary_min || ''}
-                                          onChange={(e) =>
-                                            setEditingEntity({
-                                              ...editingEntity,
-                                              data: {
-                                                ...editingEntity.data,
-                                                salary_min: e.target.value ? parseInt(e.target.value) : undefined,
-                                              },
-                                            })
-                                          }
-                                        />
-                                      </div>
-                                      <div className="space-y-2">
-                                        <Label>{t('dashboard.admin.fieldSalaryMax')}</Label>
-                                        <Input
-                                          type="number"
-                                          value={editingEntity.data.salary_max || ''}
-                                          onChange={(e) =>
-                                            setEditingEntity({
-                                              ...editingEntity,
-                                              data: {
-                                                ...editingEntity.data,
-                                                salary_max: e.target.value ? parseInt(e.target.value) : undefined,
-                                              },
-                                            })
-                                          }
-                                        />
-                                      </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                      <div className="space-y-2">
-                                        <Label>{t('dashboard.admin.fieldType')}</Label>
-                                        <Select
-                                          value={editingEntity.data.type}
-                                          onValueChange={(value) =>
-                                            setEditingEntity({
-                                              ...editingEntity,
-                                              data: { ...editingEntity.data, type: value },
-                                            })
-                                          }
-                                        >
-                                          <SelectTrigger>
-                                            <SelectValue />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="full-time">{t('dashboard.admin.jobTypeFullTime')}</SelectItem>
-                                            <SelectItem value="part-time">{t('dashboard.admin.jobTypePartTime')}</SelectItem>
-                                            <SelectItem value="contract">{t('dashboard.admin.jobTypeContract')}</SelectItem>
-                                            <SelectItem value="remote">{t('dashboard.admin.jobTypeRemote')}</SelectItem>
-                                          </SelectContent>
-                                        </Select>
-                                      </div>
-                                      <div className="space-y-2">
-                                        <Label>{t('dashboard.admin.fieldStatus')}</Label>
-                                        <Select
-                                          value={editingEntity.data.status}
-                                          onValueChange={(value) =>
-                                            setEditingEntity({
-                                              ...editingEntity,
-                                              data: { ...editingEntity.data, status: value },
-                                            })
-                                          }
-                                        >
-                                          <SelectTrigger>
-                                            <SelectValue />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="open">{t('dashboard.admin.open')}</SelectItem>
-                                            <SelectItem value="closed">{t('dashboard.admin.closed')}</SelectItem>
-                                          </SelectContent>
-                                        </Select>
-                                      </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label>{t('dashboard.admin.fieldRequirements')}</Label>
-                                      <Textarea
-                                        value={editingEntity.data.requirements || ''}
-                                        onChange={(e) =>
-                                          setEditingEntity({
-                                            ...editingEntity,
-                                            data: {
-                                              ...editingEntity.data,
-                                              requirements: e.target.value,
-                                            },
-                                          })
-                                        }
-                                        rows={3}
-                                      />
-                                    </div>
-                                    <div className="flex gap-2">
-                                      <Button onClick={handleSaveEdit}>{t('common.saveChanges')}</Button>
-                                      <Button
-                                        variant="destructive"
-                                        onClick={() => {
-                                          deleteJobMutation.mutate(job.id);
-                                          setEditingEntity(null);
-                                        }}
-                                      >
-                                        <Trash2 className="w-4 h-4 mr-2" />
-                                        {t('common.delete')}
-                                      </Button>
-                                    </div>
-                                  </div>
-                                )}
-                              </DialogContent>
-                            </Dialog>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => deleteJobMutation.mutate(job.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardHeader>
-                    </Card>
-                  ))}
-                  </div>
-                )}
+                                    )}
+                                  </DialogContent>
+                                </Dialog>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => deleteJobMutation.mutate(job.id)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardHeader>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
               {activeSection === 'tenders' && (
                 <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row gap-4 mb-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder={t('dashboard.admin.search')}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-full sm:w-[180px]">
-                    <Filter className="w-4 h-4 mr-2" />
-                    <SelectValue placeholder={t('dashboard.admin.status')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t('common.all')}</SelectItem>
-                    <SelectItem value="open">{t('dashboard.admin.active')}</SelectItem>
-                    <SelectItem value="closing-soon">{t('dashboard.admin.closingSoon')}</SelectItem>
-                    <SelectItem value="closed">{t('dashboard.admin.inactive')}</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button variant="outline" size="sm">
-                  <Download className="w-4 h-4 mr-2" />
-                  {t('dashboard.admin.export')}
-                </Button>
-              </div>
-              {tendersLoading ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                  <p className="mt-4 text-muted-foreground">{t('dashboard.admin.loading')}</p>
-                </div>
-              ) : filteredTenders.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">{t('dashboard.admin.noData')}</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid gap-4">
-                  {filteredTenders.map((tender) => (
-                    <Card key={tender.id}>
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <CardTitle className="text-lg">{tender.title}</CardTitle>
-                            <CardDescription>
-                              {tender.location} • {tender.category} • {t('dashboard.organization.deadline')}:{' '}
-                              {new Date(tender.deadline).toLocaleDateString()}
-                            </CardDescription>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline">{tender.status}</Badge>
-                            {/* Disable/Enable button */}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => toggleTenderStatusMutation.mutate({ id: tender.id, currentStatus: tender.status })}
-                              className={
-                                tender.status === 'open' || tender.status === 'active' || tender.status === 'closing_soon'
-                                  ? 'text-orange-600 hover:text-orange-700'
-                                  : 'text-green-600 hover:text-green-700'
-                              }
-                              disabled={toggleTenderStatusMutation.isPending}
-                            >
-                              <Power className="w-4 h-4 mr-1" />
-                              {tender.status === 'open' || tender.status === 'active' || tender.status === 'closing_soon'
-                                ? t('dashboard.admin.disable') || 'Disable'
-                                : t('dashboard.admin.enable') || 'Enable'}
-                            </Button>
-                            {/* Approval buttons - allow admin to approve/reject tender postings */}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => approveTenderMutation.mutate({ id: tender.id, can_post: true })}
-                              className="text-green-600 hover:text-green-700"
-                              disabled={approveTenderMutation.isPending}
-                            >
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              {t('dashboard.admin.approve')}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => approveTenderMutation.mutate({ id: tender.id, can_post: false })}
-                              className="text-red-600 hover:text-red-700"
-                              disabled={approveTenderMutation.isPending}
-                            >
-                              <XCircle className="w-4 h-4 mr-1" />
-                              {t('dashboard.admin.reject')}
-                            </Button>
-                            <Dialog>
-                              <DialogTrigger asChild>
+                  <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        placeholder={t('dashboard.admin.search')}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    <Select value={filterStatus} onValueChange={setFilterStatus}>
+                      <SelectTrigger className="w-full sm:w-[180px]">
+                        <Filter className="w-4 h-4 mr-2" />
+                        <SelectValue placeholder={t('dashboard.admin.status')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('common.all')}</SelectItem>
+                        <SelectItem value="open">{t('dashboard.admin.active')}</SelectItem>
+                        <SelectItem value="closing-soon">{t('dashboard.admin.closingSoon')}</SelectItem>
+                        <SelectItem value="closed">{t('dashboard.admin.inactive')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button variant="outline" size="sm">
+                      <Download className="w-4 h-4 mr-2" />
+                      {t('dashboard.admin.export')}
+                    </Button>
+                  </div>
+                  {tendersLoading ? (
+                    <div className="text-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                      <p className="mt-4 text-muted-foreground">{t('dashboard.admin.loading')}</p>
+                    </div>
+                  ) : filteredTenders.length === 0 ? (
+                    <Card>
+                      <CardContent className="py-12 text-center">
+                        <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                        <p className="text-muted-foreground">{t('dashboard.admin.noData')}</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="grid gap-4">
+                      {filteredTenders.map((tender) => (
+                        <Card key={tender.id}>
+                          <CardHeader>
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <CardTitle className="text-lg">{tender.title}</CardTitle>
+                                <CardDescription>
+                                  {tender.location} • {tender.category} • {t('dashboard.organization.deadline')}:{' '}
+                                  {new Date(tender.deadline).toLocaleDateString()}
+                                </CardDescription>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline">{tender.status}</Badge>
+                                {/* Disable/Enable button */}
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleEdit('tender', tender.id, tender)}
+                                  onClick={() => toggleTenderStatusMutation.mutate({ id: tender.id, currentStatus: tender.status })}
+                                  className={
+                                    tender.status === 'open' || tender.status === 'active' || tender.status === 'closing_soon'
+                                      ? 'text-orange-600 hover:text-orange-700'
+                                      : 'text-green-600 hover:text-green-700'
+                                  }
+                                  disabled={toggleTenderStatusMutation.isPending}
                                 >
-                                  <Edit className="w-4 h-4" />
+                                  <Power className="w-4 h-4 mr-1" />
+                                  {tender.status === 'open' || tender.status === 'active' || tender.status === 'closing_soon'
+                                    ? t('dashboard.admin.disable')
+                                    : t('dashboard.admin.enable')}
                                 </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                                <DialogHeader>
-                                  <DialogTitle>{t('dashboard.admin.editTender')}</DialogTitle>
-                                </DialogHeader>
-                                {editingEntity && editingEntity.type === 'tender' && (
-                                  <div className="space-y-4">
-                                    <div className="space-y-2">
-                                      <Label>{t('dashboard.admin.fieldTitle')}</Label>
-                                      <Input
-                                        value={editingEntity.data.title}
-                                        onChange={(e) =>
-                                          setEditingEntity({
-                                            ...editingEntity,
-                                            data: { ...editingEntity.data, title: e.target.value },
-                                          })
-                                        }
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label>{t('dashboard.admin.fieldDescription')}</Label>
-                                      <Textarea
-                                        value={editingEntity.data.description}
-                                        onChange={(e) =>
-                                          setEditingEntity({
-                                            ...editingEntity,
-                                            data: {
-                                              ...editingEntity.data,
-                                              description: e.target.value,
-                                            },
-                                          })
-                                        }
-                                        rows={6}
-                                      />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                      <div className="space-y-2">
-                                        <Label>{t('dashboard.admin.fieldLocation')}</Label>
-                                        <Input
-                                          value={editingEntity.data.location}
-                                          onChange={(e) =>
-                                            setEditingEntity({
-                                              ...editingEntity,
-                                              data: {
-                                                ...editingEntity.data,
-                                                location: e.target.value,
-                                              },
-                                            })
-                                          }
-                                        />
+                                {/* Approval buttons - allow admin to approve/reject tender postings */}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => approveTenderMutation.mutate({ id: tender.id, can_post: true })}
+                                  className="text-green-600 hover:text-green-700"
+                                  disabled={approveTenderMutation.isPending}
+                                >
+                                  <CheckCircle className="w-4 h-4 mr-1" />
+                                  {t('dashboard.admin.approve')}
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => approveTenderMutation.mutate({ id: tender.id, can_post: false })}
+                                  className="text-red-600 hover:text-red-700"
+                                  disabled={approveTenderMutation.isPending}
+                                >
+                                  <XCircle className="w-4 h-4 mr-1" />
+                                  {t('dashboard.admin.reject')}
+                                </Button>
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleEdit('tender', tender.id, tender)}
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                                    <DialogHeader>
+                                      <DialogTitle>{t('dashboard.admin.editTender')}</DialogTitle>
+                                    </DialogHeader>
+                                    {editingEntity && editingEntity.type === 'tender' && (
+                                      <div className="space-y-4">
+                                        <div className="space-y-2">
+                                          <Label>{t('dashboard.admin.fieldTitle')}</Label>
+                                          <Input
+                                            value={editingEntity.data.title}
+                                            onChange={(e) =>
+                                              setEditingEntity({
+                                                ...editingEntity,
+                                                data: { ...editingEntity.data, title: e.target.value },
+                                              })
+                                            }
+                                          />
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Label>{t('dashboard.admin.fieldDescription')}</Label>
+                                          <Textarea
+                                            value={editingEntity.data.description}
+                                            onChange={(e) =>
+                                              setEditingEntity({
+                                                ...editingEntity,
+                                                data: {
+                                                  ...editingEntity.data,
+                                                  description: e.target.value,
+                                                },
+                                              })
+                                            }
+                                            rows={6}
+                                          />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                          <div className="space-y-2">
+                                            <Label>{t('dashboard.admin.fieldLocation')}</Label>
+                                            <Input
+                                              value={editingEntity.data.location}
+                                              onChange={(e) =>
+                                                setEditingEntity({
+                                                  ...editingEntity,
+                                                  data: {
+                                                    ...editingEntity.data,
+                                                    location: e.target.value,
+                                                  },
+                                                })
+                                              }
+                                            />
+                                          </div>
+                                          <div className="space-y-2">
+                                            <Label>{t('dashboard.admin.fieldDeadline')}</Label>
+                                            <Input
+                                              type="date"
+                                              value={editingEntity.data.deadline.split('T')[0]}
+                                              onChange={(e) =>
+                                                setEditingEntity({
+                                                  ...editingEntity,
+                                                  data: {
+                                                    ...editingEntity.data,
+                                                    deadline: e.target.value,
+                                                  },
+                                                })
+                                              }
+                                            />
+                                          </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                          <div className="space-y-2">
+                                            <Label>{t('dashboard.admin.fieldStatus')}</Label>
+                                            <Select
+                                              value={editingEntity.data.status}
+                                              onValueChange={(value) =>
+                                                setEditingEntity({
+                                                  ...editingEntity,
+                                                  data: { ...editingEntity.data, status: value },
+                                                })
+                                              }
+                                            >
+                                              <SelectTrigger>
+                                                <SelectValue />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="open">{t('dashboard.admin.open')}</SelectItem>
+                                                <SelectItem value="closing-soon">{t('dashboard.admin.closingSoon')}</SelectItem>
+                                                <SelectItem value="closed">{t('dashboard.admin.closed')}</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Label>{t('dashboard.admin.fieldRequirements')}</Label>
+                                          <Textarea
+                                            value={editingEntity.data.requirements || ''}
+                                            onChange={(e) =>
+                                              setEditingEntity({
+                                                ...editingEntity,
+                                                data: {
+                                                  ...editingEntity.data,
+                                                  requirements: e.target.value,
+                                                },
+                                              })
+                                            }
+                                            rows={3}
+                                          />
+                                        </div>
+                                        <div className="flex gap-2">
+                                          <Button onClick={handleSaveEdit}>{t('common.saveChanges')}</Button>
+                                          <Button
+                                            variant="destructive"
+                                            onClick={() => {
+                                              deleteTenderMutation.mutate(tender.id);
+                                              setEditingEntity(null);
+                                            }}
+                                          >
+                                            <Trash2 className="w-4 h-4 mr-2" />
+                                            {t('common.delete')}
+                                          </Button>
+                                        </div>
                                       </div>
-                                      <div className="space-y-2">
-                                        <Label>{t('dashboard.admin.fieldDeadline')}</Label>
-                                        <Input
-                                          type="date"
-                                          value={editingEntity.data.deadline.split('T')[0]}
-                                          onChange={(e) =>
-                                            setEditingEntity({
-                                              ...editingEntity,
-                                              data: {
-                                                ...editingEntity.data,
-                                                deadline: e.target.value,
-                                              },
-                                            })
-                                          }
-                                        />
-                                      </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                      <div className="space-y-2">
-                                        <Label>{t('dashboard.admin.fieldStatus')}</Label>
-                                        <Select
-                                          value={editingEntity.data.status}
-                                          onValueChange={(value) =>
-                                            setEditingEntity({
-                                              ...editingEntity,
-                                              data: { ...editingEntity.data, status: value },
-                                            })
-                                          }
-                                        >
-                                          <SelectTrigger>
-                                            <SelectValue />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="open">{t('dashboard.admin.open')}</SelectItem>
-                                            <SelectItem value="closing-soon">{t('dashboard.admin.closingSoon')}</SelectItem>
-                                            <SelectItem value="closed">{t('dashboard.admin.closed')}</SelectItem>
-                                          </SelectContent>
-                                        </Select>
-                                      </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label>{t('dashboard.admin.fieldRequirements')}</Label>
-                                      <Textarea
-                                        value={editingEntity.data.requirements || ''}
-                                        onChange={(e) =>
-                                          setEditingEntity({
-                                            ...editingEntity,
-                                            data: {
-                                              ...editingEntity.data,
-                                              requirements: e.target.value,
-                                            },
-                                          })
-                                        }
-                                        rows={3}
-                                      />
-                                    </div>
-                                    <div className="flex gap-2">
-                                      <Button onClick={handleSaveEdit}>{t('common.saveChanges')}</Button>
-                                      <Button
-                                        variant="destructive"
-                                        onClick={() => {
-                                          deleteTenderMutation.mutate(tender.id);
-                                          setEditingEntity(null);
-                                        }}
-                                      >
-                                        <Trash2 className="w-4 h-4 mr-2" />
-                                        {t('common.delete')}
-                                      </Button>
-                                    </div>
-                                  </div>
-                                )}
-                              </DialogContent>
-                            </Dialog>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => deleteTenderMutation.mutate(tender.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardHeader>
-                    </Card>
-                  ))}
-                </div>
-              )}
+                                    )}
+                                  </DialogContent>
+                                </Dialog>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => deleteTenderMutation.mutate(tender.id)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardHeader>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
               {activeSection === 'applications' && (
                 <div className="space-y-4">
-              {appsLoading ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                </div>
-              ) : (
-                <div className="grid gap-4">
-                  {applications.map((application) => (
-                    <Card key={application.id}>
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <CardTitle className="text-lg">
-                              {t('dashboard.admin.applicationNumber', { id: application.id.slice(0, 8) })}
-                            </CardTitle>
-                            <CardDescription>
-                              {t('dashboard.admin.statusLabel')} {application.status} • {t('dashboard.admin.createdLabel')}{' '}
-                              {new Date(application.created_at || application.createdAt).toLocaleDateString()}
-                            </CardDescription>
-                          </div>
-                          <Badge variant="outline">{application.status}</Badge>
-                        </div>
-                      </CardHeader>
-                      {(application.cover_letter || application.coverLetter) && (
-                        <CardContent>
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {application.cover_letter || application.coverLetter}
-                          </p>
-                        </CardContent>
-                      )}
-                    </Card>
-                  ))}
-                </div>
-              )}
+                  {appsLoading ? (
+                    <div className="text-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                    </div>
+                  ) : (
+                    <div className="grid gap-4">
+                      {applications.map((application) => (
+                        <Card key={application.id}>
+                          <CardHeader>
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <CardTitle className="text-lg">
+                                  {t('dashboard.admin.applicationNumber', { id: application.id.slice(0, 8) })}
+                                </CardTitle>
+                                <CardDescription>
+                                  {t('dashboard.admin.statusLabel')} {application.status} • {t('dashboard.admin.createdLabel')}{' '}
+                                  {new Date(application.created_at || application.createdAt).toLocaleDateString()}
+                                </CardDescription>
+                              </div>
+                              <Badge variant="outline">{application.status}</Badge>
+                            </div>
+                          </CardHeader>
+                          {(application.cover_letter || application.coverLetter) && (
+                            <CardContent>
+                              <p className="text-sm text-muted-foreground line-clamp-2">
+                                {application.cover_letter || application.coverLetter}
+                              </p>
+                            </CardContent>
+                          )}
+                        </Card>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
