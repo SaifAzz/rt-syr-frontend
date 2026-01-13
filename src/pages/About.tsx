@@ -161,59 +161,35 @@ const About = () => {
         {/* Mission */}
         <section className="py-16 lg:py-24">
           <div className="container mx-auto px-4 lg:px-8">
-            <div className="grid lg:grid-cols-2 gap-12 items-center">
-              <div>
-                <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-6">
-                  {t("about.mission.title")}
-                </h2>
-                <p className="text-muted-foreground mb-6 leading-relaxed">
-                  {t("about.mission.description")}
-                </p>
-                <div className="mb-6">
-                  <h3 className="font-semibold text-foreground mb-4">
-                    {t("about.mission.aimTitle")}
-                  </h3>
-                  <ul className="space-y-3 text-muted-foreground">
-                    <li className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                      <span>{t("about.mission.aim1")}</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                      <span>{t("about.mission.aim2")}</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                      <span>{t("about.mission.aim3")}</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                      <span>{t("about.mission.aim4")}</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-              <div className="relative">
-                <div className="bg-card rounded-2xl p-8 border border-border">
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="text-center p-6 rounded-xl bg-primary/5">
-                      <div className="text-3xl font-bold text-primary mb-1">0</div>
-                      <div className="text-sm text-muted-foreground">Active Users</div>
-                    </div>
-                    <div className="text-center p-6 rounded-xl bg-accent/5">
-                      <div className="text-3xl font-bold text-accent mb-1">0</div>
-                      <div className="text-sm text-muted-foreground">Opportunities</div>
-                    </div>
-                    <div className="text-center p-6 rounded-xl bg-success/5">
-                      <div className="text-3xl font-bold text-success mb-1">0</div>
-                      <div className="text-sm text-muted-foreground">Companies</div>
-                    </div>
-                    <div className="text-center p-6 rounded-xl bg-info/5">
-                      <div className="text-3xl font-bold text-info mb-1">0</div>
-                      <div className="text-sm text-muted-foreground">Organizations</div>
-                    </div>
-                  </div>
-                </div>
+            <div className="max-w-4xl mx-auto">
+              <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-6 text-center">
+                {t("about.mission.title")}
+              </h2>
+              <p className="text-muted-foreground mb-6 leading-relaxed text-center">
+                {t("about.mission.description")}
+              </p>
+              <div className="mb-6">
+                <h3 className="font-semibold text-foreground mb-4 text-center">
+                  {t("about.mission.aimTitle")}
+                </h3>
+                <ul className="space-y-3 text-muted-foreground max-w-2xl mx-auto">
+                  <li className="flex items-start gap-3">
+                    <CheckCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                    <span>{t("about.mission.aim1")}</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                    <span>{t("about.mission.aim2")}</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                    <span>{t("about.mission.aim3")}</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                    <span>{t("about.mission.aim4")}</span>
+                  </li>
+                </ul>
               </div>
             </div>
           </div>
