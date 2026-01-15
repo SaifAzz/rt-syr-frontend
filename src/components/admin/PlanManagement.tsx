@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,6 +34,7 @@ import {
   X,
   CheckCircle2,
   XCircle,
+  Eye,
 } from 'lucide-react';
 import {
   adminPricingAPI,
@@ -51,8 +52,11 @@ export function PlanManagement() {
   const [isCreatePlanOpen, setIsCreatePlanOpen] = useState(false);
   const [isEditPlanOpen, setIsEditPlanOpen] = useState(false);
   const [isUserPlanOpen, setIsUserPlanOpen] = useState(false);
+  const [isViewPlanOpen, setIsViewPlanOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<AdminPricingPlan | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null);
+  const [viewingUser, setViewingUser] = useState<UserRecord | null>(null);
+  const [viewingPlan, setViewingPlan] = useState<AdminPricingPlan | null>(null);
   const [activeTab, setActiveTab] = useState<'plans' | 'users'>('plans');
 
   // Form states
@@ -196,12 +200,25 @@ export function PlanManagement() {
     mutationFn: async ({ userId, data }: { userId: string; data: UserPlanUpdate }) => {
       return await adminUserPlanAPI.updateUserPlan(userId, data);
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
       toast.success('User plan updated successfully!');
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      setIsUserPlanOpen(false);
-      setSelectedUser(null);
-      resetUserForms();
+      // Update selectedUser with the response data and refresh the form
+      if (response.user) {
+        const updatedUser = response.user as UserRecord;
+        setSelectedUser(updatedUser);
+        // Refresh form with updated data
+        setUserPlanForm({
+          plan_id: updatedUser.plan_id || '',
+          plan_status: (updatedUser.plan_status as 'free' | 'paid' | 'expired') || 'free',
+          plan_expires_at: formatDateForInput(updatedUser.plan_expires_at) || '',
+        });
+        setUserPostLimitsForm({
+          max_post_count: updatedUser.max_post_count ?? null,
+          post_count_start_date: formatDateForInput(updatedUser.post_count_start_date),
+          post_count_end_date: formatDateForInput(updatedUser.post_count_end_date),
+        });
+      }
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to update user plan');
@@ -213,12 +230,25 @@ export function PlanManagement() {
     mutationFn: async ({ userId, data }: { userId: string; data: UserPlanManagement }) => {
       return await adminUserPlanAPI.managePostLimits(userId, data);
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
       toast.success('User post limits updated successfully!');
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      setIsUserPlanOpen(false);
-      setSelectedUser(null);
-      resetUserForms();
+      // Update selectedUser with the response data and refresh the form
+      if (response.user) {
+        const updatedUser = response.user as UserRecord;
+        setSelectedUser(updatedUser);
+        // Refresh form with updated data
+        setUserPlanForm({
+          plan_id: updatedUser.plan_id || '',
+          plan_status: (updatedUser.plan_status as 'free' | 'paid' | 'expired') || 'free',
+          plan_expires_at: formatDateForInput(updatedUser.plan_expires_at) || '',
+        });
+        setUserPostLimitsForm({
+          max_post_count: updatedUser.max_post_count ?? null,
+          post_count_start_date: formatDateForInput(updatedUser.post_count_start_date),
+          post_count_end_date: formatDateForInput(updatedUser.post_count_end_date),
+        });
+      }
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to update user post limits');
@@ -276,19 +306,103 @@ export function PlanManagement() {
     setIsEditPlanOpen(true);
   };
 
-  const handleManageUserPlan = (user: UserRecord) => {
+  // Helper function to convert ISO date string to datetime-local format
+  const formatDateForInput = (dateString: string | null | undefined): string | null => {
+    if (!dateString) return null;
+    try {
+      const date = new Date(dateString);
+      // Format: YYYY-MM-DDTHH:mm
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    } catch {
+      return null;
+    }
+  };
+
+  // Populate form when dialog opens and selectedUser is available
+  useEffect(() => {
+    if (isUserPlanOpen && selectedUser?.id) {
+      // Fetch fresh user data when dialog opens
+      const populateForm = async () => {
+        try {
+          const fullUserData = await usersAPI.getById(selectedUser.id);
+          if (fullUserData) {
+            setUserPlanForm({
+              plan_id: fullUserData.plan_id || '',
+              plan_status: (fullUserData.plan_status as 'free' | 'paid' | 'expired') || 'free',
+              plan_expires_at: formatDateForInput(fullUserData.plan_expires_at) || '',
+            });
+            setUserPostLimitsForm({
+              max_post_count: fullUserData.max_post_count ?? null,
+              post_count_start_date: formatDateForInput(fullUserData.post_count_start_date),
+              post_count_end_date: formatDateForInput(fullUserData.post_count_end_date),
+            });
+            // Update selectedUser with fresh data
+            setSelectedUser(fullUserData);
+          } else {
+            // Fallback to selectedUser data
+            setUserPlanForm({
+              plan_id: selectedUser.plan_id || '',
+              plan_status: (selectedUser.plan_status as 'free' | 'paid' | 'expired') || 'free',
+              plan_expires_at: formatDateForInput(selectedUser.plan_expires_at) || '',
+            });
+            setUserPostLimitsForm({
+              max_post_count: selectedUser.max_post_count ?? null,
+              post_count_start_date: formatDateForInput(selectedUser.post_count_start_date),
+              post_count_end_date: formatDateForInput(selectedUser.post_count_end_date),
+            });
+          }
+        } catch (error) {
+          // If fetching fails, use selectedUser data
+          console.warn('Failed to fetch user data, using existing data:', error);
+          setUserPlanForm({
+            plan_id: selectedUser.plan_id || '',
+            plan_status: (selectedUser.plan_status as 'free' | 'paid' | 'expired') || 'free',
+            plan_expires_at: formatDateForInput(selectedUser.plan_expires_at) || '',
+          });
+          setUserPostLimitsForm({
+            max_post_count: selectedUser.max_post_count ?? null,
+            post_count_start_date: formatDateForInput(selectedUser.post_count_start_date),
+            post_count_end_date: formatDateForInput(selectedUser.post_count_end_date),
+          });
+        }
+      };
+      populateForm();
+    }
+  }, [isUserPlanOpen, selectedUser?.id]); // Run whenever dialog opens or user changes
+
+  const handleManageUserPlan = async (user: UserRecord) => {
+    // Set selected user first - the useEffect will handle populating the form
     setSelectedUser(user);
-    setUserPlanForm({
-      plan_id: user.plan_id || '',
-      plan_status: (user.plan_status as 'free' | 'paid' | 'expired') || 'free',
-      plan_expires_at: '',
-    });
-    setUserPostLimitsForm({
-      max_post_count: null,
-      post_count_start_date: null,
-      post_count_end_date: null,
-    });
+    
+    // Open the dialog - useEffect will populate the form when dialog opens
     setIsUserPlanOpen(true);
+  };
+
+  const handleViewUserPlan = async (user: UserRecord) => {
+    try {
+      // Fetch user plan data (includes both user and plan details)
+      const response = await adminUserPlanAPI.getUserPlan(user.id);
+      if (response) {
+        setViewingUser(response.user as UserRecord);
+        setViewingPlan(response.plan);
+      } else {
+        // Fallback to using the user from the list
+        setViewingUser(user);
+        setViewingPlan(null);
+      }
+    } catch (error) {
+      console.warn('Failed to fetch user plan data, using list data:', error);
+      // Fallback to using the user from the list
+      setViewingUser(user);
+      setViewingPlan(null);
+    }
+    
+    setIsViewPlanOpen(true);
   };
 
   const handleAddFeature = () => {
@@ -663,14 +777,24 @@ export function PlanManagement() {
                           )}
                         </div>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleManageUserPlan(user)}
-                      >
-                        <Edit className="w-4 h-4 mr-2" />
-                        Manage Plan
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewUserPlan(user)}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          View Plan
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleManageUserPlan(user)}
+                        >
+                          <Edit className="w-4 h-4 mr-2" />
+                          Manage Plan
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -850,7 +974,17 @@ export function PlanManagement() {
       </Dialog>
 
       {/* Manage User Plan Dialog */}
-      <Dialog open={isUserPlanOpen} onOpenChange={setIsUserPlanOpen}>
+      <Dialog 
+        open={isUserPlanOpen} 
+        onOpenChange={(open) => {
+          setIsUserPlanOpen(open);
+          // Only reset when closing, not when opening
+          if (!open) {
+            // Don't reset selectedUser or forms here - keep them for next time dialog opens
+            // The useEffect will repopulate when dialog opens again
+          }
+        }}
+      >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Manage User Plan</DialogTitle>
@@ -992,6 +1126,198 @@ export function PlanManagement() {
               </div>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View User Plan Dialog */}
+      <Dialog 
+        open={isViewPlanOpen} 
+        onOpenChange={(open) => {
+          setIsViewPlanOpen(open);
+          if (!open) {
+            // Reset when closing
+            setViewingUser(null);
+            setViewingPlan(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>View User Plan</DialogTitle>
+            <DialogDescription>
+              View plan details and post limits for {viewingUser?.full_name}
+            </DialogDescription>
+          </DialogHeader>
+          {viewingUser && (
+            <div className="space-y-6">
+              {/* Plan Details Section */}
+              {viewingPlan && (
+                <div className="space-y-4 border-b pb-4">
+                  <h3 className="font-semibold">Plan Details</h3>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Plan Name</Label>
+                        <p className="text-sm font-medium text-foreground">{viewingPlan.name}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Plan ID</Label>
+                        <p className="text-sm font-medium text-foreground">{viewingPlan.plan_id}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Description</Label>
+                      <p className="text-sm font-medium text-foreground">{viewingPlan.description || 'No description'}</p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>Price</Label>
+                        <p className="text-sm font-medium text-foreground">
+                          {viewingPlan.currency} {viewingPlan.price}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Period</Label>
+                        <p className="text-sm font-medium text-foreground capitalize">{viewingPlan.period}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Plan Type</Label>
+                        <p className="text-sm font-medium text-foreground capitalize">{viewingPlan.plan_type}</p>
+                      </div>
+                    </div>
+                    {viewingPlan.features && viewingPlan.features.length > 0 && (
+                      <div className="space-y-2">
+                        <Label>Features</Label>
+                        <ul className="list-disc list-inside space-y-1">
+                          {viewingPlan.features.map((feature, index) => (
+                            <li key={index} className="text-sm text-foreground">{feature}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {(viewingPlan.discount_percentage || viewingPlan.discount_amount) && (
+                      <div className="grid grid-cols-2 gap-4">
+                        {viewingPlan.discount_percentage && (
+                          <div className="space-y-2">
+                            <Label>Discount Percentage</Label>
+                            <p className="text-sm font-medium text-foreground">{viewingPlan.discount_percentage}%</p>
+                          </div>
+                        )}
+                        {viewingPlan.discount_amount && (
+                          <div className="space-y-2">
+                            <Label>Discount Amount</Label>
+                            <p className="text-sm font-medium text-foreground">
+                              {viewingPlan.currency} {viewingPlan.discount_amount}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {viewingPlan.is_discount_active && (
+                      <div className="space-y-2">
+                        <Badge variant="default" className="bg-green-500">
+                          Discount Active
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* User Plan Section */}
+              <div className="space-y-4">
+                <h3 className="font-semibold">User Plan</h3>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Plan ID</Label>
+                    <p className="text-sm font-medium text-foreground">
+                      {viewingUser.plan_id || 'None'}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Plan Status</Label>
+                    <div>
+                      <Badge
+                        variant={
+                          viewingUser.plan_status === 'paid'
+                            ? 'default'
+                            : viewingUser.plan_status === 'expired'
+                            ? 'destructive'
+                            : 'secondary'
+                        }
+                      >
+                        {viewingUser.plan_status || 'Free'}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Plan Expires At</Label>
+                    <p className="text-sm font-medium text-foreground">
+                      {viewingUser.plan_expires_at
+                        ? new Date(viewingUser.plan_expires_at).toLocaleString()
+                        : 'Not set'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Post Limits Section */}
+              <div className="space-y-4 border-t pt-4">
+                <h3 className="font-semibold">Post Limits</h3>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Max Post Count</Label>
+                    <p className="text-sm font-medium text-foreground">
+                      {viewingUser.max_post_count !== null && viewingUser.max_post_count !== undefined
+                        ? viewingUser.max_post_count
+                        : 'Unlimited (uses default free limit of 2)'}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Post Count Start Date</Label>
+                      <p className="text-sm font-medium text-foreground">
+                        {viewingUser.post_count_start_date
+                          ? new Date(viewingUser.post_count_start_date).toLocaleString()
+                          : 'Not set'}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Post Count End Date</Label>
+                      <p className="text-sm font-medium text-foreground">
+                        {viewingUser.post_count_end_date
+                          ? new Date(viewingUser.post_count_end_date).toLocaleString()
+                          : 'Not set'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* User Info Section */}
+              <div className="space-y-4 border-t pt-4">
+                <h3 className="font-semibold">User Information</h3>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <p className="text-sm font-medium text-foreground">{viewingUser.email}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Full Name</Label>
+                  <p className="text-sm font-medium text-foreground">{viewingUser.full_name}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Role</Label>
+                  <p className="text-sm font-medium text-foreground capitalize">{viewingUser.role}</p>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => setIsViewPlanOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

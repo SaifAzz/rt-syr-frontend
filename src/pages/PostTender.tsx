@@ -121,9 +121,6 @@ const PostTender = () => {
   // قطاع المناقصة options
   const tenderSectors = [
     { value: 'WASH', labelAr: 'المياه والاصحاح', labelEn: 'Water and Sanitation' },
-    { value: 'ELECTRICITY', labelAr: 'الكهرباء', labelEn: 'Electricity' },
-    { value: 'FOOD', labelAr: 'الغذاء', labelEn: 'Food' },
-    { value: 'CONSTRUCTION', labelAr: 'الإنشاءات', labelEn: 'Construction' },
     { value: 'FSL', labelAr: 'الأمن الغذائي وسبل العيش', labelEn: 'Food Security and Livelihoods' },
     { value: 'EDUCATION', labelAr: 'التعليم', labelEn: 'Education' },
     { value: 'HEALTH', labelAr: 'الصحة', labelEn: 'Health' },

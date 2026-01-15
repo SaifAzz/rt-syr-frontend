@@ -20,8 +20,12 @@ export interface UserRecord extends DatabaseRecord {
   bio?: string;
   plan_status?: string;
   plan_id?: string;
+  plan_expires_at?: string;
   company_id?: string;
   organization_id?: string;
+  max_post_count?: number | null;
+  post_count_start_date?: string | null;
+  post_count_end_date?: string | null;
 }
 
 export interface CompanyRecord extends DatabaseRecord {
@@ -1390,11 +1394,20 @@ export const adminPricingAPI = {
 
 // Admin User Plan Management API
 export const adminUserPlanAPI = {
+  // Get user plan details (includes user and plan data)
+  getUserPlan: async (userId: string) => {
+    return apiRequest<{
+      user: UserPlanResponse;
+      plan: AdminPricingPlan | null;
+    }>(`/admin/users/${userId}/plan`);
+  },
+
   // Update user plan
   updateUserPlan: async (userId: string, data: UserPlanUpdate) => {
     return apiRequest<{
       message: string;
       user: UserPlanResponse;
+      plan: AdminPricingPlan | null;
     }>(`/admin/users/${userId}/plan`, {
       method: 'PATCH',
       body: JSON.stringify(data),
@@ -1406,6 +1419,7 @@ export const adminUserPlanAPI = {
     return apiRequest<{
       message: string;
       user: UserPlanResponse;
+      plan: AdminPricingPlan | null;
     }>(`/admin/users/${userId}/plan-management`, {
       method: 'PATCH',
       body: JSON.stringify(data),

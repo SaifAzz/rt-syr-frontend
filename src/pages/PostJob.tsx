@@ -150,19 +150,13 @@ const PostJob = () => {
     // قطاع العمل options / Work Sector options
     const workSectors = [
         { value: 'WASH', labelAr: 'المياه والاصحاح', labelEn: 'Water and Sanitation' },
-        { value: 'NUTRITION', labelAr: 'التغذية', labelEn: 'Nutrition' },
-        { value: 'EARLY_RECOVERY', labelAr: 'التعافي المبكر', labelEn: 'Early Recovery' },
-        { value: 'TECHNOLOGY', labelAr: 'التكنولوجيا', labelEn: 'Technology' },
-        { value: 'MONITORING_EVALUATION', labelAr: 'المراقبة والتقييم', labelEn: 'Monitoring and Evaluation' },
-        { value: 'PROGRAM_MANAGER', labelAr: 'مدير برنامج', labelEn: 'Program Manager' },
-        { value: 'ASSISTANT_PROGRAM_MANAGER', labelAr: 'مساعد مدير برنامج', labelEn: 'Assistant Program Manager' },
-        { value: 'HUMAN_RESOURCES', labelAr: 'موارد بشرية', labelEn: 'Human Resources' },
-        { value: 'EXECUTIVE_DIRECTOR', labelAr: 'مدير تنفيذي', labelEn: 'Executive Director' },
-        { value: 'GENERAL_MANAGER', labelAr: 'مدير عام', labelEn: 'General Manager' },
-        { value: 'ADMINISTRATIVE', labelAr: 'الإداريين', labelEn: 'Administrative' },
-        { value: 'PUBLIC_RELATIONS_MANAGER', labelAr: 'مدير علاقات عامة', labelEn: 'Public Relations Manager' },
-        { value: 'FINANCE', labelAr: 'المالية', labelEn: 'Finance' },
-        { value: 'LOGISTICS', labelAr: 'اللوجستيات', labelEn: 'Logistics' },
+        { value: 'FSL', labelAr: 'الأمن الغذائي وسبل العيش', labelEn: 'Food Security and Livelihoods' },
+        { value: 'EDUCATION', labelAr: 'التعليم', labelEn: 'Education' },
+        { value: 'HEALTH', labelAr: 'الصحة', labelEn: 'Health' },
+        { value: 'PROTECTION', labelAr: 'الحماية', labelEn: 'Protection' },
+        { value: 'SHELTER', labelAr: 'المأوى', labelEn: 'Shelter' },
+        { value: 'NFI', labelAr: 'المواد غير الغذائية', labelEn: 'Non-Food Items' },
+        { value: 'CCCM', labelAr: 'إدارة المخيمات', labelEn: 'Camp Coordination and Management' },
         { value: 'OTHER', labelAr: 'أخرى', labelEn: 'Other' },
     ];
 
