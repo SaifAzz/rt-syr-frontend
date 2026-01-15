@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,6 +37,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 const JobDetails = () => {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
+  const { language } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -141,6 +143,26 @@ const JobDetails = () => {
     ? Math.ceil((new Date(job.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
     : null;
 
+  // Helper function to get localized field value
+  const getLocalizedField = (enValue?: string, arValue?: string) => {
+    if (language === 'ar' && arValue) return arValue;
+    return enValue || '';
+  };
+
+  // Get localized values
+  const jobTitle = getLocalizedField(job.title, job.title_ar);
+  const jobDescription = getLocalizedField(job.description, job.description_ar);
+  const jobLocation = getLocalizedField(job.location, job.location_ar);
+  const jobType = getLocalizedField(job.type, job.type_ar);
+  const jobEmploymentType = getLocalizedField(job.employment_type, job.employment_type_ar);
+  const jobDuration = getLocalizedField(job.duration, job.duration_ar);
+  const jobCategory = getLocalizedField(job.category, job.category_ar);
+  const jobExperienceLevel = getLocalizedField(job.experience_level, job.experience_level_ar);
+  const jobAboutCompany = getLocalizedField(job.about_company, job.about_company_ar);
+  const jobRequirements = getLocalizedField(job.requirements, job.requirements_ar);
+  const jobProjectSummary = getLocalizedField(job.project_summary, job.project_summary_ar);
+  const companyName = company ? getLocalizedField(company.name, company.name_ar) : '';
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20">
       <Navbar />
@@ -186,10 +208,10 @@ const JobDetails = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-4 mb-3">
                         <div className="flex-1 min-w-0">
-                          <CardTitle className="text-3xl font-bold mb-3 leading-tight">{job.title}</CardTitle>
+                          <CardTitle className="text-3xl font-bold mb-3 leading-tight">{jobTitle}</CardTitle>
                           <div className="flex items-center gap-2 text-muted-foreground mb-4">
                             <Building2 className="w-4 h-4 flex-shrink-0" />
-                            <span className="font-medium">{company?.name || job.about_company || 'Company'}</span>
+                            <span className="font-medium">{companyName || jobAboutCompany || 'Company'}</span>
                             {company?.status === 'approved' && (
                               <Badge variant="outline" className="ml-2 border-success/30 text-success bg-success/5">
                                 <Shield className="w-3 h-3 mr-1" />
@@ -199,13 +221,13 @@ const JobDetails = () => {
                           </div>
                         </div>
                         <div className="flex flex-col gap-2 flex-shrink-0">
-                          {job.employment_type && (
+                          {jobEmploymentType && (
                             <Badge 
                               variant="outline" 
                               className={`${typeColors[job.employment_type as keyof typeof typeColors] || ''} border font-semibold px-3 py-1`}
                             >
                               <Briefcase className="w-3 h-3 mr-1" />
-                              {job.employment_type}
+                              {jobEmploymentType}
                             </Badge>
                           )}
                           <Badge 
@@ -222,12 +244,12 @@ const JobDetails = () => {
 
                       {/* Enhanced Info Bar */}
                       <div className="flex flex-wrap items-center gap-4 p-4 bg-muted/30 rounded-xl border border-border/50">
-                        {job.location && (
+                        {jobLocation && (
                           <div className="flex items-center gap-2 text-sm font-medium">
                             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                               <MapPin className="w-4 h-4 text-primary" />
                             </div>
-                            <span className="text-foreground">{job.location}</span>
+                            <span className="text-foreground">{jobLocation}</span>
                           </div>
                         )}
                         {(job.salary_min || job.salary_max) && (
@@ -244,12 +266,12 @@ const JobDetails = () => {
                             </span>
                           </div>
                         )}
-                        {job.category && (
+                        {jobCategory && (
                           <div className="flex items-center gap-2 text-sm font-medium">
                             <div className="w-8 h-8 rounded-lg bg-info/10 flex items-center justify-center">
                               <Briefcase className="w-4 h-4 text-info" />
                             </div>
-                            <span className="text-foreground">{job.category}</span>
+                            <span className="text-foreground">{jobCategory}</span>
                           </div>
                         )}
                         {job.deadline && (
@@ -264,7 +286,7 @@ const JobDetails = () => {
                               </span>
                               {daysUntilDeadline !== null && daysUntilDeadline > 0 && (
                                 <span className="ml-2 text-xs text-muted-foreground">
-                                  ({daysUntilDeadline} {daysUntilDeadline === 1 ? 'day' : 'days'} left)
+                                  ({daysUntilDeadline} {daysUntilDeadline === 1 ? t('jobs.day') : t('jobs.days')} {t('jobs.left')})
                                 </span>
                               )}
                             </div>
@@ -288,10 +310,10 @@ const JobDetails = () => {
                 </CardHeader>
                 <CardContent className="pt-6 space-y-6">
                   <div className="prose prose-sm max-w-none">
-                    <p className="text-foreground leading-relaxed whitespace-pre-wrap">{job.description}</p>
+                    <p className="text-foreground leading-relaxed whitespace-pre-wrap">{jobDescription}</p>
                   </div>
 
-                  {job.about_company && (
+                  {jobAboutCompany && (
                     <>
                       <Separator className="my-6" />
                       <div className="space-y-3">
@@ -300,13 +322,13 @@ const JobDetails = () => {
                           <h3 className="text-lg font-bold text-foreground">{t('jobs.aboutCompany')}</h3>
                         </div>
                         <div className="pl-7">
-                          <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{job.about_company}</p>
+                          <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{jobAboutCompany}</p>
                         </div>
                       </div>
                     </>
                   )}
 
-                  {job.requirements && (
+                  {jobRequirements && (
                     <>
                       <Separator className="my-6" />
                       <div className="space-y-3">
@@ -315,13 +337,13 @@ const JobDetails = () => {
                           <h3 className="text-lg font-bold text-foreground">{t('jobs.requirements')}</h3>
                         </div>
                         <div className="pl-7">
-                          <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{job.requirements}</p>
+                          <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{jobRequirements}</p>
                         </div>
                       </div>
                     </>
                   )}
 
-                  {job.project_summary && (
+                  {jobProjectSummary && (
                     <>
                       <Separator className="my-6" />
                       <div className="space-y-3">
@@ -330,13 +352,13 @@ const JobDetails = () => {
                           <h3 className="text-lg font-bold text-foreground">{t('jobs.projectSummary')}</h3>
                         </div>
                         <div className="pl-7">
-                          <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{job.project_summary}</p>
+                          <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{jobProjectSummary}</p>
                         </div>
                       </div>
                     </>
                   )}
 
-                  {job.duration && (
+                  {jobDuration && (
                     <>
                       <Separator className="my-6" />
                       <div className="space-y-3">
@@ -345,7 +367,7 @@ const JobDetails = () => {
                           <h3 className="text-lg font-bold text-foreground">{t('jobs.duration')}</h3>
                         </div>
                         <div className="pl-7">
-                          <p className="text-muted-foreground font-medium">{job.duration}</p>
+                          <p className="text-muted-foreground font-medium">{jobDuration}</p>
                         </div>
                       </div>
                     </>
@@ -427,7 +449,7 @@ const JobDetails = () => {
                           </p>
                           {daysUntilDeadline !== null && daysUntilDeadline > 0 && (
                             <p className={`text-xs mt-1 ${isClosingSoon ? 'font-bold text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`}>
-                              {daysUntilDeadline} {daysUntilDeadline === 1 ? 'day' : 'days'} remaining
+                              {daysUntilDeadline} {daysUntilDeadline === 1 ? t('jobs.day') : t('jobs.days')} {t('jobs.remaining')}
                             </p>
                           )}
                         </div>
@@ -448,7 +470,7 @@ const JobDetails = () => {
                       </div>
                     )}
 
-                    {job.experience_level && (
+                    {jobExperienceLevel && (
                       <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                         <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center flex-shrink-0">
                           <Users className="w-5 h-5 text-success" />
@@ -457,12 +479,12 @@ const JobDetails = () => {
                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
                             {t('jobs.experienceLevel')}
                           </p>
-                          <p className="text-sm font-medium text-foreground">{job.experience_level}</p>
+                          <p className="text-sm font-medium text-foreground">{jobExperienceLevel}</p>
                         </div>
                       </div>
                     )}
 
-                    {job.type && (
+                    {jobType && (
                       <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                         <div className="w-10 h-10 rounded-lg bg-info/10 flex items-center justify-center flex-shrink-0">
                           <Clock className="w-5 h-5 text-info" />
@@ -471,7 +493,7 @@ const JobDetails = () => {
                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
                             {t('jobs.jobType')}
                           </p>
-                          <p className="text-sm font-medium text-foreground">{job.type}</p>
+                          <p className="text-sm font-medium text-foreground">{jobType}</p>
                         </div>
                       </div>
                     )}

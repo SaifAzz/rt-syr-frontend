@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,6 +36,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 const TenderDetails = () => {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
+  const { language } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -140,6 +142,24 @@ const TenderDetails = () => {
     ? Math.ceil((new Date(tender.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
     : null;
 
+  // Helper function to get localized field value
+  const getLocalizedField = (enValue?: string, arValue?: string) => {
+    if (language === 'ar' && arValue) return arValue;
+    return enValue || '';
+  };
+
+  // Get localized values
+  const tenderTitle = getLocalizedField(tender.title, tender.title_ar);
+  const tenderDescription = getLocalizedField(tender.description, tender.description_ar);
+  const tenderLocation = getLocalizedField(tender.location, tender.location_ar);
+  const tenderType = getLocalizedField(tender.type, tender.type_ar);
+  const tenderDuration = getLocalizedField(tender.duration, tender.duration_ar);
+  const tenderCategory = getLocalizedField(tender.category, tender.category_ar);
+  const tenderAboutOrganization = getLocalizedField(tender.about_organization, tender.about_organization_ar);
+  const tenderRequirements = getLocalizedField(tender.requirements, tender.requirements_ar);
+  const tenderProjectSummary = getLocalizedField(tender.project_summary, tender.project_summary_ar);
+  const publisherName = publisher ? getLocalizedField(publisher.name, publisher.name_ar) : '';
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20">
       <Navbar />
@@ -185,10 +205,10 @@ const TenderDetails = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-4 mb-3">
                         <div className="flex-1 min-w-0">
-                          <CardTitle className="text-3xl font-bold mb-3 leading-tight">{tender.title}</CardTitle>
+                          <CardTitle className="text-3xl font-bold mb-3 leading-tight">{tenderTitle}</CardTitle>
                           <div className="flex items-center gap-2 text-muted-foreground mb-4">
                             <Building2 className="w-4 h-4 flex-shrink-0" />
-                            <span className="font-medium">{publisher?.name || tender.about_organization || 'Organization'}</span>
+                            <span className="font-medium">{publisherName || tenderAboutOrganization || 'Organization'}</span>
                             {publisher && (publisher as any).status === 'approved' && (
                               <Badge variant="outline" className="ml-2 border-success/30 text-success bg-success/5">
                                 <Shield className="w-3 h-3 mr-1" />
@@ -218,12 +238,12 @@ const TenderDetails = () => {
 
                       {/* Enhanced Info Bar */}
                       <div className="flex flex-wrap items-center gap-4 p-4 bg-muted/30 rounded-xl border border-border/50">
-                        {tender.location && (
+                        {tenderLocation && (
                           <div className="flex items-center gap-2 text-sm font-medium">
                             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                               <MapPin className="w-4 h-4 text-primary" />
                             </div>
-                            <span className="text-foreground">{tender.location}</span>
+                            <span className="text-foreground">{tenderLocation}</span>
                           </div>
                         )}
                         {tender.deadline && (
@@ -238,18 +258,18 @@ const TenderDetails = () => {
                               </span>
                               {daysUntilDeadline !== null && daysUntilDeadline > 0 && (
                                 <span className="ml-2 text-xs text-muted-foreground">
-                                  ({daysUntilDeadline} {daysUntilDeadline === 1 ? 'day' : 'days'} left)
+                                  ({daysUntilDeadline} {daysUntilDeadline === 1 ? t('tenders.day') : t('tenders.days')} {t('tenders.left')})
                                 </span>
                               )}
                             </div>
                           </div>
                         )}
-                        {tender.category && (
+                        {tenderCategory && (
                           <div className="flex items-center gap-2 text-sm font-medium">
                             <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
                               <FileText className="w-4 h-4 text-accent" />
                             </div>
-                            <span className="text-foreground">{tender.category}</span>
+                            <span className="text-foreground">{tenderCategory}</span>
                           </div>
                         )}
                       </div>
@@ -270,10 +290,10 @@ const TenderDetails = () => {
                 </CardHeader>
                 <CardContent className="pt-6 space-y-6">
                   <div className="prose prose-sm max-w-none">
-                    <p className="text-foreground leading-relaxed whitespace-pre-wrap">{tender.description}</p>
+                    <p className="text-foreground leading-relaxed whitespace-pre-wrap">{tenderDescription}</p>
                   </div>
 
-                  {tender.about_organization && (
+                  {tenderAboutOrganization && (
                     <>
                       <Separator className="my-6" />
                       <div className="space-y-3">
@@ -282,13 +302,13 @@ const TenderDetails = () => {
                           <h3 className="text-lg font-bold text-foreground">{t('tenders.aboutOrganization') || 'About Organization'}</h3>
                         </div>
                         <div className="pl-7">
-                          <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{tender.about_organization}</p>
+                          <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{tenderAboutOrganization}</p>
                         </div>
                       </div>
                     </>
                   )}
 
-                  {tender.project_summary && (
+                  {tenderProjectSummary && (
                     <>
                       <Separator className="my-6" />
                       <div className="space-y-3">
@@ -297,13 +317,13 @@ const TenderDetails = () => {
                           <h3 className="text-lg font-bold text-foreground">{t('tenders.projectSummary') || 'Project Summary'}</h3>
                         </div>
                         <div className="pl-7">
-                          <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{tender.project_summary}</p>
+                          <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{tenderProjectSummary}</p>
                         </div>
                       </div>
                     </>
                   )}
 
-                  {tender.requirements && (
+                  {tenderRequirements && (
                     <>
                       <Separator className="my-6" />
                       <div className="space-y-3">
@@ -312,7 +332,7 @@ const TenderDetails = () => {
                           <h3 className="text-lg font-bold text-foreground">{t('tenders.requirements') || 'Requirements'}</h3>
                         </div>
                         <div className="pl-7">
-                          <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{tender.requirements}</p>
+                          <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{tenderRequirements}</p>
                         </div>
                       </div>
                     </>
@@ -435,7 +455,7 @@ const TenderDetails = () => {
                           </p>
                           {daysUntilDeadline !== null && daysUntilDeadline > 0 && (
                             <p className={`text-xs mt-1 ${isClosingSoon ? 'font-bold text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`}>
-                              {daysUntilDeadline} {daysUntilDeadline === 1 ? 'day' : 'days'} remaining
+                              {daysUntilDeadline} {daysUntilDeadline === 1 ? t('tenders.day') : t('tenders.days')} {t('tenders.remaining')}
                             </p>
                           )}
                         </div>
@@ -456,7 +476,7 @@ const TenderDetails = () => {
                       </div>
                     )}
 
-                    {tender.category && (
+                    {tenderCategory && (
                       <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                         <div className="w-10 h-10 rounded-lg bg-info/10 flex items-center justify-center flex-shrink-0">
                           <FileText className="w-5 h-5 text-info" />
@@ -465,7 +485,7 @@ const TenderDetails = () => {
                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
                             {t('tenders.category') || 'Category'}
                           </p>
-                          <p className="text-sm font-medium text-foreground">{tender.category}</p>
+                          <p className="text-sm font-medium text-foreground">{tenderCategory}</p>
                         </div>
                       </div>
                     )}
