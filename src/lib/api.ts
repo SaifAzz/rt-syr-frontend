@@ -1034,13 +1034,23 @@ export const adminAPI = {
   },
 
   // Approve or reject a job or tender posting
-  approvePosting: async (entityType: 'jobs' | 'tenders', entityId: string, can_post: boolean) => {
+  // Also used to enable/disable posting permissions for organizations and companies
+  approvePosting: async (
+    entityType: 'jobs' | 'tenders' | 'company' | 'organization',
+    entityId: string,
+    can_post: boolean
+  ) => {
     return apiRequest<{
       message: string;
-      posting: {
+      posting?: {
         id: string;
         type: string;
         status: string;
+      };
+      entity?: {
+        id: string;
+        type: string;
+        can_post: boolean;
       };
     }>('/admin/approve-posting', {
       method: 'POST',
