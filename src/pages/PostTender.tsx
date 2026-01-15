@@ -115,6 +115,8 @@ const PostTender = () => {
     // Admin fields
     selected_company_id: '',
     selected_organization_id: '',
+    other_company_name: '',
+    other_organization_name: '',
     publisher_type: 'organization' as 'company' | 'organization',
   });
 
@@ -222,9 +224,19 @@ const PostTender = () => {
       // Add company_id or organization_id for admin
       if (isAdmin) {
         if (data.publisher_type === 'company' && data.selected_company_id) {
-          tenderData.company_id = data.selected_company_id;
+          if (data.selected_company_id === 'other' && data.other_company_name) {
+            // For "other", we'll pass the company name - backend should handle creating or using it
+            tenderData.company_name = data.other_company_name;
+          } else {
+            tenderData.company_id = data.selected_company_id;
+          }
         } else if (data.publisher_type === 'organization' && data.selected_organization_id) {
-          tenderData.organization_id = data.selected_organization_id;
+          if (data.selected_organization_id === 'other' && data.other_organization_name) {
+            // For "other", we'll pass the organization name - backend should handle creating or using it
+            tenderData.organization_name = data.other_organization_name;
+          } else {
+            tenderData.organization_id = data.selected_organization_id;
+          }
         }
       } else {
         // For regular users, use their company/organization
@@ -280,9 +292,24 @@ const PostTender = () => {
 
     // Admin validation
     if (isAdmin) {
-      if (!formData.selected_company_id && !formData.selected_organization_id) {
-        toast.error(isArabic ? 'الرجاء اختيار شركة أو منظمة' : 'Please select a company or organization');
-        return;
+      if (formData.publisher_type === 'company') {
+        if (!formData.selected_company_id) {
+          toast.error(isArabic ? 'الرجاء اختيار شركة أو إدخال اسم شركة أخرى' : 'Please select a company or enter another company name');
+          return;
+        }
+        if (formData.selected_company_id === 'other' && !formData.other_company_name.trim()) {
+          toast.error(isArabic ? 'الرجاء إدخال اسم الشركة' : 'Please enter the company name');
+          return;
+        }
+      } else if (formData.publisher_type === 'organization') {
+        if (!formData.selected_organization_id) {
+          toast.error(isArabic ? 'الرجاء اختيار منظمة أو إدخال اسم منظمة أخرى' : 'Please select an organization or enter another organization name');
+          return;
+        }
+        if (formData.selected_organization_id === 'other' && !formData.other_organization_name.trim()) {
+          toast.error(isArabic ? 'الرجاء إدخال اسم المنظمة' : 'Please enter the organization name');
+          return;
+        }
       }
     }
 
@@ -396,7 +423,13 @@ const PostTender = () => {
                         <Label htmlFor="selected_company_id">{isArabic ? 'اختر الشركة *' : 'Select Company *'}</Label>
                         <Select
                           value={formData.selected_company_id}
-                          onValueChange={(value) => setFormData(prev => ({ ...prev, selected_company_id: value }))}
+                          onValueChange={(value) => {
+                            if (value === 'other') {
+                              setFormData(prev => ({ ...prev, selected_company_id: 'other', other_company_name: '' }));
+                            } else {
+                              setFormData(prev => ({ ...prev, selected_company_id: value, other_company_name: '' }));
+                            }
+                          }}
                         >
                           <SelectTrigger id="selected_company_id">
                             <SelectValue placeholder={isArabic ? 'اختر الشركة' : 'Select company'} />
@@ -407,8 +440,16 @@ const PostTender = () => {
                                 {company.name}
                               </SelectItem>
                             ))}
+                            <SelectItem value="other">{isArabic ? 'أخرى (اكتب اسم الشركة)' : 'Other (Enter company name)'}</SelectItem>
                           </SelectContent>
                         </Select>
+                        {formData.selected_company_id === 'other' && (
+                          <Input
+                            placeholder={isArabic ? 'أدخل اسم الشركة' : 'Enter company name'}
+                            value={formData.other_company_name}
+                            onChange={(e) => setFormData(prev => ({ ...prev, other_company_name: e.target.value }))}
+                          />
+                        )}
                       </div>
                     )}
 
@@ -417,7 +458,13 @@ const PostTender = () => {
                         <Label htmlFor="selected_organization_id">{isArabic ? 'اختر المنظمة *' : 'Select Organization *'}</Label>
                         <Select
                           value={formData.selected_organization_id}
-                          onValueChange={(value) => setFormData(prev => ({ ...prev, selected_organization_id: value }))}
+                          onValueChange={(value) => {
+                            if (value === 'other') {
+                              setFormData(prev => ({ ...prev, selected_organization_id: 'other', other_organization_name: '' }));
+                            } else {
+                              setFormData(prev => ({ ...prev, selected_organization_id: value, other_organization_name: '' }));
+                            }
+                          }}
                         >
                           <SelectTrigger id="selected_organization_id">
                             <SelectValue placeholder={isArabic ? 'اختر المنظمة' : 'Select organization'} />
@@ -428,8 +475,16 @@ const PostTender = () => {
                                 {org.name}
                               </SelectItem>
                             ))}
+                            <SelectItem value="other">{isArabic ? 'أخرى (اكتب اسم المنظمة)' : 'Other (Enter organization name)'}</SelectItem>
                           </SelectContent>
                         </Select>
+                        {formData.selected_organization_id === 'other' && (
+                          <Input
+                            placeholder={isArabic ? 'أدخل اسم المنظمة' : 'Enter organization name'}
+                            value={formData.other_organization_name}
+                            onChange={(e) => setFormData(prev => ({ ...prev, other_organization_name: e.target.value }))}
+                          />
+                        )}
                       </div>
                     )}
                   </>

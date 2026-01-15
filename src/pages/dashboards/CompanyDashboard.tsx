@@ -61,38 +61,56 @@ const CompanyDashboard = () => {
   const [editingJob, setEditingJob] = useState<{
     id: string;
     title: string;
+    title_ar?: string;
     description: string;
+    description_ar?: string;
     status: string;
     type?: string;
+    type_ar?: string;
     sector?: string;
     about_company?: string;
+    about_company_ar?: string;
     project_summary?: string;
+    project_summary_ar?: string;
     requirements?: string;
+    requirements_ar?: string;
     deadline?: string;
     tender_documents_link?: string;
     file_upload_url?: string;
     salary_min?: number;
     salary_max?: number;
     employment_type?: string;
+    employment_type_ar?: string;
     experience_level?: string;
+    experience_level_ar?: string;
     location?: string;
+    location_ar?: string;
     category?: string;
+    category_ar?: string;
   } | null>(null);
   const [editingTender, setEditingTender] = useState<{
     id: string;
     title: string;
+    title_ar?: string;
     description: string;
+    description_ar?: string;
     status: string;
     type?: string;
+    type_ar?: string;
     sector?: string;
     about_organization?: string;
+    about_organization_ar?: string;
     project_summary?: string;
+    project_summary_ar?: string;
     requirements?: string;
+    requirements_ar?: string;
     deadline?: string;
     tender_documents_link?: string;
     file_upload_url?: string;
     location?: string;
+    location_ar?: string;
     category?: string;
+    category_ar?: string;
   } | null>(null);
 
   // Profile state
@@ -347,22 +365,32 @@ const CompanyDashboard = () => {
     setEditingJob({
       id: job.id,
       title: job.title || job.name || '',
+      title_ar: job.title_ar || '',
       description: job.description || '',
+      description_ar: job.description_ar || '',
       status: job.status || 'open',
       type: job.type || '',
+      type_ar: job.type_ar || '',
       sector: job.sector || '',
       about_company: job.about_company || '',
+      about_company_ar: job.about_company_ar || '',
       project_summary: job.project_summary || '',
+      project_summary_ar: job.project_summary_ar || '',
       requirements: job.requirements || '',
+      requirements_ar: job.requirements_ar || '',
       deadline: job.deadline || '',
       tender_documents_link: job.tender_documents_link || '',
       file_upload_url: job.file_upload_url || '',
       salary_min: job.salary_min,
       salary_max: job.salary_max,
       employment_type: job.employment_type || '',
+      employment_type_ar: job.employment_type_ar || '',
       experience_level: job.experience_level || '',
+      experience_level_ar: job.experience_level_ar || '',
       location: job.location || '',
+      location_ar: job.location_ar || '',
       category: job.category || '',
+      category_ar: job.category_ar || '',
     });
   };
 
@@ -375,18 +403,26 @@ const CompanyDashboard = () => {
     setEditingTender({
       id: tender.id,
       title: tender.title || tender.name || '',
+      title_ar: tender.title_ar || '',
       description: tender.description || '',
+      description_ar: tender.description_ar || '',
       status: tender.status || 'open',
       type: tender.type || '',
+      type_ar: tender.type_ar || '',
       sector: tender.sector || '',
       about_organization: tender.about_organization || '',
+      about_organization_ar: tender.about_organization_ar || '',
       project_summary: tender.project_summary || '',
+      project_summary_ar: tender.project_summary_ar || '',
       requirements: tender.requirements || '',
+      requirements_ar: tender.requirements_ar || '',
       deadline: tender.deadline || '',
       tender_documents_link: tender.tender_documents_link || '',
       file_upload_url: tender.file_upload_url || '',
       location: tender.location || '',
+      location_ar: tender.location_ar || '',
       category: tender.category || '',
+      category_ar: tender.category_ar || '',
     });
   };
 
@@ -396,22 +432,32 @@ const CompanyDashboard = () => {
       id: editingJob.id,
       data: {
         title: editingJob.title.trim(),
+        title_ar: editingJob.title_ar?.trim() || undefined,
         description: editingJob.description.trim(),
+        description_ar: editingJob.description_ar?.trim() || undefined,
         status: (editingJob.status.trim() || 'open') as JobRecord['status'],
         type: editingJob.type?.trim() || undefined,
+        type_ar: editingJob.type_ar?.trim() || undefined,
         sector: editingJob.sector as JobRecord['sector'] || undefined,
         about_company: editingJob.about_company?.trim() || undefined,
+        about_company_ar: editingJob.about_company_ar?.trim() || undefined,
         project_summary: editingJob.project_summary?.trim() || undefined,
+        project_summary_ar: editingJob.project_summary_ar?.trim() || undefined,
         requirements: editingJob.requirements?.trim() || undefined,
+        requirements_ar: editingJob.requirements_ar?.trim() || undefined,
         deadline: editingJob.deadline || undefined,
         tender_documents_link: editingJob.tender_documents_link?.trim() || undefined,
         file_upload_url: editingJob.file_upload_url?.trim() || undefined,
         salary_min: editingJob.salary_min || undefined,
         salary_max: editingJob.salary_max || undefined,
         employment_type: editingJob.employment_type?.trim() || undefined,
+        employment_type_ar: editingJob.employment_type_ar?.trim() || undefined,
         experience_level: editingJob.experience_level?.trim() || undefined,
+        experience_level_ar: editingJob.experience_level_ar?.trim() || undefined,
         location: editingJob.location?.trim() || undefined,
+        location_ar: editingJob.location_ar?.trim() || undefined,
         category: editingJob.category?.trim() || undefined,
+        category_ar: editingJob.category_ar?.trim() || undefined,
       },
     });
   };
@@ -422,18 +468,26 @@ const CompanyDashboard = () => {
       id: editingTender.id,
       data: {
         title: editingTender.title.trim(),
+        title_ar: editingTender.title_ar?.trim() || undefined,
         description: editingTender.description.trim(),
+        description_ar: editingTender.description_ar?.trim() || undefined,
         status: (editingTender.status.trim() || 'open') as TenderRecord['status'],
         type: editingTender.type?.trim() || undefined,
+        type_ar: editingTender.type_ar?.trim() || undefined,
         sector: editingTender.sector as TenderRecord['sector'] || undefined,
         about_organization: editingTender.about_organization?.trim() || undefined,
+        about_organization_ar: editingTender.about_organization_ar?.trim() || undefined,
         project_summary: editingTender.project_summary?.trim() || undefined,
+        project_summary_ar: editingTender.project_summary_ar?.trim() || undefined,
         requirements: editingTender.requirements?.trim() || undefined,
+        requirements_ar: editingTender.requirements_ar?.trim() || undefined,
         deadline: editingTender.deadline || undefined,
         tender_documents_link: editingTender.tender_documents_link?.trim() || undefined,
         file_upload_url: editingTender.file_upload_url?.trim() || undefined,
         location: editingTender.location?.trim() || undefined,
+        location_ar: editingTender.location_ar?.trim() || undefined,
         category: editingTender.category?.trim() || undefined,
+        category_ar: editingTender.category_ar?.trim() || undefined,
       },
     });
   };
@@ -958,6 +1012,15 @@ const CompanyDashboard = () => {
                                     />
                                   </div>
                                   <div className="space-y-2">
+                                    <Label>{t('dashboard.admin.fieldTitle')} (العربية)</Label>
+                                    <Input
+                                      value={editingJob.title_ar || ''}
+                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, title_ar: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div className="space-y-2">
                                     <Label>{t('dashboard.admin.fieldStatus')}</Label>
                                     <Select
                                       value={editingJob.status}
@@ -985,10 +1048,26 @@ const CompanyDashboard = () => {
                                     />
                                   </div>
                                   <div className="space-y-2">
+                                    <Label>{t('jobs.location')} (العربية)</Label>
+                                    <Input
+                                      value={editingJob.location_ar || ''}
+                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, location_ar: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div className="space-y-2">
                                     <Label>{t('jobs.category')}</Label>
                                     <Input
                                       value={editingJob.category || ''}
                                       onChange={(e) => setEditingJob(prev => prev ? { ...prev, category: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>{t('jobs.category')} (العربية)</Label>
+                                    <Input
+                                      value={editingJob.category_ar || ''}
+                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, category_ar: e.target.value } : prev)}
                                     />
                                   </div>
                                 </div>
@@ -1000,6 +1079,15 @@ const CompanyDashboard = () => {
                                       onChange={(e) => setEditingJob(prev => prev ? { ...prev, type: e.target.value } : prev)}
                                     />
                                   </div>
+                                  <div className="space-y-2">
+                                    <Label>{t('jobs.type')} (العربية)</Label>
+                                    <Input
+                                      value={editingJob.type_ar || ''}
+                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, type_ar: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
                                   <div className="space-y-2">
                                     <Label>{t('jobs.sector')}</Label>
                                     <Select
@@ -1028,10 +1116,26 @@ const CompanyDashboard = () => {
                                     />
                                   </div>
                                   <div className="space-y-2">
+                                    <Label>{t('jobs.employmentType')} (العربية)</Label>
+                                    <Input
+                                      value={editingJob.employment_type_ar || ''}
+                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, employment_type_ar: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div className="space-y-2">
                                     <Label>{t('jobs.experienceLevel')}</Label>
                                     <Input
                                       value={editingJob.experience_level || ''}
                                       onChange={(e) => setEditingJob(prev => prev ? { ...prev, experience_level: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>{t('jobs.experienceLevel')} (العربية)</Label>
+                                    <Input
+                                      value={editingJob.experience_level_ar || ''}
+                                      onChange={(e) => setEditingJob(prev => prev ? { ...prev, experience_level_ar: e.target.value } : prev)}
                                     />
                                   </div>
                                 </div>
@@ -1081,10 +1185,26 @@ const CompanyDashboard = () => {
                                   />
                                 </div>
                                 <div className="space-y-2">
+                                  <Label>{t('dashboard.admin.fieldDescription')} (العربية)</Label>
+                                  <Textarea
+                                    value={editingJob.description_ar || ''}
+                                    onChange={(e) => setEditingJob(prev => prev ? { ...prev, description_ar: e.target.value } : prev)}
+                                    rows={4}
+                                  />
+                                </div>
+                                <div className="space-y-2">
                                   <Label>{t('jobs.aboutCompany')}</Label>
                                   <Textarea
                                     value={editingJob.about_company || ''}
                                     onChange={(e) => setEditingJob(prev => prev ? { ...prev, about_company: e.target.value } : prev)}
+                                    rows={3}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>{t('jobs.aboutCompany')} (العربية)</Label>
+                                  <Textarea
+                                    value={editingJob.about_company_ar || ''}
+                                    onChange={(e) => setEditingJob(prev => prev ? { ...prev, about_company_ar: e.target.value } : prev)}
                                     rows={3}
                                   />
                                 </div>
@@ -1097,10 +1217,26 @@ const CompanyDashboard = () => {
                                   />
                                 </div>
                                 <div className="space-y-2">
+                                  <Label>{t('jobs.projectSummary')} (العربية)</Label>
+                                  <Textarea
+                                    value={editingJob.project_summary_ar || ''}
+                                    onChange={(e) => setEditingJob(prev => prev ? { ...prev, project_summary_ar: e.target.value } : prev)}
+                                    rows={3}
+                                  />
+                                </div>
+                                <div className="space-y-2">
                                   <Label>{t('jobs.requirements')}</Label>
                                   <Textarea
                                     value={editingJob.requirements || ''}
                                     onChange={(e) => setEditingJob(prev => prev ? { ...prev, requirements: e.target.value } : prev)}
+                                    rows={3}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>{t('jobs.requirements')} (العربية)</Label>
+                                  <Textarea
+                                    value={editingJob.requirements_ar || ''}
+                                    onChange={(e) => setEditingJob(prev => prev ? { ...prev, requirements_ar: e.target.value } : prev)}
                                     rows={3}
                                   />
                                 </div>
@@ -1231,6 +1367,15 @@ const CompanyDashboard = () => {
                                     />
                                   </div>
                                   <div className="space-y-2">
+                                    <Label>{t('dashboard.admin.fieldTitle')} (العربية)</Label>
+                                    <Input
+                                      value={editingTender.title_ar || ''}
+                                      onChange={(e) => setEditingTender(prev => prev ? { ...prev, title_ar: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div className="space-y-2">
                                     <Label>{t('dashboard.admin.fieldStatus')}</Label>
                                     <Select
                                       value={editingTender.status}
@@ -1258,10 +1403,26 @@ const CompanyDashboard = () => {
                                     />
                                   </div>
                                   <div className="space-y-2">
+                                    <Label>{t('tenders.location')} (العربية)</Label>
+                                    <Input
+                                      value={editingTender.location_ar || ''}
+                                      onChange={(e) => setEditingTender(prev => prev ? { ...prev, location_ar: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div className="space-y-2">
                                     <Label>{t('tenders.category')}</Label>
                                     <Input
                                       value={editingTender.category || ''}
                                       onChange={(e) => setEditingTender(prev => prev ? { ...prev, category: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>{t('tenders.category')} (العربية)</Label>
+                                    <Input
+                                      value={editingTender.category_ar || ''}
+                                      onChange={(e) => setEditingTender(prev => prev ? { ...prev, category_ar: e.target.value } : prev)}
                                     />
                                   </div>
                                 </div>
@@ -1273,6 +1434,15 @@ const CompanyDashboard = () => {
                                       onChange={(e) => setEditingTender(prev => prev ? { ...prev, type: e.target.value } : prev)}
                                     />
                                   </div>
+                                  <div className="space-y-2">
+                                    <Label>{t('tenders.type')} (العربية)</Label>
+                                    <Input
+                                      value={editingTender.type_ar || ''}
+                                      onChange={(e) => setEditingTender(prev => prev ? { ...prev, type_ar: e.target.value } : prev)}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
                                   <div className="space-y-2">
                                     <Label>{t('tenders.sector')}</Label>
                                     <Select
@@ -1320,10 +1490,26 @@ const CompanyDashboard = () => {
                                   />
                                 </div>
                                 <div className="space-y-2">
+                                  <Label>{t('dashboard.admin.fieldDescription')} (العربية)</Label>
+                                  <Textarea
+                                    value={editingTender.description_ar || ''}
+                                    onChange={(e) => setEditingTender(prev => prev ? { ...prev, description_ar: e.target.value } : prev)}
+                                    rows={4}
+                                  />
+                                </div>
+                                <div className="space-y-2">
                                   <Label>{t('tenders.aboutOrganization')}</Label>
                                   <Textarea
                                     value={editingTender.about_organization || ''}
                                     onChange={(e) => setEditingTender(prev => prev ? { ...prev, about_organization: e.target.value } : prev)}
+                                    rows={3}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>{t('tenders.aboutOrganization')} (العربية)</Label>
+                                  <Textarea
+                                    value={editingTender.about_organization_ar || ''}
+                                    onChange={(e) => setEditingTender(prev => prev ? { ...prev, about_organization_ar: e.target.value } : prev)}
                                     rows={3}
                                   />
                                 </div>
@@ -1336,10 +1522,26 @@ const CompanyDashboard = () => {
                                   />
                                 </div>
                                 <div className="space-y-2">
+                                  <Label>{t('tenders.projectSummary')} (العربية)</Label>
+                                  <Textarea
+                                    value={editingTender.project_summary_ar || ''}
+                                    onChange={(e) => setEditingTender(prev => prev ? { ...prev, project_summary_ar: e.target.value } : prev)}
+                                    rows={3}
+                                  />
+                                </div>
+                                <div className="space-y-2">
                                   <Label>{t('tenders.requirements')}</Label>
                                   <Textarea
                                     value={editingTender.requirements || ''}
                                     onChange={(e) => setEditingTender(prev => prev ? { ...prev, requirements: e.target.value } : prev)}
+                                    rows={3}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>{t('tenders.requirements')} (العربية)</Label>
+                                  <Textarea
+                                    value={editingTender.requirements_ar || ''}
+                                    onChange={(e) => setEditingTender(prev => prev ? { ...prev, requirements_ar: e.target.value } : prev)}
                                     rows={3}
                                   />
                                 </div>

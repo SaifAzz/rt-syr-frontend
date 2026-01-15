@@ -2019,6 +2019,23 @@ const AdminDashboard = () => {
                                             />
                                           </div>
                                           <div className="space-y-2">
+                                            <Label>{t('dashboard.admin.fieldLocation')} (العربية)</Label>
+                                            <Input
+                                              value={editingEntity.data.location_ar || ''}
+                                              onChange={(e) =>
+                                                setEditingEntity({
+                                                  ...editingEntity,
+                                                  data: {
+                                                    ...editingEntity.data,
+                                                    location_ar: e.target.value,
+                                                  },
+                                                })
+                                              }
+                                            />
+                                          </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                          <div className="space-y-2">
                                             <Label>{t('dashboard.admin.fieldSalaryMin')}</Label>
                                             <Input
                                               type="number"
@@ -2054,26 +2071,30 @@ const AdminDashboard = () => {
                                         <div className="grid grid-cols-2 gap-4">
                                           <div className="space-y-2">
                                             <Label>{t('dashboard.admin.fieldType')}</Label>
-                                            <Select
-                                              value={editingEntity.data.type}
-                                              onValueChange={(value) =>
+                                            <Input
+                                              value={editingEntity.data.type || ''}
+                                              onChange={(e) =>
                                                 setEditingEntity({
                                                   ...editingEntity,
-                                                  data: { ...editingEntity.data, type: value },
+                                                  data: { ...editingEntity.data, type: e.target.value },
                                                 })
                                               }
-                                            >
-                                              <SelectTrigger>
-                                                <SelectValue />
-                                              </SelectTrigger>
-                                              <SelectContent>
-                                                <SelectItem value="full-time">{t('dashboard.admin.jobTypeFullTime')}</SelectItem>
-                                                <SelectItem value="part-time">{t('dashboard.admin.jobTypePartTime')}</SelectItem>
-                                                <SelectItem value="contract">{t('dashboard.admin.jobTypeContract')}</SelectItem>
-                                                <SelectItem value="remote">{t('dashboard.admin.jobTypeRemote')}</SelectItem>
-                                              </SelectContent>
-                                            </Select>
+                                            />
                                           </div>
+                                          <div className="space-y-2">
+                                            <Label>{t('dashboard.admin.fieldType')} (العربية)</Label>
+                                            <Input
+                                              value={editingEntity.data.type_ar || ''}
+                                              onChange={(e) =>
+                                                setEditingEntity({
+                                                  ...editingEntity,
+                                                  data: { ...editingEntity.data, type_ar: e.target.value },
+                                                })
+                                              }
+                                            />
+                                          </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
                                           <div className="space-y-2">
                                             <Label>{t('dashboard.admin.fieldStatus')}</Label>
                                             <Select
@@ -2278,6 +2299,18 @@ const AdminDashboard = () => {
                                           />
                                         </div>
                                         <div className="space-y-2">
+                                          <Label>{t('dashboard.admin.fieldTitle')} (العربية)</Label>
+                                          <Input
+                                            value={editingEntity.data.title_ar || ''}
+                                            onChange={(e) =>
+                                              setEditingEntity({
+                                                ...editingEntity,
+                                                data: { ...editingEntity.data, title_ar: e.target.value },
+                                              })
+                                            }
+                                          />
+                                        </div>
+                                        <div className="space-y-2">
                                           <Label>{t('dashboard.admin.fieldDescription')}</Label>
                                           <Textarea
                                             value={editingEntity.data.description}
@@ -2287,6 +2320,22 @@ const AdminDashboard = () => {
                                                 data: {
                                                   ...editingEntity.data,
                                                   description: e.target.value,
+                                                },
+                                              })
+                                            }
+                                            rows={6}
+                                          />
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Label>{t('dashboard.admin.fieldDescription')} (العربية)</Label>
+                                          <Textarea
+                                            value={editingEntity.data.description_ar || ''}
+                                            onChange={(e) =>
+                                              setEditingEntity({
+                                                ...editingEntity,
+                                                data: {
+                                                  ...editingEntity.data,
+                                                  description_ar: e.target.value,
                                                 },
                                               })
                                             }
@@ -2309,6 +2358,23 @@ const AdminDashboard = () => {
                                               }
                                             />
                                           </div>
+                                          <div className="space-y-2">
+                                            <Label>{t('dashboard.admin.fieldLocation')} (العربية)</Label>
+                                            <Input
+                                              value={editingEntity.data.location_ar || ''}
+                                              onChange={(e) =>
+                                                setEditingEntity({
+                                                  ...editingEntity,
+                                                  data: {
+                                                    ...editingEntity.data,
+                                                    location_ar: e.target.value,
+                                                  },
+                                                })
+                                              }
+                                            />
+                                          </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
                                           <div className="space-y-2">
                                             <Label>{t('dashboard.admin.fieldDeadline')}</Label>
                                             <Input
@@ -2359,6 +2425,22 @@ const AdminDashboard = () => {
                                                 data: {
                                                   ...editingEntity.data,
                                                   requirements: e.target.value,
+                                                },
+                                              })
+                                            }
+                                            rows={3}
+                                          />
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Label>{t('dashboard.admin.fieldRequirements')} (العربية)</Label>
+                                          <Textarea
+                                            value={editingEntity.data.requirements_ar || ''}
+                                            onChange={(e) =>
+                                              setEditingEntity({
+                                                ...editingEntity,
+                                                data: {
+                                                  ...editingEntity.data,
+                                                  requirements_ar: e.target.value,
                                                 },
                                               })
                                             }
