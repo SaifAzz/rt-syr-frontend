@@ -42,6 +42,10 @@ export interface CompanyRecord extends DatabaseRecord {
   contact_person_email?: string;
   status: 'pending' | 'approved' | 'rejected';
   user_id: string;
+  canPost?: boolean;
+  can_post?: boolean; // Keep for backward compatibility
+  jobs_posting_disabled?: boolean;
+  tenders_posting_disabled?: boolean;
 }
 
 export interface OrganizationRecord extends DatabaseRecord {
@@ -63,6 +67,10 @@ export interface OrganizationRecord extends DatabaseRecord {
   work_sectors?: string[];
   status: 'pending' | 'approved' | 'rejected';
   user_id: string;
+  canPost?: boolean;
+  can_post?: boolean; // Keep for backward compatibility
+  jobs_posting_disabled?: boolean;
+  tenders_posting_disabled?: boolean;
 }
 
 export interface JobRecord extends DatabaseRecord {
@@ -1051,6 +1059,32 @@ export const adminAPI = {
         id: string;
         type: string;
         can_post: boolean;
+      };
+      company?: {
+        id: string;
+        name: string;
+        canPost: boolean;
+        can_post?: boolean; // Keep for backward compatibility
+        jobs_posting_disabled?: boolean;
+        tenders_posting_disabled?: boolean;
+        user?: {
+          id: string;
+          email: string;
+          full_name: string;
+        };
+      };
+      organization?: {
+        id: string;
+        name: string;
+        canPost: boolean;
+        can_post?: boolean; // Keep for backward compatibility
+        jobs_posting_disabled?: boolean;
+        tenders_posting_disabled?: boolean;
+        user?: {
+          id: string;
+          email: string;
+          full_name: string;
+        };
       };
     }>('/admin/approve-posting', {
       method: 'POST',

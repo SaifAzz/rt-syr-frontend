@@ -534,21 +534,11 @@ const AdminDashboard = () => {
   // Company posting permission mutation
   const approveCompanyPostingMutation = useMutation({
     mutationFn: async ({ id, can_post, postingType }: { id: string; can_post: boolean; postingType: 'jobs' | 'tenders' | 'both' }) => {
-      const disabled = !can_post;
-
-      // If "both" is selected, make two API calls
-      if (postingType === 'both') {
-        await Promise.all([
-          adminAPI.disablePosting('company', id, 'jobs', disabled),
-          adminAPI.disablePosting('company', id, 'tenders', disabled),
-        ]);
-        return { postingType: 'both' };
-      } else {
-        // Single API call for jobs or tenders
-        return await adminAPI.disablePosting('company', id, postingType, disabled);
-      }
+      // Use approvePosting endpoint to enable/disable posting permissions for companies
+      // This enables posting for both jobs and tenders when can_post is true
+      return await adminAPI.approvePosting('company', id, can_post);
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (response, variables) => {
       const postingTypeLabel = variables.postingType === 'jobs'
         ? t('dashboard.admin.jobs')
         : variables.postingType === 'tenders'
@@ -557,6 +547,20 @@ const AdminDashboard = () => {
       toast.success(
         `${postingTypeLabel} ${t(variables.can_post ? 'dashboard.admin.enabled' : 'dashboard.admin.disabled')} ${t('dashboard.admin.forCompany')}`
       );
+      
+      // Update the cache directly with the response data
+      if (response.company) {
+        queryClient.setQueryData<CompanyRecord[]>(['admin-companies'], (oldData) => {
+          if (!oldData) return oldData;
+          return oldData.map((company) =>
+            company.id === response.company!.id
+              ? { ...company, canPost: response.company!.canPost, can_post: response.company!.canPost }
+              : company
+          );
+        });
+      }
+      
+      // Also invalidate to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
       setPostingDialogOpen({ open: false, entityType: null, entityId: null, action: null });
     },
@@ -568,21 +572,11 @@ const AdminDashboard = () => {
   // Organization posting permission mutation
   const approveOrganizationPostingMutation = useMutation({
     mutationFn: async ({ id, can_post, postingType }: { id: string; can_post: boolean; postingType: 'jobs' | 'tenders' | 'both' }) => {
-      const disabled = !can_post;
-
-      // If "both" is selected, make two API calls
-      if (postingType === 'both') {
-        await Promise.all([
-          adminAPI.disablePosting('organization', id, 'jobs', disabled),
-          adminAPI.disablePosting('organization', id, 'tenders', disabled),
-        ]);
-        return { postingType: 'both' };
-      } else {
-        // Single API call for jobs or tenders
-        return await adminAPI.disablePosting('organization', id, postingType, disabled);
-      }
+      // Use approvePosting endpoint to enable/disable posting permissions for organizations
+      // This enables posting for both jobs and tenders when can_post is true
+      return await adminAPI.approvePosting('organization', id, can_post);
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (response, variables) => {
       const postingTypeLabel = variables.postingType === 'jobs'
         ? t('dashboard.admin.jobs')
         : variables.postingType === 'tenders'
@@ -591,6 +585,20 @@ const AdminDashboard = () => {
       toast.success(
         `${postingTypeLabel} ${t(variables.can_post ? 'dashboard.admin.enabled' : 'dashboard.admin.disabled')} ${t('dashboard.admin.forOrganization')}`
       );
+      
+      // Update the cache directly with the response data
+      if (response.organization) {
+        queryClient.setQueryData<OrganizationRecord[]>(['admin-organizations'], (oldData) => {
+          if (!oldData) return oldData;
+          return oldData.map((org) =>
+            org.id === response.organization!.id
+              ? { ...org, canPost: response.organization!.canPost, can_post: response.organization!.canPost }
+              : org
+          );
+        });
+      }
+      
+      // Also invalidate to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ['admin-organizations'] });
       setPostingDialogOpen({ open: false, entityType: null, entityId: null, action: null });
     },
@@ -1384,8 +1392,8 @@ const AdminDashboard = () => {
                                 <span className="text-sm text-muted-foreground">
                                   {t('dashboard.admin.postingPermission')}:
                                 </span>
-                                <Badge variant={(company as any).can_post ? 'default' : 'secondary'}>
-                                  {(company as any).can_post ? t('dashboard.admin.enabled') : t('dashboard.admin.disabled')}
+                                <Badge variant={(company.canPost ?? company.can_post) ? 'default' : 'secondary'}>
+                                  {(company.canPost ?? company.can_post) ? t('dashboard.admin.enabled') : t('dashboard.admin.disabled')}
                                 </Badge>
                               </div>
                               <div className="flex items-center gap-2">
@@ -1693,8 +1701,8 @@ const AdminDashboard = () => {
                                 <span className="text-sm text-muted-foreground">
                                   {t('dashboard.admin.postingPermission')}:
                                 </span>
-                                <Badge variant={(org as any).can_post ? 'default' : 'secondary'}>
-                                  {(org as any).can_post ? t('dashboard.admin.enabled') : t('dashboard.admin.disabled')}
+                                <Badge variant={(org.canPost ?? org.can_post) ? 'default' : 'secondary'}>
+                                  {(org.canPost ?? org.can_post) ? t('dashboard.admin.enabled') : t('dashboard.admin.disabled')}
                                 </Badge>
                               </div>
                               <div className="flex items-center gap-2">
