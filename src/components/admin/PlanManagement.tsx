@@ -131,6 +131,7 @@ export function PlanManagement() {
     onSuccess: () => {
       toast.success('Pricing plan created successfully!');
       queryClient.invalidateQueries({ queryKey: ['admin-pricing-plans'] });
+      queryClient.invalidateQueries({ queryKey: ['pricing-plans'] });
       setIsCreatePlanOpen(false);
       resetPlanForm();
     },
@@ -165,6 +166,7 @@ export function PlanManagement() {
     onSuccess: () => {
       toast.success('Pricing plan updated successfully!');
       queryClient.invalidateQueries({ queryKey: ['admin-pricing-plans'] });
+      queryClient.invalidateQueries({ queryKey: ['pricing-plans'] });
       setIsEditPlanOpen(false);
       setSelectedPlan(null);
       resetPlanForm();
@@ -182,6 +184,7 @@ export function PlanManagement() {
     onSuccess: () => {
       toast.success('Pricing plan deleted successfully!');
       queryClient.invalidateQueries({ queryKey: ['admin-pricing-plans'] });
+      queryClient.invalidateQueries({ queryKey: ['pricing-plans'] });
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to delete pricing plan');
