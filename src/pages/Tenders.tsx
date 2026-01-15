@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow, format } from "date-fns";
@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select";
 
 // Helper function to map TenderRecord to Tender
-const mapTenderRecordToTender = (tenderRecord: TenderRecord): Tender => {
+const mapTenderRecordToTender = (tenderRecord: TenderRecord, isArabic: boolean): Tender => {
   // Format deadline
   const deadline = tenderRecord.deadline 
     ? format(new Date(tenderRecord.deadline), "MMM d, yyyy")
@@ -46,23 +46,38 @@ const mapTenderRecordToTender = (tenderRecord: TenderRecord): Tender => {
     status = "open";
   }
 
+  // Display Arabic fields when in Arabic mode, English fields when in English mode
+  // If Arabic field is missing, fallback to English
+  const title = isArabic 
+    ? (tenderRecord.title_ar || tenderRecord.title || "No title")
+    : tenderRecord.title || "No title";
+  const location = isArabic
+    ? (tenderRecord.location_ar || tenderRecord.location || "Not specified")
+    : (tenderRecord.location || "Not specified");
+  const category = isArabic
+    ? (tenderRecord.category_ar || tenderRecord.category || "General")
+    : (tenderRecord.category || "General");
+
   return {
     id: tenderRecord.id,
-    title: tenderRecord.title,
+    title,
     organization: (tenderRecord as any).organization?.name || "Organization", // API might include organization info
     organizationLogo: (tenderRecord as any).organization?.logo_url,
-    location: tenderRecord.location || "Not specified",
+    location,
     deadline,
-    category: tenderRecord.category || "General",
+    category,
     postedAt,
     isVerified: tenderRecord.status === "open" || tenderRecord.status === "active",
     status,
     userRole: (tenderRecord as any).user_role as "user" | "company" | "organization" | "admin" | undefined,
+    // Store original record for search purposes
+    _originalRecord: tenderRecord,
   };
 };
 
 const Tenders = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isArabic = i18n.language.startsWith('ar');
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(t('tenders.allCategories'));
   const [selectedLocation, setSelectedLocation] = useState(t('tenders.allLocations'));
@@ -77,16 +92,27 @@ const Tenders = () => {
     },
   });
 
-  const tenders: Tender[] = useMemo(() => {
+  const tenders: (Tender & { _originalRecord?: TenderRecord })[] = useMemo(() => {
     if (!tendersData) return [];
-    return tendersData.map(mapTenderRecordToTender);
-  }, [tendersData]);
+    return tendersData.map(record => mapTenderRecordToTender(record, isArabic));
+  }, [tendersData, isArabic]);
 
-  // Extract unique categories and locations from tenders
+  // Reset filters when language changes
+  useEffect(() => {
+    setSelectedCategory(t('tenders.allCategories'));
+    setSelectedLocation(t('tenders.allLocations'));
+    setSelectedStatus(t('tenders.allStatus'));
+  }, [isArabic, t]);
+
+  // Extract unique categories and locations from tenders (both English and Arabic)
   const categories = useMemo(() => {
     const uniqueCategories = new Set<string>();
     tenders.forEach(tender => {
       if (tender.category) uniqueCategories.add(tender.category);
+      // Also include Arabic category if available
+      if (tender._originalRecord?.category_ar) uniqueCategories.add(tender._originalRecord.category_ar);
+      // Also include English category for filtering
+      if (tender._originalRecord?.category) uniqueCategories.add(tender._originalRecord.category);
     });
     return [t('tenders.allCategories'), ...Array.from(uniqueCategories).sort()];
   }, [tenders, t]);
@@ -95,6 +121,10 @@ const Tenders = () => {
     const uniqueLocations = new Set<string>();
     tenders.forEach(tender => {
       if (tender.location) uniqueLocations.add(tender.location);
+      // Also include Arabic location if available
+      if (tender._originalRecord?.location_ar) uniqueLocations.add(tender._originalRecord.location_ar);
+      // Also include English location for filtering
+      if (tender._originalRecord?.location) uniqueLocations.add(tender._originalRecord.location);
     });
     return [t('tenders.allLocations'), ...Array.from(uniqueLocations).sort()];
   }, [tenders, t]);
@@ -112,13 +142,41 @@ const Tenders = () => {
   };
 
   const filteredTenders = tenders.filter((tender) => {
-    const matchesSearch = 
-      tender.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tender.organization.toLowerCase().includes(searchQuery.toLowerCase());
+    const record = tender._originalRecord;
+    if (!record) return false;
+
+    // Search in both English and Arabic fields
+    const searchLower = searchQuery.toLowerCase();
+    const matchesSearch = searchQuery === "" || 
+      (tender.title && tender.title.toLowerCase().includes(searchLower)) ||
+      (record.title_ar && record.title_ar.toLowerCase().includes(searchLower)) ||
+      (record.title && record.title.toLowerCase().includes(searchLower)) ||
+      (tender.organization && tender.organization.toLowerCase().includes(searchLower)) ||
+      (record.description && record.description.toLowerCase().includes(searchLower)) ||
+      (record.description_ar && record.description_ar.toLowerCase().includes(searchLower)) ||
+      (record.requirements && record.requirements.toLowerCase().includes(searchLower)) ||
+      (record.requirements_ar && record.requirements_ar.toLowerCase().includes(searchLower));
+
+    // Category matching - check both displayed category and original categories
+    const allCategoriesLabel = t('tenders.allCategories');
+    // If "All Categories" is selected (in current language), match all
     const matchesCategory = 
-      selectedCategory === t('tenders.allCategories') || tender.category === selectedCategory;
+      selectedCategory === allCategoriesLabel || 
+      // Check if selectedCategory matches any of the category fields
+      tender.category === selectedCategory ||
+      record.category === selectedCategory ||
+      record.category_ar === selectedCategory;
+
+    // Location matching - check both displayed location and original locations
+    const allLocationsLabel = t('tenders.allLocations');
+    // If "All Locations" is selected (in current language), match all
     const matchesLocation = 
-      selectedLocation === t('tenders.allLocations') || tender.location === selectedLocation;
+      selectedLocation === allLocationsLabel || 
+      // Check if selectedLocation matches any of the location fields
+      tender.location === selectedLocation ||
+      record.location === selectedLocation ||
+      record.location_ar === selectedLocation;
+
     const statusKey = getStatusKey(selectedStatus);
     const matchesStatus = 
       statusKey === 'all' || tender.status === statusKey;

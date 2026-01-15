@@ -120,7 +120,7 @@ const App = () => (
                   <ProtectedRoute
                     requireAuth={true}
                     requireEmailVerification={true}
-                    allowedUserTypes={['company', 'organization']}
+                    allowedUserTypes={['company', 'organization', 'admin']}
                   >
                     <PostTender />
                   </ProtectedRoute>
@@ -132,7 +132,7 @@ const App = () => (
                   <ProtectedRoute
                     requireAuth={true}
                     requireEmailVerification={true}
-                    allowedUserTypes={['company', 'organization']}
+                    allowedUserTypes={['company', 'organization', 'admin']}
                   >
                     <PostJob />
                   </ProtectedRoute>

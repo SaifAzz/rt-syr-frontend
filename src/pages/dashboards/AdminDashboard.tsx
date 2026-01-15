@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -1868,6 +1869,16 @@ const AdminDashboard = () => {
                         <SelectItem value="closed">{t('dashboard.admin.inactive')}</SelectItem>
                       </SelectContent>
                     </Select>
+                    <Button 
+                      variant="default" 
+                      size="sm"
+                      asChild
+                    >
+                      <Link to="/jobs/post">
+                        <Plus className="w-4 h-4 mr-2" />
+                        {t('dashboard.admin.postJob') || 'Post Job'}
+                      </Link>
+                    </Button>
                     <Button variant="outline" size="sm">
                       <Download className="w-4 h-4 mr-2" />
                       {t('dashboard.admin.export')}
@@ -2150,6 +2161,16 @@ const AdminDashboard = () => {
                         <SelectItem value="closed">{t('dashboard.admin.inactive')}</SelectItem>
                       </SelectContent>
                     </Select>
+                    <Button 
+                      variant="default" 
+                      size="sm"
+                      asChild
+                    >
+                      <Link to="/tenders/post">
+                        <Plus className="w-4 h-4 mr-2" />
+                        {t('dashboard.admin.postTender') || 'Post Tender'}
+                      </Link>
+                    </Button>
                     <Button variant="outline" size="sm">
                       <Download className="w-4 h-4 mr-2" />
                       {t('dashboard.admin.export')}

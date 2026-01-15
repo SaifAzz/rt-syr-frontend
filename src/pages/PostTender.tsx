@@ -28,6 +28,7 @@ const PostTender = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isArabic = i18n.language.startsWith('ar');
+  const isAdmin = user?.role === 'admin' || user?.type === 'admin';
 
   // Fetch organization/company data to get names
   const { data: myOrganizations = [] } = useQuery({
@@ -54,27 +55,67 @@ const PostTender = () => {
     enabled: (user?.role === 'company' || user?.type === 'company'),
   });
 
+  // For admin: fetch all companies and organizations
+  const { data: allCompanies = [] } = useQuery({
+    queryKey: ['admin-companies'],
+    queryFn: async () => {
+      try {
+        return await companiesAPI.getAll();
+      } catch {
+        return [];
+      }
+    },
+    enabled: isAdmin,
+  });
+
+  const { data: allOrganizations = [] } = useQuery({
+    queryKey: ['admin-organizations'],
+    queryFn: async () => {
+      try {
+        return await organizationsAPI.getAll();
+      } catch {
+        return [];
+      }
+    },
+    enabled: isAdmin,
+  });
+
   const [formData, setFormData] = useState({
     // 1. عنوان المناقصة
     title: '',
+    title_ar: '',
     // 2. اسم المعلن (المنظمة أو الشركة)
     publisher_name: '',
     // 3. الموقع الجغرافي
     location: '',
+    location_ar: '',
     // 4. أخر موعد للتقديم (تاريخ)
     deadline: '',
     // 5. نبذة عن المعلن (المنظمة أو الشركة)
     about_publisher: '',
+    about_organization_ar: '',
     // 6. قطاع المناقصة
     sector: '',
+    category_ar: '',
+    type_ar: '',
     // 7. نبذة عن المشروع
     project_summary: '',
+    project_summary_ar: '',
     // 8. المتطلبات
     requirements: '',
+    requirements_ar: '',
     // 9. رفع مستندات المناقصة
     tender_documents_link: '',
     file_upload_url: '',
     tender_document_file: null as File | null,
+    // Additional fields
+    duration: '',
+    duration_ar: '',
+    description_ar: '',
+    // Admin fields
+    selected_company_id: '',
+    selected_organization_id: '',
+    publisher_type: 'organization' as 'company' | 'organization',
   });
 
   // قطاع المناقصة options
@@ -95,6 +136,17 @@ const PostTender = () => {
 
   // Get publisher name from organization or company
   const getPublisherName = () => {
+    if (isAdmin) {
+      // For admin, use selected company/organization
+      if (formData.publisher_type === 'organization' && formData.selected_organization_id) {
+        const org = allOrganizations.find(o => o.id === formData.selected_organization_id);
+        return org?.name || '';
+      } else if (formData.publisher_type === 'company' && formData.selected_company_id) {
+        const company = allCompanies.find(c => c.id === formData.selected_company_id);
+        return company?.name || '';
+      }
+      return '';
+    }
     if (user?.role === 'organization' || user?.type === 'organization') {
       const org = myOrganizations[0];
       return org?.name || user?.full_name || '';
@@ -107,16 +159,26 @@ const PostTender = () => {
 
   // Set publisher name on mount
   useEffect(() => {
-    const publisherName = getPublisherName();
-    if (publisherName) {
-      setFormData(prev => {
-        if (!prev.publisher_name) {
-          return { ...prev, publisher_name: publisherName };
-        }
-        return prev;
-      });
+    if (!isAdmin) {
+      const publisherName = getPublisherName();
+      if (publisherName) {
+        setFormData(prev => {
+          if (!prev.publisher_name) {
+            return { ...prev, publisher_name: publisherName };
+          }
+          return prev;
+        });
+      }
     }
   }, [user, myOrganizations, myCompanies]);
+
+  // For admin: update publisher name when selection changes
+  useEffect(() => {
+    if (isAdmin) {
+      const publisherName = getPublisherName();
+      setFormData(prev => ({ ...prev, publisher_name: publisherName }));
+    }
+  }, [formData.publisher_type, formData.selected_company_id, formData.selected_organization_id, allOrganizations, allCompanies]);
 
   const mutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -126,6 +188,13 @@ const PostTender = () => {
         description: data.project_summary || data.requirements || '', // Use project_summary or requirements as description
         status: 'active' as const,
       };
+
+      // Set description_ar from Arabic fields if available
+      if (data.description_ar?.trim()) {
+        tenderData.description_ar = data.description_ar;
+      } else if (data.project_summary_ar?.trim() || data.requirements_ar?.trim()) {
+        tenderData.description_ar = data.project_summary_ar || data.requirements_ar || '';
+      }
 
       // Add all optional fields
       if (data.location?.trim()) tenderData.location = data.location;
@@ -139,7 +208,37 @@ const PostTender = () => {
       if (data.sector) tenderData.sector = data.sector;
       if (data.project_summary?.trim()) tenderData.project_summary = data.project_summary;
       if (data.requirements?.trim()) tenderData.requirements = data.requirements;
+      if (data.duration?.trim()) tenderData.duration = data.duration;
       if (data.tender_documents_link?.trim()) tenderData.tender_documents_link = data.tender_documents_link;
+
+      // Add Arabic fields
+      if (data.title_ar?.trim()) tenderData.title_ar = data.title_ar;
+      if (data.location_ar?.trim()) tenderData.location_ar = data.location_ar;
+      if (data.about_organization_ar?.trim()) tenderData.about_organization_ar = data.about_organization_ar;
+      if (data.type_ar?.trim()) tenderData.type_ar = data.type_ar;
+      if (data.category_ar?.trim()) tenderData.category_ar = data.category_ar;
+      if (data.project_summary_ar?.trim()) tenderData.project_summary_ar = data.project_summary_ar;
+      if (data.requirements_ar?.trim()) tenderData.requirements_ar = data.requirements_ar;
+      if (data.duration_ar?.trim()) tenderData.duration_ar = data.duration_ar;
+      if (data.description_ar?.trim()) tenderData.description_ar = data.description_ar;
+
+      // Add company_id or organization_id for admin
+      if (isAdmin) {
+        if (data.publisher_type === 'company' && data.selected_company_id) {
+          tenderData.company_id = data.selected_company_id;
+        } else if (data.publisher_type === 'organization' && data.selected_organization_id) {
+          tenderData.organization_id = data.selected_organization_id;
+        }
+      } else {
+        // For regular users, use their company/organization
+        if (user?.role === 'company' || user?.type === 'company') {
+          const company = myCompanies[0];
+          if (company?.id) tenderData.company_id = company.id;
+        } else if (user?.role === 'organization' || user?.type === 'organization') {
+          const org = myOrganizations[0];
+          if (org?.id) tenderData.organization_id = org.id;
+        }
+      }
 
       // Handle PDF file upload
       if (data.tender_document_file) {
@@ -166,7 +265,9 @@ const PostTender = () => {
       queryClient.invalidateQueries({ queryKey: ['tenders'] });
 
       // Navigate to appropriate dashboard
-      if (user?.type === 'company') {
+      if (isAdmin) {
+        navigate('/dashboard/admin');
+      } else if (user?.type === 'company') {
         navigate('/dashboard/company');
       } else {
         navigate('/dashboard/organization');
@@ -179,6 +280,14 @@ const PostTender = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Admin validation
+    if (isAdmin) {
+      if (!formData.selected_company_id && !formData.selected_organization_id) {
+        toast.error(isArabic ? 'الرجاء اختيار شركة أو منظمة' : 'Please select a company or organization');
+        return;
+      }
+    }
 
     // Validation
     if (!formData.title) {
@@ -234,7 +343,7 @@ const PostTender = () => {
         <div className="container mx-auto px-4 lg:px-8 max-w-3xl">
           <div className="mb-6">
             <Button variant="ghost" asChild className="mb-4">
-              <Link to={user?.type === 'company' ? '/dashboard/company' : '/dashboard/organization'}>
+              <Link to={isAdmin ? '/dashboard/admin' : user?.type === 'company' ? '/dashboard/company' : '/dashboard/organization'}>
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 {isArabic ? 'العودة إلى لوحة التحكم' : 'Back to Dashboard'}
               </Link>
@@ -259,6 +368,76 @@ const PostTender = () => {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Admin: Select Company or Organization */}
+                {isAdmin && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="publisher_type">{isArabic ? 'نوع المعلن *' : 'Publisher Type *'}</Label>
+                      <Select
+                        value={formData.publisher_type}
+                        onValueChange={(value: 'company' | 'organization') => {
+                          setFormData(prev => ({
+                            ...prev,
+                            publisher_type: value,
+                            selected_company_id: value === 'company' ? prev.selected_company_id : '',
+                            selected_organization_id: value === 'organization' ? prev.selected_organization_id : '',
+                          }));
+                        }}
+                      >
+                        <SelectTrigger id="publisher_type">
+                          <SelectValue placeholder={isArabic ? 'اختر نوع المعلن' : 'Select publisher type'} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="company">{isArabic ? 'شركة' : 'Company'}</SelectItem>
+                          <SelectItem value="organization">{isArabic ? 'منظمة' : 'Organization'}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {formData.publisher_type === 'company' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="selected_company_id">{isArabic ? 'اختر الشركة *' : 'Select Company *'}</Label>
+                        <Select
+                          value={formData.selected_company_id}
+                          onValueChange={(value) => setFormData(prev => ({ ...prev, selected_company_id: value }))}
+                        >
+                          <SelectTrigger id="selected_company_id">
+                            <SelectValue placeholder={isArabic ? 'اختر الشركة' : 'Select company'} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {allCompanies.map((company) => (
+                              <SelectItem key={company.id} value={company.id}>
+                                {company.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {formData.publisher_type === 'organization' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="selected_organization_id">{isArabic ? 'اختر المنظمة *' : 'Select Organization *'}</Label>
+                        <Select
+                          value={formData.selected_organization_id}
+                          onValueChange={(value) => setFormData(prev => ({ ...prev, selected_organization_id: value }))}
+                        >
+                          <SelectTrigger id="selected_organization_id">
+                            <SelectValue placeholder={isArabic ? 'اختر المنظمة' : 'Select organization'} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {allOrganizations.map((org) => (
+                              <SelectItem key={org.id} value={org.id}>
+                                {org.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </>
+                )}
+
                 {/* 1. عنوان المناقصة / Tender Title */}
                 <div className="space-y-2">
                   <Label htmlFor="title">{isArabic ? 'عنوان المناقصة *' : 'Tender Title *'}</Label>
@@ -268,6 +447,17 @@ const PostTender = () => {
                     value={formData.title}
                     onChange={(e) => handleChange('title', e.target.value)}
                     required
+                  />
+                </div>
+
+                {/* 1. عنوان المناقصة بالعربية / Tender Title (Arabic) */}
+                <div className="space-y-2">
+                  <Label htmlFor="title_ar">{isArabic ? 'عنوان المناقصة بالعربية (اختياري)' : 'Tender Title (Arabic) (Optional)'}</Label>
+                  <Input
+                    id="title_ar"
+                    placeholder={isArabic ? 'مثال: مناقصة مشروع البناء' : 'e.g., مناقصة مشروع البناء'}
+                    value={formData.title_ar}
+                    onChange={(e) => handleChange('title_ar', e.target.value)}
                   />
                 </div>
 
@@ -292,6 +482,17 @@ const PostTender = () => {
                     value={formData.location}
                     onChange={(e) => handleChange('location', e.target.value)}
                     required
+                  />
+                </div>
+
+                {/* 3. الموقع الجغرافي بالعربية / Geographic Location (Arabic) */}
+                <div className="space-y-2">
+                  <Label htmlFor="location_ar">{isArabic ? 'الموقع الجغرافي بالعربية (اختياري)' : 'Geographic Location (Arabic) (Optional)'}</Label>
+                  <Input
+                    id="location_ar"
+                    placeholder={isArabic ? 'مثال: دمشق، سوريا' : 'e.g., دمشق، سوريا'}
+                    value={formData.location_ar}
+                    onChange={(e) => handleChange('location_ar', e.target.value)}
                   />
                 </div>
 
@@ -324,6 +525,18 @@ const PostTender = () => {
                   />
                 </div>
 
+                {/* 5. نبذة عن المعلن بالعربية / About Publisher (Arabic) */}
+                <div className="space-y-2">
+                  <Label htmlFor="about_organization_ar">{isArabic ? 'نبذة عن المعلن بالعربية (اختياري)' : 'About Publisher (Arabic) (Optional)'}</Label>
+                  <Textarea
+                    id="about_organization_ar"
+                    placeholder={isArabic ? 'أخبرنا عن منظمتك أو شركتك...' : 'أخبرنا عن منظمتك أو شركتك...'}
+                    value={formData.about_organization_ar}
+                    onChange={(e) => handleChange('about_organization_ar', e.target.value)}
+                    rows={4}
+                  />
+                </div>
+
                 {/* 6. قطاع المناقصة / Tender Sector */}
                 <div className="space-y-2">
                   <Label htmlFor="sector">{isArabic ? 'قطاع المناقصة *' : 'Tender Sector *'}</Label>
@@ -344,6 +557,28 @@ const PostTender = () => {
                   </Select>
                 </div>
 
+                {/* 6. قطاع المناقصة بالعربية / Tender Sector (Arabic) */}
+                <div className="space-y-2">
+                  <Label htmlFor="category_ar">{isArabic ? 'قطاع المناقصة بالعربية (اختياري)' : 'Tender Sector (Arabic) (Optional)'}</Label>
+                  <Input
+                    id="category_ar"
+                    placeholder={isArabic ? 'مثال: بناء' : 'e.g., بناء'}
+                    value={formData.category_ar}
+                    onChange={(e) => handleChange('category_ar', e.target.value)}
+                  />
+                </div>
+
+                {/* Type (Arabic) */}
+                <div className="space-y-2">
+                  <Label htmlFor="type_ar">{isArabic ? 'نوع المناقصة بالعربية (اختياري)' : 'Tender Type (Arabic) (Optional)'}</Label>
+                  <Input
+                    id="type_ar"
+                    placeholder={isArabic ? 'مثال: بناء' : 'e.g., بناء'}
+                    value={formData.type_ar}
+                    onChange={(e) => handleChange('type_ar', e.target.value)}
+                  />
+                </div>
+
                 {/* 7. نبذة عن المشروع / Project Summary */}
                 <div className="space-y-2">
                   <Label htmlFor="project_summary">{isArabic ? 'نبذة عن المشروع *' : 'Project Summary *'}</Label>
@@ -354,6 +589,18 @@ const PostTender = () => {
                     onChange={(e) => handleChange('project_summary', e.target.value)}
                     rows={5}
                     required
+                  />
+                </div>
+
+                {/* 7. نبذة عن المشروع بالعربية / Project Summary (Arabic) */}
+                <div className="space-y-2">
+                  <Label htmlFor="project_summary_ar">{isArabic ? 'نبذة عن المشروع بالعربية (اختياري)' : 'Project Summary (Arabic) (Optional)'}</Label>
+                  <Textarea
+                    id="project_summary_ar"
+                    placeholder={isArabic ? 'قدم ملخصاً عن المشروع الذي تخصه هذه المناقصة...' : 'قدم ملخصاً عن المشروع الذي تخصه هذه المناقصة...'}
+                    value={formData.project_summary_ar}
+                    onChange={(e) => handleChange('project_summary_ar', e.target.value)}
+                    rows={5}
                   />
                 </div>
 
@@ -369,6 +616,54 @@ const PostTender = () => {
                     onChange={(e) => handleChange('requirements', e.target.value)}
                     rows={6}
                     required
+                  />
+                </div>
+
+                {/* 8. المتطلبات بالعربية / Requirements (Arabic) */}
+                <div className="space-y-2">
+                  <Label htmlFor="requirements_ar">{isArabic ? 'المتطلبات بالعربية (اختياري)' : 'Requirements (Arabic) (Optional)'}</Label>
+                  <Textarea
+                    id="requirements_ar"
+                    placeholder={isArabic
+                      ? 'اشرح أهم المتطلبات في الإعلان مثل شركة لديها خبرة سابقة بعدد سنوات كذا أو مشاريع عدد كذا أو أي متطلبات أخرى...'
+                      : 'اشرح أهم المتطلبات في الإعلان مثل شركة لديها خبرة سابقة بعدد سنوات كذا أو مشاريع عدد كذا أو أي متطلبات أخرى...'}
+                    value={formData.requirements_ar}
+                    onChange={(e) => handleChange('requirements_ar', e.target.value)}
+                    rows={6}
+                  />
+                </div>
+
+                {/* Duration */}
+                <div className="space-y-2">
+                  <Label htmlFor="duration">{isArabic ? 'المدة الزمنية (اختياري)' : 'Duration (Optional)'}</Label>
+                  <Input
+                    id="duration"
+                    placeholder={isArabic ? 'مثال: 12 شهرًا' : 'e.g., 12 months'}
+                    value={formData.duration}
+                    onChange={(e) => handleChange('duration', e.target.value)}
+                  />
+                </div>
+
+                {/* Duration (Arabic) */}
+                <div className="space-y-2">
+                  <Label htmlFor="duration_ar">{isArabic ? 'المدة الزمنية بالعربية (اختياري)' : 'Duration (Arabic) (Optional)'}</Label>
+                  <Input
+                    id="duration_ar"
+                    placeholder={isArabic ? 'مثال: 12 شهرًا' : 'e.g., 12 شهرًا'}
+                    value={formData.duration_ar}
+                    onChange={(e) => handleChange('duration_ar', e.target.value)}
+                  />
+                </div>
+
+                {/* Description (Arabic) */}
+                <div className="space-y-2">
+                  <Label htmlFor="description_ar">{isArabic ? 'الوصف بالعربية (اختياري)' : 'Description (Arabic) (Optional)'}</Label>
+                  <Textarea
+                    id="description_ar"
+                    placeholder={isArabic ? 'وصف تفصيلي بالعربية...' : 'وصف تفصيلي بالعربية...'}
+                    value={formData.description_ar}
+                    onChange={(e) => handleChange('description_ar', e.target.value)}
+                    rows={6}
                   />
                 </div>
 

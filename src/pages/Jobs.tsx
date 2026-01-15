@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 
 // Helper function to map JobRecord to Job
-const mapJobRecordToJob = (jobRecord: JobRecord): Job => {
+const mapJobRecordToJob = (jobRecord: JobRecord, isArabic: boolean): Job => {
   // Format salary
   let salary: string | undefined;
   if (jobRecord.salary_min && jobRecord.salary_max) {
@@ -42,26 +42,46 @@ const mapJobRecordToJob = (jobRecord: JobRecord): Job => {
     ? formatDistanceToNow(new Date(jobRecord.created_at), { addSuffix: true })
     : "Recently";
 
-  // Map employment type
-  const type = (jobRecord.employment_type || jobRecord.type || "full-time") as Job["type"];
+  // Map employment type - use Arabic if available
+  let typeValue = jobRecord.employment_type || jobRecord.type || "full-time";
+  if (isArabic && jobRecord.employment_type_ar) {
+    // Keep the value as is for filtering, but we'll display the Arabic text
+    typeValue = jobRecord.employment_type || jobRecord.type || "full-time";
+  }
+  const type = typeValue as Job["type"];
+
+  // Display Arabic fields when in Arabic mode, English fields when in English mode
+  // If Arabic field is missing, fallback to English
+  const title = isArabic
+    ? (jobRecord.title_ar || jobRecord.title || "No title")
+    : jobRecord.title || "No title";
+  const location = isArabic
+    ? (jobRecord.location_ar || jobRecord.location || "Not specified")
+    : (jobRecord.location || "Not specified");
+  const category = isArabic
+    ? (jobRecord.category_ar || jobRecord.category || "General")
+    : (jobRecord.category || "General");
 
   return {
     id: jobRecord.id,
-    title: jobRecord.title,
+    title,
     company: (jobRecord as any).company?.name || "Company", // API might include company info
     companyLogo: (jobRecord as any).company?.logo_url,
-    location: jobRecord.location || "Not specified",
+    location,
     salary,
     type,
-    category: jobRecord.category || "General",
+    category,
     postedAt,
     isVerified: jobRecord.status === "open" || jobRecord.status === "active",
     userRole: (jobRecord as any).user_role as "user" | "company" | "organization" | "admin" | undefined,
+    // Store original record for search purposes
+    _originalRecord: jobRecord,
   };
 };
 
 const Jobs = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isArabic = i18n.language.startsWith('ar');
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(t('jobs.allCategories'));
   const [selectedLocation, setSelectedLocation] = useState(t('jobs.allLocations'));
@@ -75,16 +95,26 @@ const Jobs = () => {
     },
   });
 
-  const jobs: Job[] = useMemo(() => {
+  const jobs: (Job & { _originalRecord?: JobRecord })[] = useMemo(() => {
     if (!jobsData) return [];
-    return jobsData.map(mapJobRecordToJob);
-  }, [jobsData]);
+    return jobsData.map(record => mapJobRecordToJob(record, isArabic));
+  }, [jobsData, isArabic]);
 
-  // Extract unique categories and locations from jobs
+  // Reset filters when language changes
+  useEffect(() => {
+    setSelectedCategory(t('jobs.allCategories'));
+    setSelectedLocation(t('jobs.allLocations'));
+  }, [isArabic, t]);
+
+  // Extract unique categories and locations from jobs (both English and Arabic)
   const categories = useMemo(() => {
     const uniqueCategories = new Set<string>();
     jobs.forEach(job => {
       if (job.category) uniqueCategories.add(job.category);
+      // Also include Arabic category if available
+      if (job._originalRecord?.category_ar) uniqueCategories.add(job._originalRecord.category_ar);
+      // Also include English category for filtering
+      if (job._originalRecord?.category) uniqueCategories.add(job._originalRecord.category);
     });
     return [t('jobs.allCategories'), ...Array.from(uniqueCategories).sort()];
   }, [jobs, t]);
@@ -93,18 +123,49 @@ const Jobs = () => {
     const uniqueLocations = new Set<string>();
     jobs.forEach(job => {
       if (job.location) uniqueLocations.add(job.location);
+      // Also include Arabic location if available
+      if (job._originalRecord?.location_ar) uniqueLocations.add(job._originalRecord.location_ar);
+      // Also include English location for filtering
+      if (job._originalRecord?.location) uniqueLocations.add(job._originalRecord.location);
     });
     return [t('jobs.allLocations'), ...Array.from(uniqueLocations).sort()];
   }, [jobs, t]);
 
   const filteredJobs = jobs.filter((job) => {
-    const matchesSearch = 
-      job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      job.company.toLowerCase().includes(searchQuery.toLowerCase());
+    const record = job._originalRecord;
+    if (!record) return false;
+
+    // Search in both English and Arabic fields
+    const searchLower = searchQuery.toLowerCase();
+    const matchesSearch = searchQuery === "" || 
+      (job.title && job.title.toLowerCase().includes(searchLower)) ||
+      (record.title_ar && record.title_ar.toLowerCase().includes(searchLower)) ||
+      (record.title && record.title.toLowerCase().includes(searchLower)) ||
+      (job.company && job.company.toLowerCase().includes(searchLower)) ||
+      (record.description && record.description.toLowerCase().includes(searchLower)) ||
+      (record.description_ar && record.description_ar.toLowerCase().includes(searchLower)) ||
+      (record.requirements && record.requirements.toLowerCase().includes(searchLower)) ||
+      (record.requirements_ar && record.requirements_ar.toLowerCase().includes(searchLower));
+
+    // Category matching - check both displayed category and original categories
+    const allCategoriesLabel = t('jobs.allCategories');
+    // If "All Categories" is selected (in current language), match all
     const matchesCategory = 
-      selectedCategory === t('jobs.allCategories') || job.category === selectedCategory;
+      selectedCategory === allCategoriesLabel || 
+      // Check if selectedCategory matches any of the category fields
+      job.category === selectedCategory ||
+      record.category === selectedCategory ||
+      record.category_ar === selectedCategory;
+
+    // Location matching - check both displayed location and original locations
+    const allLocationsLabel = t('jobs.allLocations');
+    // If "All Locations" is selected (in current language), match all
     const matchesLocation = 
-      selectedLocation === t('jobs.allLocations') || job.location === selectedLocation;
+      selectedLocation === allLocationsLabel || 
+      // Check if selectedLocation matches any of the location fields
+      job.location === selectedLocation ||
+      record.location === selectedLocation ||
+      record.location_ar === selectedLocation;
     
     return matchesSearch && matchesCategory && matchesLocation;
   });

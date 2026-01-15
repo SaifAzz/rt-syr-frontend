@@ -67,48 +67,68 @@ export interface OrganizationRecord extends DatabaseRecord {
 
 export interface JobRecord extends DatabaseRecord {
   title: string;
+  title_ar?: string; // Arabic title (optional)
   name?: string;
   description: string;
+  description_ar?: string; // Arabic description (optional)
   company_id: string;
   type?: string;
+  type_ar?: string; // Arabic type (optional)
   sector?: 'WASH' | 'FSL' | 'EDUCATION' | 'HEALTH' | 'PROTECTION' | 'SHELTER' | 'NFI' | 'CCCM' | 'OTHER';
   about_company?: string;
+  about_company_ar?: string; // Arabic about company (optional)
   project_summary?: string;
+  project_summary_ar?: string; // Arabic project summary (optional)
   requirements?: string;
+  requirements_ar?: string; // Arabic requirements (optional)
   deadline?: string;
   status: 'active' | 'closed' | 'open' | 'closing_soon' | 'draft';
   duration?: string;
+  duration_ar?: string; // Arabic duration (optional)
   estimated_start_date?: string;
   tender_documents_link?: string;
   file_upload_url?: string;
   salary_min?: number;
   salary_max?: number;
   employment_type?: string;
+  employment_type_ar?: string; // Arabic employment type (optional)
   experience_level?: string;
+  experience_level_ar?: string; // Arabic experience level (optional)
   location?: string;
+  location_ar?: string; // Arabic location (optional)
   category?: string;
+  category_ar?: string; // Arabic category (optional)
   created_at: string;
 }
 
 export interface TenderRecord extends DatabaseRecord {
   title: string;
+  title_ar?: string; // Arabic title (optional)
   name?: string;
   description: string;
+  description_ar?: string; // Arabic description (optional)
   organization_id?: string;
   company_id?: string;
   type?: string;
+  type_ar?: string; // Arabic type (optional)
   sector?: 'WASH' | 'FSL' | 'EDUCATION' | 'HEALTH' | 'PROTECTION' | 'SHELTER' | 'NFI' | 'CCCM' | 'OTHER';
   about_organization?: string;
+  about_organization_ar?: string; // Arabic about organization (optional)
   project_summary?: string;
+  project_summary_ar?: string; // Arabic project summary (optional)
   requirements?: string;
+  requirements_ar?: string; // Arabic requirements (optional)
   deadline?: string;
   status: 'active' | 'closed' | 'open' | 'closing_soon' | 'draft';
   duration?: string;
+  duration_ar?: string; // Arabic duration (optional)
   estimated_start_date?: string;
   tender_documents_link?: string;
   file_upload_url?: string;
   location?: string;
+  location_ar?: string; // Arabic location (optional)
   category?: string;
+  category_ar?: string; // Arabic category (optional)
   created_at: string;
 }
 
