@@ -38,12 +38,39 @@ const Pricing = () => {
   });
 
   // Transform API data to component format
-  const transformPlan = (plan: PricingPlan | undefined, icon: any, color: "primary" | "accent", popular: boolean = false, badge?: string) => {
-    if (!plan) return null;
+  const transformPlan = (
+    plan: PricingPlan | undefined,
+    icon: any,
+    color: "primary" | "accent",
+    popular: boolean = false,
+    badge?: string,
+    defaultName?: string,
+    defaultDescription?: string,
+    planType?: string
+  ) => {
+    // If no plan data from API, create a placeholder plan
+    if (!plan) {
+      return {
+        name: defaultName || "Plan",
+        description: defaultDescription || "Coming soon",
+        price: "Contact Us",
+        originalPrice: undefined,
+        period: "",
+        icon,
+        color,
+        popular,
+        badge,
+        features: ["Contact us for details"],
+        cta: "Contact Us",
+        ctaLink: "/signup",
+        planId: `placeholder-${planType}`,
+        isPlaceholder: true,
+      };
+    }
 
     // Use originalPrice from API if available (indicates discount)
     const hasDiscount = plan.originalPrice !== undefined && plan.originalPrice !== null;
-    
+
     // Format prices
     const formatPrice = (price: number | string, currency: string): string => {
       const numPrice = typeof price === 'string' ? parseFloat(price) : price;
@@ -56,11 +83,11 @@ const Pricing = () => {
     };
 
     // If originalPrice exists, price is the discounted price
-    const displayPrice = hasDiscount 
+    const displayPrice = hasDiscount
       ? formatPrice(plan.price, plan.currency)
       : formatPrice(plan.price, plan.currency);
-    
-    const originalPriceDisplay = hasDiscount 
+
+    const originalPriceDisplay = hasDiscount
       ? formatPrice(plan.originalPrice!, plan.currency)
       : undefined;
 
@@ -80,19 +107,83 @@ const Pricing = () => {
       cta: plan.plan_type === 'vendorAdvertisement' ? "Contact Us" : "Get Started",
       ctaLink: "/signup",
       planId: plan.plan_id,
+      isPlaceholder: false,
     };
   };
 
-  // Build pricing plans array from API data
-  const pricingPlans = pricingData ? [
-    transformPlan(pricingData.tender?.single, FileText, "primary", false),
-    transformPlan(pricingData.tender?.yearly, FileText, "primary", false),
-    transformPlan(pricingData.job?.single, Briefcase, "accent", false),
-    transformPlan(pricingData.job?.yearly, Briefcase, "accent", false),
-    transformPlan(pricingData.combined, Zap, "primary", true, "Best Value"),
-    transformPlan(pricingData.vendor, Store, "accent", false),
-    transformPlan(pricingData.vendorAdvertisement, ShoppingBag, "primary", false),
-  ].filter(Boolean) as any[] : [];
+  // Build pricing plans array from API data - always show all 7 plan types
+  const pricingPlans = [
+    transformPlan(
+      pricingData?.tender?.single,
+      FileText,
+      "primary",
+      false,
+      undefined,
+      "Single Tender",
+      "Perfect for businesses or individuals who need to publish a one-time tender quickly and efficiently without long-term commitment.",
+      "tender-single"
+    ),
+    transformPlan(
+      pricingData?.tender?.yearly,
+      FileText,
+      "primary",
+      false,
+      undefined,
+      "Unlimited Tender Annual Plan",
+      "A dedicated annual plan for organizations that frequently publish tenders and want unlimited access without per-post costs.",
+      "tender-yearly"
+    ),
+    transformPlan(
+      pricingData?.job?.single,
+      Briefcase,
+      "accent",
+      false,
+      undefined,
+      "Single Job",
+      "Ideal for employers seeking to advertise a single job vacancy and reach relevant candidates instantly.",
+      "job-single"
+    ),
+    transformPlan(
+      pricingData?.job?.yearly,
+      Briefcase,
+      "accent",
+      false,
+      undefined,
+      "Unlimited Job Annual Plan",
+      "Ideal for recruitment agencies or large employers with continuous hiring needs.",
+      "job-yearly"
+    ),
+    transformPlan(
+      pricingData?.combined,
+      Zap,
+      "primary",
+      true,
+      "Best Value",
+      "Combined Plan",
+      "Best value package combining both tender and job posting capabilities.",
+      "combined"
+    ),
+    transformPlan(
+      pricingData?.vendor,
+      Store,
+      "accent",
+      false,
+      undefined,
+      "Vendor",
+      "For vendors and suppliers to showcase their services and products.",
+      "vendor"
+    ),
+    transformPlan(
+      pricingData?.vendorAdvertisement,
+      ShoppingBag,
+      "primary",
+      false,
+      undefined,
+      "Vendor Advertisement",
+      "Premium advertising solution for vendors to increase visibility and reach.",
+      "vendor-advertisement"
+    ),
+  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -146,89 +237,97 @@ const Pricing = () => {
             ) : (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-7xl mx-auto">
                 {pricingPlans.map((plan, index) => {
-                const Icon = plan.icon;
-                const isPopular = plan.popular;
+                  const Icon = plan.icon;
+                  const isPopular = plan.popular;
 
-                return (
-                  <Card
-                    key={plan.name}
-                    className={`
+                  return (
+                    <Card
+                      key={plan.name}
+                      className={`
                       relative transition-all duration-300 hover:shadow-xl hover:-translate-y-1 h-full flex flex-col
                       ${isPopular ? 'border-2 border-primary shadow-lg bg-primary/5' : 'border'}
                     `}
-                  >
-                    {isPopular && (
-                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-                        <Badge className="bg-primary text-primary-foreground px-3 py-1 text-xs font-semibold shadow-md">
-                          <Star className="w-3 h-3 mr-1" />
-                          {plan.badge}
-                        </Badge>
-                      </div>
-                    )}
+                    >
+                      {isPopular && (
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                          <Badge className="bg-primary text-primary-foreground px-3 py-1 text-xs font-semibold shadow-md">
+                            <Star className="w-3 h-3 mr-1" />
+                            {plan.badge}
+                          </Badge>
+                        </div>
+                      )}
 
-                    <CardHeader className="text-center pb-6 pt-8">
-                      <div className={`
+                      <CardHeader className="text-center pb-6 pt-8">
+                        <div className={`
                         w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-4
                         ${plan.color === 'primary' ? 'bg-primary/10' : 'bg-accent/10'}
                       `}>
-                        <Icon className={`
+                          <Icon className={`
                           w-7 h-7
                           ${plan.color === 'primary' ? 'text-primary' : 'text-accent'}
                         `} />
-                      </div>
-                      <CardTitle className="text-xl font-bold mb-2">{plan.name}</CardTitle>
-                      <CardDescription className="text-sm text-muted-foreground">
-                        {plan.description}
-                      </CardDescription>
-                    </CardHeader>
-
-                    <CardContent className="flex-grow flex flex-col">
-                      <div className="text-center mb-6 pb-6 border-b">
-                        <div className="flex flex-col items-center justify-center">
-                          {plan.originalPrice && (
-                            <span className="text-lg text-muted-foreground line-through mb-1">{plan.originalPrice}</span>
-                          )}
-                          <span className="text-3xl font-bold text-foreground leading-none">{plan.price}</span>
-                          {plan.period && (
-                            <span className="text-sm text-muted-foreground mt-1">{plan.period}</span>
-                          )}
                         </div>
-                      </div>
+                        <CardTitle className="text-xl font-bold mb-2">{plan.name}</CardTitle>
+                        <CardDescription className="text-sm text-muted-foreground">
+                          {plan.description}
+                        </CardDescription>
+                      </CardHeader>
 
-                      <ul className="space-y-3 flex-grow">
-                        {plan.features.map((feature, idx) => (
-                          <li key={idx} className="flex items-start gap-2.5">
-                            <div className={`
+                      <CardContent className="flex-grow flex flex-col">
+                        <div className="text-center mb-6 pb-6 border-b">
+                          <div className="flex flex-col items-center justify-center">
+                            {plan.originalPrice && (
+                              <span className="text-lg text-muted-foreground line-through mb-1">{plan.originalPrice}</span>
+                            )}
+                            <span className="text-3xl font-bold text-foreground leading-none">{plan.price}</span>
+                            {plan.period && (
+                              <span className="text-sm text-muted-foreground mt-1">{plan.period}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <ul className="space-y-3 flex-grow">
+                          {plan.features.map((feature, idx) => (
+                            <li key={idx} className="flex items-start gap-2.5">
+                              <div className={`
                               w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5
                               ${plan.color === 'primary' ? 'bg-primary/10' : 'bg-accent/10'}
                             `}>
-                              <Check className={`
+                                <Check className={`
                                 w-2.5 h-2.5
                                 ${plan.color === 'primary' ? 'text-primary' : 'text-accent'}
                               `} />
-                            </div>
-                            <span className="text-sm text-muted-foreground leading-relaxed">{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
+                              </div>
+                              <span className="text-sm text-muted-foreground leading-relaxed">{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
 
-                    <CardFooter className="pt-6 pb-6">
-                      <Button
-                        variant={isPopular ? "default" : "outline"}
-                        className={`w-full font-semibold ${isPopular ? 'bg-primary hover:bg-primary/90' : ''}`}
-                        size="lg"
-                        asChild
-                      >
-                        <Link to={plan.ctaLink}>
-                          {plan.cta}
-                          <ArrowRight className="w-4 h-4 ml-2" />
-                        </Link>
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                );
-              })}
+                      <CardFooter className="pt-6 pb-6">
+                        <Button
+                          variant={isPopular ? "default" : "outline"}
+                          className={`w-full font-semibold ${isPopular ? 'bg-primary hover:bg-primary/90' : ''} ${plan.isPlaceholder ? 'opacity-60' : ''}`}
+                          size="lg"
+                          asChild={!plan.isPlaceholder}
+                          disabled={plan.isPlaceholder}
+                        >
+                          {plan.isPlaceholder ? (
+                            <span>
+                              {plan.cta}
+                              <ArrowRight className="w-4 h-4 ml-2" />
+                            </span>
+                          ) : (
+                            <Link to={plan.ctaLink}>
+                              {plan.cta}
+                              <ArrowRight className="w-4 h-4 ml-2" />
+                            </Link>
+                          )}
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </div>
