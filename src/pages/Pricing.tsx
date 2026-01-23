@@ -37,40 +37,31 @@ const Pricing = () => {
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
-  // Transform API data to component format
-  const transformPlan = (
-    plan: PricingPlan | undefined,
-    icon: any,
-    color: "primary" | "accent",
-    popular: boolean = false,
-    badge?: string,
-    defaultName?: string,
-    defaultDescription?: string,
-    planType?: string
-  ) => {
-    // If no plan data from API, create a placeholder plan
-    if (!plan) {
-      return {
-        name: defaultName || "Plan",
-        description: defaultDescription || "Coming soon",
-        price: "Contact Us",
-        originalPrice: undefined,
-        period: "",
-        icon,
-        color,
-        popular,
-        badge,
-        features: ["Contact us for details"],
-        cta: "Contact Us",
-        ctaLink: "/signup",
-        planId: `placeholder-${planType}`,
-        isPlaceholder: true,
-      };
-    }
+  // Get icon and color based on plan type
+  const getPlanIcon = (planType: string) => {
+    if (planType.includes('tender')) return FileText;
+    if (planType.includes('job')) return Briefcase;
+    if (planType === 'combined') return Zap;
+    if (planType === 'vendor' && !planType.includes('Advertisement')) return Store;
+    if (planType === 'vendorAdvertisement') return ShoppingBag;
+    return Sparkles; // Default icon
+  };
 
+  const getPlanColor = (planType: string, index: number): "primary" | "accent" => {
+    if (planType.includes('job') || planType === 'vendor') return "accent";
+    return "primary";
+  };
+
+  // Check if plan should be marked as popular (combined plan)
+  const isPlanPopular = (planType: string) => {
+    return planType === 'combined';
+  };
+
+  // Transform API data to component format
+  const transformPlan = (plan: PricingPlan, index: number) => {
     // Use originalPrice from API if available (indicates discount)
     const hasDiscount = plan.originalPrice !== undefined && plan.originalPrice !== null;
-
+    
     // Format prices
     const formatPrice = (price: number | string, currency: string): string => {
       const numPrice = typeof price === 'string' ? parseFloat(price) : price;
@@ -83,15 +74,19 @@ const Pricing = () => {
     };
 
     // If originalPrice exists, price is the discounted price
-    const displayPrice = hasDiscount
+    const displayPrice = hasDiscount 
       ? formatPrice(plan.price, plan.currency)
       : formatPrice(plan.price, plan.currency);
-
-    const originalPriceDisplay = hasDiscount
+    
+    const originalPriceDisplay = hasDiscount 
       ? formatPrice(plan.originalPrice!, plan.currency)
       : undefined;
 
     const period = plan.period === 'yearly' ? 'per year' : plan.period === 'one-time' ? (plan.plan_type === 'tender' ? 'per tender' : 'per job') : '';
+
+    const isPopular = isPlanPopular(plan.plan_type);
+    const icon = getPlanIcon(plan.plan_type);
+    const color = getPlanColor(plan.plan_type, index);
 
     return {
       name: plan.name,
@@ -101,8 +96,8 @@ const Pricing = () => {
       period,
       icon,
       color,
-      popular,
-      badge,
+      popular: isPopular,
+      badge: isPopular ? "Best Value" : undefined,
       features: plan.features || [],
       cta: plan.plan_type === 'vendorAdvertisement' ? "Contact Us" : "Get Started",
       ctaLink: "/signup",
@@ -111,79 +106,9 @@ const Pricing = () => {
     };
   };
 
-  // Build pricing plans array from API data - always show all 7 plan types
-  const pricingPlans = [
-    transformPlan(
-      pricingData?.tender?.single,
-      FileText,
-      "primary",
-      false,
-      undefined,
-      "Single Tender",
-      "Perfect for businesses or individuals who need to publish a one-time tender quickly and efficiently without long-term commitment.",
-      "tender-single"
-    ),
-    transformPlan(
-      pricingData?.tender?.yearly,
-      FileText,
-      "primary",
-      false,
-      undefined,
-      "Unlimited Tender Annual Plan",
-      "A dedicated annual plan for organizations that frequently publish tenders and want unlimited access without per-post costs.",
-      "tender-yearly"
-    ),
-    transformPlan(
-      pricingData?.job?.single,
-      Briefcase,
-      "accent",
-      false,
-      undefined,
-      "Single Job",
-      "Ideal for employers seeking to advertise a single job vacancy and reach relevant candidates instantly.",
-      "job-single"
-    ),
-    transformPlan(
-      pricingData?.job?.yearly,
-      Briefcase,
-      "accent",
-      false,
-      undefined,
-      "Unlimited Job Annual Plan",
-      "Ideal for recruitment agencies or large employers with continuous hiring needs.",
-      "job-yearly"
-    ),
-    transformPlan(
-      pricingData?.combined,
-      Zap,
-      "primary",
-      true,
-      "Best Value",
-      "Combined Plan",
-      "Best value package combining both tender and job posting capabilities.",
-      "combined"
-    ),
-    transformPlan(
-      pricingData?.vendor,
-      Store,
-      "accent",
-      false,
-      undefined,
-      "Vendor",
-      "For vendors and suppliers to showcase their services and products.",
-      "vendor"
-    ),
-    transformPlan(
-      pricingData?.vendorAdvertisement,
-      ShoppingBag,
-      "primary",
-      false,
-      undefined,
-      "Vendor Advertisement",
-      "Premium advertising solution for vendors to increase visibility and reach.",
-      "vendor-advertisement"
-    ),
-  ];
+  // Build pricing plans array from ALL API data dynamically
+  // Use the 'all' array from API response which contains all pricing plans
+  const pricingPlans = (pricingData?.all || []).map((plan, index) => transformPlan(plan, index));
 
   return (
     <div className="min-h-screen bg-background">
@@ -304,27 +229,19 @@ const Pricing = () => {
                         </ul>
                       </CardContent>
 
-                      <CardFooter className="pt-6 pb-6">
-                        <Button
-                          variant={isPopular ? "default" : "outline"}
-                          className={`w-full font-semibold ${isPopular ? 'bg-primary hover:bg-primary/90' : ''} ${plan.isPlaceholder ? 'opacity-60' : ''}`}
-                          size="lg"
-                          asChild={!plan.isPlaceholder}
-                          disabled={plan.isPlaceholder}
-                        >
-                          {plan.isPlaceholder ? (
-                            <span>
-                              {plan.cta}
-                              <ArrowRight className="w-4 h-4 ml-2" />
-                            </span>
-                          ) : (
-                            <Link to={plan.ctaLink}>
-                              {plan.cta}
-                              <ArrowRight className="w-4 h-4 ml-2" />
-                            </Link>
-                          )}
-                        </Button>
-                      </CardFooter>
+                    <CardFooter className="pt-6 pb-6">
+                      <Button
+                        variant={isPopular ? "default" : "outline"}
+                        className={`w-full font-semibold ${isPopular ? 'bg-primary hover:bg-primary/90' : ''}`}
+                        size="lg"
+                        asChild
+                      >
+                        <Link to={plan.ctaLink}>
+                          {plan.cta}
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </Link>
+                      </Button>
+                    </CardFooter>
                     </Card>
                   );
                 })}
